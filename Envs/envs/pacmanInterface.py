@@ -1,23 +1,54 @@
 import gym
-from .pacman.pacman import readCommand
+from .pacman.pacman import readCommand, ClassicGameRules
+from gym.utils import seeding
+
 
 class PacmanEnv(gym.Env):
     metadata = {'render.modes': ['human']}
-    def __init__(self,layout, pacman, ghosts, gameDisplay, beQuiet, catchExceptions, symX, symY):
+    def __init__(self,layout, pacman, ghosts, display, numGames, record, numTraining = 0, numGhostTraining = 0, withoutShield = 0, catchExceptions=False, timeout=60, symX=False, symY=False):
         """"""
-        # n = SimpleNamespace(**args)
 
-        # import __main__
-        # __main__.__dict__['_display'] = display
-        #
-        # rules = pacman.ClassicGameRules(timeout)
-        # games = []
-        # stat_games = []
-        # last_n_games = []
-        # average_scores = []
-        # win_rates = []
-        #
-        # game = rules.newGame(layout, pacman, ghosts, gameDisplay, beQuiet, catchExceptions, symX, symY)
+        # set OpenAI gym variables
+        self._seed = 123
+        self.A = ['up', 'down', 'left', 'right', 'stay']
+        # self.O = [...]
+        # self.state_size = (...)
+        self.steps = 0
+        self.history = []
+
+
+        # port input values to fields
+        self.layout = layout
+        self.pacman = pacman
+        self.ghosts = ghosts
+        self.display = display
+        self.numGames = numGames
+        self.record = record
+        self.numTraining = numTraining
+        self.numGhostTraining = numGhostTraining
+        self.withoutShield = withoutShield
+        self.catchExceptions = catchExceptions
+        self.timeout = timeout
+        self.symX = symX
+        self.symY = symY
+
+
+        # set games stats veriables
+        self.rules = ClassicGameRules(timeout)
+        self.games = []
+        self.stat_games = []
+        self.last_n_games = []
+        self.average_scores = []
+        self.win_rates = []
+        self.game_index = -1
+        import __main__
+        __main__.__dict__['_display'] = self.display
+
+
+        self._reset()
+
+
+
 
     def _step(self, action):
         """
@@ -46,7 +77,7 @@ class PacmanEnv(gym.Env):
                  However, official evaluations of your agent are not allowed to
                  use this for learning.
         """
-        # self._take_action(action)
+        self._take_action(action)
         # self.status = self.env.step()
         # reward = self._get_reward()
         # ob = self.env.getState()
@@ -54,11 +85,40 @@ class PacmanEnv(gym.Env):
         # return ob, reward, episode_over, {}
 
     def _reset(self):
-        pass
+        # # update the games stats TODO where to put these end game actions?
+        # if not self.beQuiet:
+        #     self.games.append(self.env)
+        # self.stat_games.append(self.env)
+        # self.last_n_games.append(self.env)
+
+        # start a new game
+        self.game_index += 1
+        self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining
+        if self.beQuiet:
+            # Suppress output and graphics
+            from .pacman import textDisplay
+            self.gameDisplay = textDisplay.NullGraphics()
+            self.rules.quiet = True
+        else:
+            self.gameDisplay = self.display
+
+            self.rules.quiet = False
+
+        self.env = self.rules.newGame(self.layout, self.pacman, self.ghosts, self.gameDisplay, self.beQuiet,
+                                       self.catchExceptions, self.symX, self.symY)
+
+        self.env.start_game()
+
+
     def _render(self, mode='human', close=False):
         pass
+
+
     def _take_action(self, action):
+
+
         pass
+
     def _get_reward(self):
         """ Reward is given for XY. """
         # if self.status == FOOBAR:

@@ -16,7 +16,7 @@
 import math
 from math import pi as PI
 import time
-import environment
+from . import environment
 import random
 
 class CrawlingRobotEnvironment(environment.Environment):

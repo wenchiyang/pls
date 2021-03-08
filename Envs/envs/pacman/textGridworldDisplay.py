@@ -12,7 +12,7 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-import util
+from . import util
 from functools import reduce
 
 class TextGridworldDisplay:

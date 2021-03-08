@@ -4,7 +4,7 @@ import os
 import numpy
 import time
 from multiprocessing.dummy import Pool as ThreadPool
-from util import ShortestPath
+from .util import ShortestPath
 import tempfile
 
 import multiprocessing

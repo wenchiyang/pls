@@ -11,14 +11,14 @@
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
-from game import *
-from learningAgents import ReinforcementAgent
-from featureExtractors import *
+from .game import *
+from .learningAgents import ReinforcementAgent
+from .featureExtractors import *
 # from shield import Shield
 # from stormEncoder import StormEncoder
 import numpy as np
-
-import random, util, math, copy
+from . import util
+import random, math, copy
 
 RIGHT = 0
 UP = 1

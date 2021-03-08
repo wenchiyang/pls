@@ -8,8 +8,8 @@ STEPS_PER_EPISODE = 10
 
 ENV_NAME = 'pacman-v0'
 
-# CWD = pathlib.Path(__file__).parent.absolute()
-# LAYOUT = os.path.join(CWD, 'smallGrid2')
+
+
 
 # Get the environment and extract the number of actions.
 args = [
@@ -22,12 +22,19 @@ args = [
 ]
 args = pacmanInterface.readCommand(args)
 
-env = gym.make(ENV_NAME)
+
+# layout, pacman, ghosts, display, numGames, record, numTraining = 0, numGhostTraining = 0, withoutShield = 0, catchExceptions=False, timeout=60, symX=False, symY=False
+
+
+env = gym.make(ENV_NAME, **args)
 
 env.episode_length = STEPS_PER_EPISODE
 np.random.seed(123)
-env.seed(123)
+# env.seed(123)
 nb_actions = len(env.A)
+env.env.wrapper_run()
+
+
 
 
 

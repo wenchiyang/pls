@@ -13,17 +13,17 @@
 
 
 # imports from python standard library
-import grading
+from . import grading
 import imp
 import optparse
 import os
 import re
 import sys
-import projectParams
+from . import projectParams
 import random
 random.seed(0)
 try: 
-    from pacman import GameState
+    from .pacman import GameState
 except:
     pass
 

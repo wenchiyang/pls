@@ -14,9 +14,9 @@
 
 import random
 import sys
-import mdp
-import environment
-import util
+from . import mdp
+from . import environment
+from . import util
 import optparse
 
 class Gridworld(mdp.MarkovDecisionProcess):

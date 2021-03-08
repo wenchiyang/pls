@@ -12,11 +12,11 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-import testClasses
+from . import testClasses
 import random, math, traceback, sys, os
-import layout, textDisplay, pacman, gridworld
+from . import layout, textDisplay, pacman, gridworld
 import time
-from util import Counter, TimeoutFunction, FixedRandom
+from .util import Counter, TimeoutFunction, FixedRandom
 from collections import defaultdict
 from pprint import PrettyPrinter
 from hashlib import sha1
@@ -24,7 +24,7 @@ from functools import reduce
 pp = PrettyPrinter()
 VERBOSE = False
 
-import gridworld
+from . import gridworld
 
 LIVINGREWARD = -0.1
 NOISE = 0.2

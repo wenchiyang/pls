@@ -12,8 +12,8 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-import util
-from graphicsUtils import *
+from . import util
+from .graphicsUtils import *
 from functools import reduce
 
 class GraphicsGridworldDisplay:

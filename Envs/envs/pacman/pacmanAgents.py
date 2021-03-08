@@ -12,11 +12,11 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-from pacman import Directions
-from game import Agent
+from .pacman import Directions
+from .game import Agent
 import random
-import game
-import util
+from . import game
+from . import util
 
 class LeftTurnAgent(game.Agent):
     "An agent that turns left at every opportunity"

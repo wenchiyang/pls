@@ -12,9 +12,9 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-from util import manhattanDistance
-from game import Grid
-import os
+from .util import manhattanDistance
+from .game import Grid
+import os, pathlib
 import random
 from functools import reduce
 
@@ -130,15 +130,18 @@ class Layout:
             self.agentPositions.append( (int(layoutChar), (x,y)))
             self.numGhosts += 1
 def getLayout(name, back = 2):
+    cwd = pathlib.Path(__file__).parent.absolute()
     if name.endswith('.lay'):
-        layout = tryToLoad('layouts/' + name)
+        layout_location = os.path.join(cwd, 'layouts', name)
+        layout = tryToLoad(layout_location)
         if layout == None: layout = tryToLoad(name)
     else:
-        layout = tryToLoad('layouts/' + name + '.lay')
+        layout_location = os.path.join(cwd, 'layouts', name+'.lay')
+        layout = tryToLoad(layout_location)
         if layout == None: layout = tryToLoad(name + '.lay')
     if layout == None and back >= 0:
         curdir = os.path.abspath('')
-        os.chdir('../..')
+        os.chdir('../../..')
         layout = getLayout(name, back -1)
         os.chdir(curdir)
     return layout
@@ -149,3 +152,15 @@ def tryToLoad(fullname):
 
     try: return Layout([line.strip() for line in f])
     finally: f.close()
+
+# def getLayout(fullname):
+#     if (not os.path.exists(fullname)): return None
+#     f = open(fullname)
+#
+#     try:
+#         return Layout([line.strip() for line in f])
+#     finally:
+#         f.close()
+
+
+

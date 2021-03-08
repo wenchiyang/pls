@@ -11,9 +11,9 @@
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
-from game import Directions, Agent, Actions
-
-import random,util,time
+from .game import Directions, Agent, Actions
+from . import util
+import random,time
 
 class ValueEstimationAgent(Agent):
     """

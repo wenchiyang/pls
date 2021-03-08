@@ -12,9 +12,9 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-import mdp, util
+from . import mdp, util
 
-from learningAgents import ValueEstimationAgent
+from .learningAgents import ValueEstimationAgent
 
 class ValueIterationAgent(ValueEstimationAgent):
     """

@@ -23,11 +23,11 @@
 # For more info, see http://inst.eecs.berkeley.edu/~cs188/pacman/pacman.html
 
 import tkinter
-import qlearningAgents
+from . import qlearningAgents
 import time
 import threading
 import sys
-import crawler
+from . import crawler
 #import pendulum
 import math
 from math import pi as PI

@@ -20,7 +20,7 @@ import sys
 import traceback
 import pdb
 from collections import defaultdict
-import util
+from . import util
 
 class Grades:
   "A data structure for project grades, along with formatting code to display them"
