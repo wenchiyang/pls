@@ -891,7 +891,7 @@ class Game:
                 ## TODO: could this exceed the total time
                 self.unmute()
         self.agentIndex = self.startingIndex
-        numAgents = len(self.agents)
+        # numAgents = len(self.agents)
 
     def get_observation(self):
         # Fetch the next agent

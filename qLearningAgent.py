@@ -23,8 +23,6 @@ args = [
 args = pacmanInterface.readCommand(args)
 
 
-# layout, pacman, ghosts, display, numGames, record, numTraining = 0, numGhostTraining = 0, withoutShield = 0, catchExceptions=False, timeout=60, symX=False, symY=False
-
 
 env = gym.make(ENV_NAME, **args)
 

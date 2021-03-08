@@ -93,7 +93,8 @@ class PacmanEnv(gym.Env):
 
         # start a new game
         self.game_index += 1
-        self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining
+        # self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining
+        self.beQuiet = False # For now always visualize the game
         if self.beQuiet:
             # Suppress output and graphics
             from .pacman import textDisplay

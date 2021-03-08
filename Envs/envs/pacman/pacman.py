@@ -596,7 +596,8 @@ def readCommand( argv ):
     args['pacman'] = pacman
 
 
-    if str(type(pacman)) == "<class 'qlearningAgents.ApproximateQAgent'>":
+    # if str(type(pacman)) == "<class 'qlearningAgents.ApproximateQAgent'>":
+    if 'qlearningAgents.ApproximateQAgent' in str(type(pacman)):
         pacman.setDumpParameters(options.dump,options.open)
         pacman.setSymmetryParameters(options.symX,options.symY)
 
