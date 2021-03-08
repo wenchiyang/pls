@@ -1,15 +1,8 @@
 import gym
-import numpy as np
-import pathlib, os
+import relenvs
 from relenvs.envs import pacmanInterface
 
-NUOF_EPISODES = 1
-STEPS_PER_EPISODE = 10
-
 ENV_NAME = 'Pacman-v0'
-
-
-
 
 # Get the environment and extract the number of actions.
 args = [
@@ -21,16 +14,19 @@ args = [
     '--numGames', '101'  # Total episodes
 ]
 args = pacmanInterface.readCommand(args)
-
-
-
 env = gym.make(ENV_NAME, **args)
 
-env.episode_length = STEPS_PER_EPISODE
-np.random.seed(123)
-# env.seed(123)
-nb_actions = len(env.A)
-env.env.wrapper_run()
+
+# Initial State
+initial_state = env.game.state
+
+while not env.game.gameOver:
+    legal_actions = env.get_legal_actions()
+    state, reward, is_gameOver, _ = env.step(legal_actions[0])
+    env.game.render()
+
+env.game.end_game()
+
 
 
 

@@ -1036,7 +1036,6 @@ class Game:
         self.display.finish()
         
     def wrapper_run(self):
-        self.start_game()
         while not self.gameOver:
             observation = self.get_observation()
             reward = observation.data.scoreChange

@@ -10,9 +10,7 @@ class PacmanEnv(gym.Env):
 
         # set OpenAI gym variables
         self._seed = 123
-        self.A = ['up', 'down', 'left', 'right', 'stay']
-        # self.O = [...]
-        # self.state_size = (...)
+        self.A = ['North', 'South', 'West', 'East', 'Stop']
         self.steps = 0
         self.history = []
 
@@ -44,13 +42,10 @@ class PacmanEnv(gym.Env):
         import __main__
         __main__.__dict__['_display'] = self.display
 
-
-        self._reset()
-
+        self.reset()
 
 
-
-    def _step(self, action):
+    def step(self, action):
         """
         Parameters
         ----------
@@ -77,20 +72,11 @@ class PacmanEnv(gym.Env):
                  However, official evaluations of your agent are not allowed to
                  use this for learning.
         """
-        self._take_action(action)
-        # self.status = self.env.step()
-        # reward = self._get_reward()
-        # ob = self.env.getState()
-        # episode_over = self.status != hfo_py.IN_GAME
-        # return ob, reward, episode_over, {}
+        self.game.take_action(action)
+        return self.game.state, self.game.state.data.scoreChange, self.game.gameOver, dict()
 
-    def _reset(self):
-        # # update the games stats TODO where to put these end game actions?
-        # if not self.beQuiet:
-        #     self.games.append(self.env)
-        # self.stat_games.append(self.env)
-        # self.last_n_games.append(self.env)
 
+    def reset(self):
         # start a new game
         self.game_index += 1
         # self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining
@@ -102,27 +88,19 @@ class PacmanEnv(gym.Env):
             self.rules.quiet = True
         else:
             self.gameDisplay = self.display
-
             self.rules.quiet = False
 
-        self.env = self.rules.newGame(self.layout, self.pacman, self.ghosts, self.gameDisplay, self.beQuiet,
+        self.game = self.rules.newGame(self.layout, self.pacman, self.ghosts, self.gameDisplay, self.beQuiet,
                                        self.catchExceptions, self.symX, self.symY)
-
-        self.env.start_game()
-
-
-    def _render(self, mode='human', close=False):
-        pass
+        self.game.start_game()
 
 
-    def _take_action(self, action):
-        pass
+    def render(self, mode='human', close=False):
+        self.game.render()
 
-    def _get_reward(self):
-        """ Reward is given for XY. """
-        # if self.status == FOOBAR:
-        #     return 1
-        # elif self.status == ABC:
-        #     return self.somestate ** 2
-        # else:
-        #     return 0
+    def get_legal_actions(self):
+        return self.game.state.getLegalActions(self.game.agentIndex)
+
+
+
+

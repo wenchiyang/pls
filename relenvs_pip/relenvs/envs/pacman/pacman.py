@@ -672,7 +672,7 @@ def loadAgent(pacman, nographics):
     moduleNames = [f for f in os.listdir(moduleDir) if f.endswith('gents.py')]
     for modulename in moduleNames:
         try:
-            module = importlib.import_module('.'+modulename[:-3], 'Envs.envs.pacman')
+            module = importlib.import_module('.'+modulename[:-3], 'relenvs.envs.pacman')
             # module = __import__(modulename[:-3])
         except ImportError:
             continue

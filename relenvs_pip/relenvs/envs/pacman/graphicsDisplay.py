@@ -248,7 +248,8 @@ class PacmanGraphics:
         self.background = self.drawBackground(newState.colorFields)
 
 
-        if self.agentImages[agentIndex][0].isPacman != agentState.isPacman: self.swapImages(agentIndex, agentState)
+        if self.agentImages[agentIndex][0].isPacman != agentState.isPacman:
+            self.swapImages(agentIndex, agentState)
         prevState, prevImage = self.agentImages[agentIndex]
         if agentState.isPacman:
             self.animatePacman(agentState, prevState, prevImage)
