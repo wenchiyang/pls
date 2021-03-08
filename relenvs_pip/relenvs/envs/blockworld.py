@@ -8,7 +8,7 @@ import random
 class BlockWorld(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, N=10, episode_length=30, reward_end=100, reward_allowed_move=0, reward_impossible_move=-30, random=False):
+    def __init__(self, N=3, episode_length=30, reward_end=100, reward_allowed_move=0, reward_impossible_move=-30, random=False):
 
 
         self.random = random
