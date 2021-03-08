@@ -1039,6 +1039,7 @@ class Game:
         self.start_game()
         while not self.gameOver:
             observation = self.get_observation()
+            reward = observation.data.scoreChange
             action = self.calculate_action(observation)
             self.take_action(action)
             self.render()

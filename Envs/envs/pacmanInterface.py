@@ -116,8 +116,6 @@ class PacmanEnv(gym.Env):
 
 
     def _take_action(self, action):
-
-
         pass
 
     def _get_reward(self):
