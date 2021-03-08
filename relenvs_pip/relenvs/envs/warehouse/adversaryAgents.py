@@ -12,11 +12,11 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-import util
-from game import Actions
-from game import Agent
-from game import Directions
-from util import manhattanDistance
+from . import util
+from .game import Actions
+from .game import Agent
+from .game import Directions
+from .util import manhattanDistance
 
 
 class GhostAgent(Agent):

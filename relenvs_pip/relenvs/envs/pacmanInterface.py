@@ -1,7 +1,5 @@
 import gym
 from .pacman.pacman import readCommand, ClassicGameRules
-from gym.utils import seeding
-
 
 class PacmanEnv(gym.Env):
     metadata = {'render.modes': ['human']}
@@ -13,7 +11,6 @@ class PacmanEnv(gym.Env):
         self.A = ['North', 'South', 'West', 'East', 'Stop']
         self.steps = 0
         self.history = []
-
 
         # port input values to fields
         self.layout = layout
@@ -29,23 +26,14 @@ class PacmanEnv(gym.Env):
         self.timeout = timeout
         self.symX = symX
         self.symY = symY
-
-
-        # set games stats veriables
         self.rules = ClassicGameRules(timeout)
-        self.games = []
-        self.stat_games = []
-        self.last_n_games = []
-        self.average_scores = []
-        self.win_rates = []
-        self.game_index = -1
+
         import __main__
         __main__.__dict__['_display'] = self.display
 
         self.reset()
 
-
-    def step(self, action):
+    def step(self, agentIndex, action):
         """
         Parameters
         ----------
@@ -72,13 +60,13 @@ class PacmanEnv(gym.Env):
                  However, official evaluations of your agent are not allowed to
                  use this for learning.
         """
-        self.game.take_action(action)
+        # perform "doAction" for the pacman
+        if callable(getattr(self.game.agents[agentIndex], "doAction", None)):
+            self.game.agents[agentIndex].doAction(self.game.state, action)
+        self.game.take_action(agentIndex, action)
         return self.game.state, self.game.state.data.scoreChange, self.game.gameOver, dict()
 
-
     def reset(self):
-        # start a new game
-        self.game_index += 1
         # self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining
         self.beQuiet = False # For now always visualize the game
         if self.beQuiet:
@@ -94,12 +82,11 @@ class PacmanEnv(gym.Env):
                                        self.catchExceptions, self.symX, self.symY)
         self.game.start_game()
 
-
     def render(self, mode='human', close=False):
         self.game.render()
 
-    def get_legal_actions(self):
-        return self.game.state.getLegalActions(self.game.agentIndex)
+    def get_legal_actions(self, agentIndex):
+        return self.game.state.getLegalActions(agentIndex)
 
 
 

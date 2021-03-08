@@ -15,8 +15,8 @@ import random
 
 import numpy as np
 
-from featureExtractors import *
-from learningAgents import ReinforcementAgent
+from .featureExtractors import *
+from .learningAgents import ReinforcementAgent
 # from shield import Shield
 # from stormEncoder import StormEncoder
 

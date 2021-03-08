@@ -14,10 +14,10 @@
 
 import random
 
-import game
-import util
-from game import Agent
-from warehouse import Directions
+from . import game
+from . import util
+from .game import Agent
+from .warehouse import Directions
 
 
 class LeftTurnAgent(game.Agent):

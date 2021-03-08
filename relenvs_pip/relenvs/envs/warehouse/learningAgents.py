@@ -12,8 +12,8 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 import time
-import util
-from game import Agent
+from . import util
+from .game import Agent
 
 
 class ValueEstimationAgent(Agent):

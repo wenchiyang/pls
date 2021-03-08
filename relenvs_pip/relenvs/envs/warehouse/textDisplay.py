@@ -16,7 +16,7 @@ import time
 
 
 try:
-    import warehouse
+    from . import warehouse
 except:
     pass
 

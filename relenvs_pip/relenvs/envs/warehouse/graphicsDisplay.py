@@ -12,8 +12,8 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-from game import Directions
-from graphicsUtils import *
+from .game import Directions
+from .graphicsUtils import *
 
 
 ###########################

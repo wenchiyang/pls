@@ -16,17 +16,17 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-import os
+import os, pathlib
 import random
 import sys
 
-import layout
-from game import Actions
-from game import Directions
-from game import Game
-from game import GameStateData
-from util import manhattanDistance
-from util import nearestPoint
+from . import layout
+from .game import Actions
+from .game import Directions
+from .game import Game
+from .game import GameStateData
+from .util import manhattanDistance
+from .util import nearestPoint
 
 
 ###################################################
@@ -637,14 +637,14 @@ def readCommand(argv):
 
     # Choose a display format
     if options.quietGraphics:
-        import textDisplay
+        from . import textDisplay
         args['display'] = textDisplay.NullGraphics()
     elif options.textGraphics:
-        import textDisplay
+        from . import textDisplay
         textDisplay.SLEEP_TIME = options.frameTime
         args['display'] = textDisplay.PacmanGraphics()
     else:
-        import graphicsDisplay
+        from . import graphicsDisplay
         args['display'] = graphicsDisplay.PacmanGraphics(options.zoom, frameTime=options.frameTime)
     args['numGames'] = options.numGames
     args['record'] = options.record
@@ -670,35 +670,51 @@ def readCommand(argv):
 
 
 def loadAgent(pacman, nographics):
-    # Looks through all pythonPath Directories for the right module,
-    pythonPathStr = os.path.expandvars("$PYTHONPATH")
-    if pythonPathStr.find(';') == -1:
-        pythonPathDirs = pythonPathStr.split(':')
-    else:
-        pythonPathDirs = pythonPathStr.split(';')
-    pythonPathDirs.append('.')
+    # # Looks through all pythonPath Directories for the right module,
+    # pythonPathStr = os.path.expandvars("$PYTHONPATH")
+    # if pythonPathStr.find(';') == -1:
+    #     pythonPathDirs = pythonPathStr.split(':')
+    # else:
+    #     pythonPathDirs = pythonPathStr.split(';')
+    # pythonPathDirs.append('.')
+    #
+    # # TODO:
+    # # print("Remove this hack for Stefans Laptop....")
+    #
+    # # return getattr(module, pacman)
+    #
+    # for moduleDir in pythonPathDirs:
+    #     if not os.path.isdir(moduleDir):
+    #         continue
+    #     moduleNames = [f for f in os.listdir(moduleDir) if f.endswith('gents.py')]
+    #     # print (moduleNames)
+    #     for modulename in moduleNames:
+    #         # print(modulename)
+    #         try:
+    #             module = __import__(modulename[:-3])
+    #         except ImportError:
+    #             continue
+    #         # print(module)
+    #         if pacman in dir(module):
+    #             if nographics and modulename == 'keyboardAgents.py':
+    #                 raise Exception('Using the keyboard requires graphics (not text display)')
+    #             return getattr(module, pacman)
+    # raise Exception('The agent ' + pacman + ' is not specified in any *Agents.py.')
+    import importlib
 
-    # TODO:
-    # print("Remove this hack for Stefans Laptop....")
-
-    # return getattr(module, pacman)
-
-    for moduleDir in pythonPathDirs:
-        if not os.path.isdir(moduleDir):
+    moduleDir = pathlib.Path(__file__).parent.absolute()
+    if not os.path.isdir(moduleDir): pass
+    moduleNames = [f for f in os.listdir(moduleDir) if f.endswith('gents.py')]
+    for modulename in moduleNames:
+        try:
+            module = importlib.import_module('.'+modulename[:-3], 'relenvs.envs.warehouse')
+            # module = __import__(modulename[:-3])
+        except ImportError:
             continue
-        moduleNames = [f for f in os.listdir(moduleDir) if f.endswith('gents.py')]
-        # print (moduleNames)
-        for modulename in moduleNames:
-            # print(modulename)
-            try:
-                module = __import__(modulename[:-3])
-            except ImportError:
-                continue
-            # print(module)
-            if pacman in dir(module):
-                if nographics and modulename == 'keyboardAgents.py':
-                    raise Exception('Using the keyboard requires graphics (not text display)')
-                return getattr(module, pacman)
+        if pacman in dir(module):
+            if nographics and modulename == 'keyboardAgents.py':
+                raise Exception('Using the keyboard requires graphics (not text display)')
+            return getattr(module, pacman)
     raise Exception('The agent ' + pacman + ' is not specified in any *Agents.py.')
 
 

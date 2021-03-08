@@ -12,12 +12,12 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-import os
+import os, pathlib
 import random
 from functools import reduce
 
-from game import Grid
-from util import manhattanDistance
+from .game import Grid
+from .util import manhattanDistance
 
 
 VISIBILITY_MATRIX_CACHE = {}
@@ -222,14 +222,15 @@ class Layout:
 
 
 def getLayout(name, back=2):
+    cwd = pathlib.Path(__file__).parent.absolute()
     if name.endswith('.lay'):
-        layout = tryToLoad('layouts/' + name)
-        if layout == None:
-            layout = tryToLoad(name)
+        layout_location = os.path.join(cwd, 'layouts', name)
+        layout = tryToLoad(layout_location)
+        if layout == None: layout = tryToLoad(name)
     else:
-        layout = tryToLoad('layouts/' + name + '.lay')
-        if layout == None:
-            layout = tryToLoad(name + '.lay')
+        layout_location = os.path.join(cwd, 'layouts', name + '.lay')
+        layout = tryToLoad(layout_location)
+        if layout == None: layout = tryToLoad(name + '.lay')
     if layout == None and back >= 0:
         curdir = os.path.abspath('')
         os.chdir('../../..')

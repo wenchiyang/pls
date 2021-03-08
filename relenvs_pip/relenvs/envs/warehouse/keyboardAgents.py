@@ -14,8 +14,8 @@
 
 import random
 
-from game import Agent
-from game import Directions
+from .game import Agent
+from .game import Directions
 
 
 class KeyboardAgent(Agent):

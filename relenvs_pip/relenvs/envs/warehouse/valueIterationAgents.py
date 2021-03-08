@@ -12,9 +12,9 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-import util
+from . import util
 
-from learningAgents import ValueEstimationAgent
+from .learningAgents import ValueEstimationAgent
 
 
 class ValueIterationAgent(ValueEstimationAgent):

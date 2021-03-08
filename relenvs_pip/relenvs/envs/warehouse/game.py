@@ -24,7 +24,7 @@ import sys
 import time
 import traceback
 
-from util import *
+from .util import *
 
 
 #######################
@@ -940,6 +940,100 @@ class Game:
                 except Exception as data:
                     if not self.catchExceptions:
                         raise
+                    self._agentCrash(agentIndex)
+                    self.unmute()
+                    return
+        self.display.finish()
+
+
+    def start_game(self):
+        """for wrapper
+        part one of self.run():
+        """
+        self.display.initialize(self.state.data)
+        self.numMoves = 0
+
+        ###self.display.initialize(self.state.makeObservation(1).data)
+        # inform learning agents of the game start
+        for i in range(len(self.agents)):
+            agent = self.agents[i]
+            if not agent:
+                self.mute(i)
+                # this is a null agent, meaning it failed to load
+                # the other team wins
+                print("Agent %d failed to load" % i, file=sys.stderr)
+                self.unmute()
+                self._agentCrash(i, quiet=True)
+                return
+            if ("registerInitialState" in dir(agent)):
+                self.mute(i)
+                if self.catchExceptions:
+                    try:
+                        timed_func = TimeoutFunction(agent.registerInitialState, int(self.rules.getMaxStartupTime(i)))
+                        try:
+                            start_time = time.time()
+                            timed_func(self.state.deepCopy())
+                            time_taken = time.time() - start_time
+                            self.totalAgentTimes[i] += time_taken
+                        except TimeoutFunctionException:
+                            print("Agent %d ran out of time on startup!" % i, file=sys.stderr)
+                            self.unmute()
+                            self.agentTimeout = True
+                            self._agentCrash(i, quiet=True)
+                            return
+                    except Exception as data:
+                        self._agentCrash(i, quiet=False)
+                        self.unmute()
+                        return
+                else:
+                    agent.registerInitialState(self.state.deepCopy())
+                ## TODO: could this exceed the total time
+                self.unmute()
+        self.agentIndex = self.startingIndex
+        # numAgents = len(self.agents)
+
+    def take_action(self, agentIndex, action):
+        self.moveHistory.append((agentIndex, action))
+        if self.catchExceptions:
+            try:
+                self.state = self.state.generateSuccessor(agentIndex, action)
+            except Exception as data:
+                self.mute(agentIndex)
+                self._agentCrash(agentIndex)
+                self.unmute()
+                return
+        else:
+            self.state = self.state.generateSuccessor(agentIndex, action)
+
+
+
+        # Allow for game specific conditions (winning, losing, etc.)
+        self.rules.process(self.state, self)
+        # # Track progress
+        # numAgents = len(self.agents)
+        # if self.agentIndex == numAgents + 1: self.numMoves += 1
+        # # Next agent
+        # self.agentIndex = (self.agentIndex + 1) % numAgents
+
+        if _BOINC_ENABLED:
+            boinc.set_fraction_done(self.getProgress())
+
+    def render(self):
+        # Change the display
+        self.display.update(self.state.data)
+        ###idx = agentIndex - agentIndex % 2 + 1
+        ###self.display.update( self.state.makeObservation(idx).data )
+
+    def end_game(self):
+        # inform a learning agent of the game result
+        for agentIndex, agent in enumerate(self.agents):
+            if "final" in dir(agent):
+                try:
+                    self.mute(agentIndex)
+                    agent.final(self.state)
+                    self.unmute()
+                except Exception as data:
+                    if not self.catchExceptions: raise
                     self._agentCrash(agentIndex)
                     self.unmute()
                     return

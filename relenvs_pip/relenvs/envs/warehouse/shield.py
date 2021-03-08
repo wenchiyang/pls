@@ -6,8 +6,8 @@ import tempfile
 import time
 import numpy
 
-from stormEncoder import StormEncoder
-from util import ShortestPath
+from .stormEncoder import StormEncoder
+from .util import ShortestPath
 from multiprocessing import Pool
 
 
