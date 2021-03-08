@@ -1,12 +1,12 @@
 import gym
 import numpy as np
 import pathlib, os
-from Envs.envs import pacmanInterface
+from relenvs.envs import pacmanInterface
 
 NUOF_EPISODES = 1
 STEPS_PER_EPISODE = 10
 
-ENV_NAME = 'pacman-v0'
+ENV_NAME = 'Pacman-v0'
 
 
 
