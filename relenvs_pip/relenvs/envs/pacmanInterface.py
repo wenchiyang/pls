@@ -33,7 +33,7 @@ class PacmanEnv(gym.Env):
 
         self.reset()
 
-    def step(self, agentIndex, action):
+    def step(self, action):
         """
         Parameters
         ----------
@@ -60,10 +60,20 @@ class PacmanEnv(gym.Env):
                  However, official evaluations of your agent are not allowed to
                  use this for learning.
         """
+        agentIndex = 0
+        action = 'Stop' if action not in self.get_legal_actions(0) else action
         # perform "doAction" for the pacman
-        if callable(getattr(self.game.agents[agentIndex], "doAction", None)):
-            self.game.agents[agentIndex].doAction(self.game.state, action)
+        self.game.agents[agentIndex].doAction(self.game.state, action)
+        # if callable(getattr(self.game.agents[agentIndex], "doAction", None)):
         self.game.take_action(agentIndex, action)
+        self.render()
+
+        for agentIndex in range(1, len(self.game.agents)):
+            state = self.game.get_observation(agentIndex)
+            action = self.game.calculate_action(agentIndex, state)
+            self.game.take_action(agentIndex, action)
+            self.render()
+
         return self.game.state, self.game.state.data.scoreChange, self.game.gameOver, dict()
 
     def reset(self):

@@ -1,6 +1,7 @@
 import gym
 import relenvs
 from relenvs.envs import pacmanInterface
+import random
 
 ENV_NAME = 'Pacman-v0'
 
@@ -16,22 +17,16 @@ args = [
 args = pacmanInterface.readCommand(args)
 env = gym.make(ENV_NAME, **args)
 
+# all actions
+all_actions = env.A
 
 # Initial State
 initial_state = env.game.state
 
-# get all agents in the environment
-agents = env.game.agents
-num_agents = len(agents)
-# agentIndex starts with 0
-agents_index = 0
-
 
 while not env.game.gameOver:
-    legal_actions = env.get_legal_actions(agents_index)
-    state, reward, is_gameOver, _ = env.step(agents_index, legal_actions[0])
-    env.game.render()
-    agents_index = (agents_index+1)%num_agents
+    action = random.choice(all_actions)
+    state, reward, is_gameOver, _ = env.step(action)
 
 env.game.end_game()
 
