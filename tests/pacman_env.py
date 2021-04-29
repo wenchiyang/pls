@@ -1,21 +1,13 @@
 import gym
 import relenvs
-from relenvs.envs import pacmanInterface
+from relenvs.envs.pacmanInterface import SIMPLE_ENV_ARGS
 import random
 
 ENV_NAME = 'Pacman-v0'
 
 # Get the environment and extract the number of actions.
-args = [
-    '--layout', 'smallGrid2',
-    '--withoutShield', '1',
-    '--pacman', 'ApproximateQAgent',
-    '--numGhostTraining', '0',
-    '--numTraining', '100',  # Training episodes
-    '--numGames', '101'  # Total episodes
-]
-args = pacmanInterface.readCommand(args)
-env = gym.make(ENV_NAME, **args)
+
+env = gym.make(ENV_NAME, **SIMPLE_ENV_ARGS)
 
 # all actions
 all_actions = env.A

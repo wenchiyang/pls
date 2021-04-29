@@ -1,6 +1,10 @@
 import gym
 from .pacman.pacman import readCommand, ClassicGameRules
 
+
+
+
+
 class PacmanEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     def __init__(self,layout, pacman, ghosts, display, numGames, record, numTraining = 0, numGhostTraining = 0, withoutShield = 0, catchExceptions=False, timeout=60, symX=False, symY=False):
@@ -64,21 +68,24 @@ class PacmanEnv(gym.Env):
         action = 'Stop' if action not in self.get_legal_actions(0) else action
         # perform "doAction" for the pacman
         self.game.agents[agentIndex].doAction(self.game.state, action)
-        # if callable(getattr(self.game.agents[agentIndex], "doAction", None)):
         self.game.take_action(agentIndex, action)
         self.render()
 
-        for agentIndex in range(1, len(self.game.agents)):
-            state = self.game.get_observation(agentIndex)
-            action = self.game.calculate_action(agentIndex, state)
-            self.game.take_action(agentIndex, action)
-            self.render()
+        reward = self.game.state.data.scoreChange
 
-        return self.game.state, self.game.state.data.scoreChange, self.game.gameOver, dict()
+        if not self.game.gameOver:
+            for agentIndex in range(1, len(self.game.agents)):
+                state = self.game.get_observation(agentIndex)
+                action = self.game.calculate_action(agentIndex, state)
+                self.game.take_action(agentIndex, action)
+                self.render()
+                reward += self.game.state.data.scoreChange
+
+        return self.game.state, reward, self.game.gameOver, dict()
 
     def reset(self):
         # self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining
-        self.beQuiet = False # For now always visualize the game
+        self.beQuiet = True # For now always visualize the game
         if self.beQuiet:
             # Suppress output and graphics
             from .pacman import textDisplay

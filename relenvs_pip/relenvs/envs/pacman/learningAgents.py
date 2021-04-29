@@ -143,7 +143,7 @@ class ReinforcementAgent(ValueEstimationAgent):
         self.episodeRewards = 0.0
 
 
-        if (self.episodesSoFar)%10 == 0:
+        if (self.episodesSoFar)%1 == 0:
             if (self.episodesSoFar >=  self.numGhostTraining) and (self.episodesSoFar < self.numTraining + self.numGhostTraining):
                 print('Episodes so far: %d' % (self.episodesSoFar-self.numGhostTraining))
 
