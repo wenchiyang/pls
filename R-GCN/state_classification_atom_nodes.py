@@ -3,6 +3,7 @@ import dgl.function as fn
 import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
+from dgl import DGLError
 from dgl.data import DGLDataset
 import networkx as nx
 import pandas as pd
@@ -15,7 +16,7 @@ from problog.logic import Term, Constant
 import dgl.nn.pytorch as dglnn
 
 LAYOUT = "testGrid" # We can change the layout by changing relenvs_pip/relvens/envs/pacman/layouts/testGrid.lay
-NUM_SAMPLE_TRACES = 20
+NUM_SAMPLE_TRACES = 100
 trace_file = LAYOUT+"_traces_"+str(NUM_SAMPLE_TRACES)+".p"
 MAX_ARITY = 2 # FIXME: do not hard code this. This is the max arity of state predicates
 
@@ -33,6 +34,10 @@ class RGCN(nn.Module):
             rel: dglnn.GraphConv(in_feats, hid_feats)
             for rel in rel_names}, aggregate='sum')
 
+        # self.conv_hidden = dglnn.HeteroGraphConv({
+        #     rel: dglnn.GraphConv(hid_feats, hid_feats)
+        #     for rel in rel_names}, aggregate='sum')
+
         self.conv_output = dglnn.HeteroGraphConv({
             rel: dglnn.GraphConv(hid_feats, out_feats)
             for rel in rel_names}, aggregate='sum')
@@ -40,6 +45,7 @@ class RGCN(nn.Module):
     def forward(self, graph, inputs, **kwargs):
         # inputs is features of nodes
         h = self.conv_input(graph, inputs, **kwargs)
+
         h = {k: F.relu(v) for k, v in h.items()}
         h = self.conv_output(graph, h)
         return h
@@ -61,7 +67,8 @@ class HeteroClassifier(nn.Module):
             } for etype in etypes}
         kwargs = {'mod_kwargs': edge_features}
         # call the layer
-        h = self.rgcn1(g, h, **kwargs)
+        # h = self.rgcn1(g, h, **kwargs)
+        h = self.rgcn1(g, h)
         with g.local_scope():
             g.ndata['h'] = h
             # Calculate graph representation by average readout.
@@ -71,39 +78,14 @@ class HeteroClassifier(nn.Module):
             return self.classify(hg)
 
 
-###############################################################################
-# When a model is trained, we can use the following method to evaluate the performance of the model
-def evaluate(model, g, labels):
-    model.eval()
-    with th.no_grad():
-        logits = model(g)
-        _, indices = th.max(logits, dim=1)
-        correct = th.sum(indices == labels)
-        fp = th.sum((indices == True) & (labels == False))
-        tp = th.sum((indices == True) & (labels == True))
-        # tn = th.sum((indices == False) & (labels == False))
-        fn = th.sum((indices == False) & (labels == True))
 
-        precision = tp / (tp + fp)
-        recall = tp / (tp + fn)
-
-        f1 = 2 * (precision * recall) / (precision + recall)
-
-        return correct.item() * 1.0 / len(labels), f1, precision, recall
-
-# This is to sample mini batches
-def collate(samples):
-    # The input `samples` is a list of pairs
-    #  (graph, label).
-    graphs, labels = map(list, zip(*samples))
-    batched_graph = dgl.batch(graphs)
-    return batched_graph, th.tensor(labels)
 
 # The Pacman dataset: It converts traces to a list of (state, label) examples
 class PacmanDataset(DGLDataset):
-    def __init__(self, trace_file, width):
+    def __init__(self, trace_file, width, n_classes):
         self.trace_file = trace_file
         self.width = width # for calculating links between connections
+        self.n_classes = n_classes
         super().__init__(name='pacman')
 
     def process(self):
@@ -172,11 +154,40 @@ class PacmanDataset(DGLDataset):
                 # create the graph label
                 temp_label = self.safe_label_of_state(state)
                 # convert the labels for a binary classification task
-                label = 0 if temp_label == 0 else 1
+                if self.n_classes == 2:
+                    label = 0 if temp_label == 0 else 1
+                elif self.n_classes == 4:
+                    label = temp_label
 
                 # save the graph and the graph label
                 self.graphs.append(graph)
                 self.labels.append(th.tensor(label))
+
+                if label == 0:
+                    # Increase weight of dangerous states by adding more times
+                    self.graphs.append(graph)
+                    self.labels.append(th.tensor(label))
+                    self.graphs.append(graph)
+                    self.labels.append(th.tensor(label))
+
+
+                ################ Draw #####################
+                # We prepare name tags of node and save in node_name_dict {node_id: node_name}
+                node_name_dict = {type: {} for type in name_node_dict}
+                # reverse keys and values of name_node_dict
+                for type in name_node_dict:
+                    node_name_dict[type] = {v: k for k, v in name_node_dict[type].items()}
+                    if type == 'constant':
+                        # translate constants from location ids to coordinates
+                        node_name_dict['constant'] = {k: node_id_to_coord(rel_width, v) for k, v in
+                                                      node_name_dict['constant'].items()}
+                    else:
+                        # translate atom locations to coordinates
+                        node_name_dict[type] = {k: Term(v.functor, *[node_id_to_coord(rel_width, arg) for arg in v.args]) for k, v in node_name_dict[type].items() }
+
+                # self.draw(graph, node_name_dict, atom_types, label)
+
+
 
     def safe_label_of_state(self, state):
         """
@@ -224,31 +235,96 @@ class PacmanDataset(DGLDataset):
         else:
             return 3
 
+    def draw(self, graph, node_name_dict, atom_types, graph_label):
+        # We split a relational graph into homogeneous graphs
+        homo_graphs_n, rel_graphs, homo_graphs = to_homo_networkx(graph)
+
+        fig, ax = plt.subplots(5, 2, figsize=(18, 80))
+        fig.suptitle(f"Class: {graph_label}", fontsize=28)
+        for homo_graph_n, rel_graph, homo_graph in zip(homo_graphs_n, rel_graphs, homo_graphs):
+            (srctype, edgetype, dsttype) = rel_graph.canonical_etypes[0]
+            type = srctype if srctype != 'constant' else dsttype
+            i = atom_types.index(type)
+            j = 0 if edgetype.startswith("constant") else 1
+            # combine two sets of nodes: srctype oand dsttype
+            local_node_name_mapping = {**node_name_dict[srctype],
+                                       **{k + len(node_name_dict[srctype]): v
+                                          for k, v in node_name_dict[dsttype].items()}}
+            # draw the bipartite
+            pos = nx.drawing.layout.bipartite_layout(homo_graph_n, node_name_dict[srctype], aspect_ratio=0.3)
+            nx.draw_networkx(homo_graph_n, pos=pos, labels=local_node_name_mapping, ax=ax[i][j], node_color="#cee4f2")
+            ax[i][j].set_title(f'Edge: {rel_graph.canonical_etypes[0]}')
+        plt.show()
+
     def __getitem__(self, i):
         return self.graphs[i], self.labels[i]
 
     def __len__(self):
         return len(self.graphs)
 
+
+def to_homo_networkx(g):
+    homo_graphs_n = []
+    rel_graphs = []
+    homo_graphs = []
+    for stype, etype, dtype in g.canonical_etypes:
+        rel_graph = g[stype, etype, dtype]
+        homo_graph = dgl.to_homogeneous(rel_graph)
+        homo_graph_n = homo_graph.to_networkx()
+
+        homo_graphs_n.append(homo_graph_n)
+        rel_graphs.append(rel_graph)
+        homo_graphs.append(homo_graph)
+    return homo_graphs_n, rel_graphs, homo_graphs
+
+###############################################################################
+# When a model is trained, we can use the following method to evaluate the performance of the model
+def evaluate(model, g, labels):
+    model.eval()
+    with th.no_grad():
+        logits = model(g)
+        _, indices = th.max(logits, dim=1)
+        correct = th.sum(indices == labels)
+        fp = th.sum((indices == True) & (labels == False))
+        tp = th.sum((indices == True) & (labels == True))
+        # tn = th.sum((indices == False) & (labels == False))
+        fn = th.sum((indices == False) & (labels == True))
+
+        precision = tp / (tp + fp)
+        recall = tp / (tp + fn)
+
+        f1 = 2 * (precision * recall) / (precision + recall)
+
+        return correct.item() * 1.0 / len(labels), f1, precision, recall
+
+# This is to sample mini batches
+def collate(samples):
+    graphs, labels = map(list, zip(*samples))
+    batched_graph = dgl.batch(graphs)
+    return batched_graph, th.tensor(labels)
+
 ###############################################################################
 # We then train the network as follows:
 
 # Randomly sample some traces of the pacman domain
 # You can comment out this line to always use the same traces
-trace_file, rel_width = sample(layout=LAYOUT, sampling_episodes=20)
+# trace_file, rel_width = sample(layout=LAYOUT, sampling_episodes=NUM_SAMPLE_TRACES)
+rel_width = 5
+# Some hyper parameters
+in_dim = MAX_ARITY
+hidden_dim = 8
+n_classes = 2 # binary classification
+learning_rate = 1e-2
+
 
 # Create dataset
-trainset = PacmanDataset(trace_file, rel_width)
+trainset = PacmanDataset(trace_file, rel_width, n_classes)
 batch_size = len(trainset)
 
 # Use PyTorch's DataLoader and the collate function defined before.
 data_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True, collate_fn=collate)
 
-# Some hyper parameters
-in_dim = MAX_ARITY
-hidden_dim = 16
-n_classes = 2 # binary classification
-learning_rate = 1e-8
+
 
 atom_types = ['wall', 'pacman', 'ghost', 'link', 'food']
 rel_names = []
@@ -277,4 +353,14 @@ for epoch in range(50):
 
     # evaluate
     graph_acc, graph_f1, graph_precision, graph_recall = evaluate(graph_classifier, g, labels)
-    print(f"Epoch {epoch:05d} | Loss {graph_loss.item():.4f} | Test Acc {graph_acc:.4f} | Test F1 {graph_f1:.4f} | Test Precision {graph_precision:.4f} | Test Recall {graph_recall:.4f} | Time(s) {np.mean(dur):.4f}")
+    print(f"Epoch {epoch:05d} | "
+          f"Loss {graph_loss.item():.4f} | "
+          f"Test Acc {graph_acc:.4f} | "
+          f"Test F1 {graph_f1:.4f} | "
+          f"Test Precision {graph_precision:.4f} | "
+          f"Test Recall {graph_recall:.4f} | "
+          f"Time(s) {np.mean(dur):.4f} | "
+          # f"Predected Labels {indices}"
+          )
+
+print("done")

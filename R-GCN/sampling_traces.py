@@ -8,10 +8,10 @@ import pickle
 
 
 def coord_to_node_id(width, i, j):
-    return i * width + j
+    return j * width + i
 
 def node_id_to_coord(width, node_id):
-    return int(node_id) // width, int(node_id) % width
+    return int(node_id) % width, int(node_id) // width
 
 
 def relationize(state):
@@ -28,25 +28,25 @@ def relationize(state):
 
     # Add wall(loc) atoms
     walls = np.array(state.data.layout.walls.data).T
-    for i, row in enumerate(walls):
-        for j, c in enumerate(row):
+    for j, row in enumerate(walls):
+        for i, c in enumerate(row):
             if c:
                 relstate.append(Term("wall", Constant(coord_to_node_id(width, i, j))))
 
     # Add food(loc) atoms
-    food = np.array(state.data.layout.food.data).T
-    for i, row in enumerate(food):
-        for j, c in enumerate(row):
+    food = np.array(state.data.food.data).T
+    for j, row in enumerate(food):
+        for i, c in enumerate(row):
             if c:
                 relstate.append(Term("food", Constant(coord_to_node_id(width, i, j))))
 
     # Add link(loc, loc) atoms
-    for i in range(height):
-        for j in range(width):
+    for j in range(height):
+        for i in range(width):
             loc = Constant(coord_to_node_id(width, i, j))
             neighboring_locs = [Constant(coord_to_node_id(width, ii, jj))
                                 for (ii, jj) in [(i, j-1), (i-1, j), (i+1, j), (i, j+1)]
-                                if 0 <= ii < height and 0 <= jj < width]
+                                if 0 <= ii < width and 0 <= jj < height]
             links = [Term("link", Constant(loc), Constant(neighboring_loc)) for neighboring_loc in neighboring_locs]
             for link in links:
                 relstate.append(link)
