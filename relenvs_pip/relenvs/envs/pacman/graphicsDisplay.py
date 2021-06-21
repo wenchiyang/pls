@@ -238,6 +238,8 @@ class PacmanGraphics:
     def update(self, newState):
 
         agentIndex = newState._agentMoved
+        if agentIndex is None:
+            agentIndex = 0 # If agentIndex == None, try 0 (pacmans index)
         agentState = newState.agentStates[agentIndex]
 
         #set all background to black
@@ -264,6 +266,10 @@ class PacmanGraphics:
         self.infoPane.updateScore(newState.score)
         if 'ghostDistances' in dir(newState):
             self.infoPane.updateGhostDistances(newState.ghostDistances)
+
+    def get_image(self):
+        return get_rgb_array()
+
 
     def make_window(self, width, height):
         grid_width = (width-1) * self.gridSize

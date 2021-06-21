@@ -85,7 +85,7 @@ class PacmanEnv(gym.Env):
 
     def reset(self):
         # self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining
-        self.beQuiet = True # For now always visualize the game
+        self.beQuiet = False # For now always visualize the game
         if self.beQuiet:
             # Suppress output and graphics
             from .pacman import textDisplay
@@ -101,6 +101,10 @@ class PacmanEnv(gym.Env):
 
     def render(self, mode='human', close=False):
         self.game.render()
+        if mode == "rgb_array":
+            image = self.display.get_image()
+            return image
+
 
     def get_legal_actions(self, agentIndex):
         return self.game.state.getLegalActions(agentIndex)
