@@ -4,10 +4,9 @@ import random
 
 ENV_NAME = 'Pacman-v0'
 
-
-
+# Pick an layout from relenvs_pip/relenvs/envs/pacman/layouts
 layout='testGrid'
-sampling_episodes=1
+sampling_episodes = 1
 
 SIMPLE_ENV_ARGS = readCommand([
         '--layout', layout,
@@ -20,7 +19,6 @@ SIMPLE_ENV_ARGS = readCommand([
 
 
 # Get the environment and extract the number of actions.
-
 env = gym.make(ENV_NAME, **SIMPLE_ENV_ARGS)
 env.render()
 
@@ -33,8 +31,10 @@ initial_state = env.game.state
 
 while not env.game.gameOver:
     action = random.choice(all_actions)
-    state, reward, is_gameOver, _ = env.step(action)
-    image = env.render(mode="rgb_array")
+    state_rel, reward, is_gameOver, _ = env.step(action)
+    # One can choose to use an image as an input as well
+    state_image = env.render(mode="rgb_array")
+
 
 env.game.end_game()
 
