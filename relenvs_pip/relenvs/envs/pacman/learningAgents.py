@@ -143,12 +143,12 @@ class ReinforcementAgent(ValueEstimationAgent):
         self.episodeRewards = 0.0
 
 
-        if (self.episodesSoFar)%1 == 0:
-            if (self.episodesSoFar >=  self.numGhostTraining) and (self.episodesSoFar < self.numTraining + self.numGhostTraining):
-                print('Episodes so far: %d' % (self.episodesSoFar-self.numGhostTraining))
-
-            if (self.episodesSoFar < self.numGhostTraining):
-                print('Episodes so far: %d' % self.episodesSoFar)
+        # if (self.episodesSoFar)%10 == 0:
+        #     if (self.episodesSoFar >=  self.numGhostTraining) and (self.episodesSoFar < self.numTraining + self.numGhostTraining):
+        #         print('Episodes so far: %d' % (self.episodesSoFar-self.numGhostTraining))
+        #
+        #     if (self.episodesSoFar < self.numGhostTraining):
+        #         print('Episodes so far: %d' % self.episodesSoFar)
 
     def stopEpisode(self):
         """
@@ -235,11 +235,11 @@ class ReinforcementAgent(ValueEstimationAgent):
 
     def registerInitialState(self, state):
         self.startEpisode()
-        if self.episodesSoFar == 0:
-            print('Beginning %d episodes of training to learn ghost model' % (self.numGhostTraining))
-        if self.episodesSoFar == (self.numGhostTraining):
-            print('Done with learning ghost models')
-            print('Beginning %d episodes of training' % (self.numTraining))
+        # if self.episodesSoFar == 0:
+        #     print('Beginning %d episodes of training to learn ghost model' % (self.numGhostTraining))
+        # if self.episodesSoFar == (self.numGhostTraining):
+        #     print('Done with learning ghost models')
+        #     print('Beginning %d episodes of training' % (self.numTraining))
 
     def final(self, state):
         """

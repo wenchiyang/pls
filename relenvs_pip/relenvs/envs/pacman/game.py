@@ -24,7 +24,17 @@ from .util import *
 import time, os
 import traceback
 import sys
-import pickle
+
+
+import numpy as np
+
+# grey scale
+WALL_COLOR = 0.25
+PACMAN_COLOR = 0.5
+GHOST_COLOR = 0.75
+FOOD_COLOR = 1
+
+
 
 #######################
 # Parts worth reading #
@@ -1013,7 +1023,46 @@ class Game:
 
         if _BOINC_ENABLED:
             boinc.set_fraction_done(self.getProgress())
-            
+
+    def my_render(self, grid_size):
+        newState = self.state.data
+        # initialize image
+        grid_height = int(newState.layout.height)
+        grid_width = int(newState.layout.width)
+
+
+        # initialize the image
+        # set all background to black
+        image = np.zeros((int(grid_width*grid_size), int(grid_height*grid_size)))
+
+
+        # draw food
+        for w in range(newState.food.width):
+            for h in range(newState.food.height):
+                if newState.food[w][h]:
+                    image[w*grid_size:(w+1)*grid_size, h*grid_size:(h+1)*grid_size] = FOOD_COLOR
+
+        # draw wall
+        for w in range(newState.layout.walls.width):
+            for h in range(newState.layout.walls.height):
+                if newState.layout.walls[w][h]:
+                    image[w * grid_size:(w + 1) * grid_size, h * grid_size:(h + 1) * grid_size] = WALL_COLOR
+
+        # draw agents
+        for agentIndex, agentState in enumerate(newState.agentStates):
+            agent_x = int(agentState.configuration.pos[0])
+            agent_y = int(agentState.configuration.pos[1])
+            if agentIndex == 0:
+                image[agent_x * grid_size:(agent_x + 1) * grid_size,
+                agent_y * grid_size:(agent_y + 1) * grid_size] = PACMAN_COLOR
+            else:
+                image[agent_x * grid_size:(agent_x + 1) * grid_size,
+                agent_y * grid_size:(agent_y + 1) * grid_size] = GHOST_COLOR
+
+        rotated_image = np.swapaxes(image,0,1)
+        rotated_image = np.flip(rotated_image,axis=0).copy()
+        return rotated_image
+
     def render(self):
         # Change the display
         self.display.update(self.state.data)

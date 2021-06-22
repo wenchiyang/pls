@@ -16,6 +16,7 @@ from .graphicsUtils import *
 import math, time
 from .game import Directions
 
+
 ###########################
 #  GRAPHICS DISPLAY CODE  #
 ###########################
@@ -235,8 +236,11 @@ class PacmanGraphics:
             self.agentImages[agentIndex] = (newState, image )
         refresh()
 
-    def update(self, newState):
 
+
+
+
+    def update(self, newState):
         agentIndex = newState._agentMoved
         if agentIndex is None:
             agentIndex = 0 # If agentIndex == None, try 0 (pacmans index)

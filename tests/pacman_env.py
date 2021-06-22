@@ -1,6 +1,15 @@
 import gym
 from relenvs.envs.pacmanInterface import readCommand
 import random
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+
+def draw(image):
+    plt.axis("off")
+    plt.imshow(image, cmap='gray', vmin=0, vmax=1)
+    plt.show()
+
 
 ENV_NAME = 'Pacman-v0'
 
@@ -20,7 +29,6 @@ SIMPLE_ENV_ARGS = readCommand([
 
 # Get the environment and extract the number of actions.
 env = gym.make(ENV_NAME, **SIMPLE_ENV_ARGS)
-env.render()
 
 # all actions
 all_actions = env.A
@@ -30,10 +38,18 @@ initial_state = env.game.state
 
 
 while not env.game.gameOver:
-    action = random.choice(all_actions)
-    state_rel, reward, is_gameOver, _ = env.step(action)
+    # action = random.choice(all_actions)
+    action = random.choice(range(5))
+    state, reward, is_gameOver, _ = env.step(action)
+
     # One can choose to use an image as an input as well
-    state_image = env.render(mode="rgb_array")
+    # state_image = env.render(mode="rgb_array")
+    # env.render(mode="human")
+
+    # state_image = env.my_render()
+    draw(state)
+
+
 
 
 env.game.end_game()

@@ -1,8 +1,10 @@
 import gym
+from gym.spaces import Box, Discrete
+
 from .pacman.pacman import readCommand, ClassicGameRules
+import numpy as np
 
-
-
+import random as rd
 
 
 class PacmanEnv(gym.Env):
@@ -12,7 +14,7 @@ class PacmanEnv(gym.Env):
 
         # set OpenAI gym variables
         self._seed = 123
-        self.A = ['North', 'South', 'West', 'East', 'Stop']
+        self.A = ['Stop','North', 'South', 'West', 'East']
         self.steps = 0
         self.history = []
 
@@ -31,9 +33,15 @@ class PacmanEnv(gym.Env):
         self.symX = symX
         self.symY = symY
         self.rules = ClassicGameRules(timeout)
+        self.grid_size = 4
 
         import __main__
         __main__.__dict__['_display'] = self.display
+
+        self.observation_space = Box(0, 255, (layout.height*self.grid_size, layout.width*self.grid_size, 3), np.uint8)
+        self.action_space = Discrete(5)
+        self.np_random = rd.seed(self._seed)
+        self.reward_range = (-500, 10)
 
         self.reset()
 
@@ -65,7 +73,12 @@ class PacmanEnv(gym.Env):
                  use this for learning.
         """
         agentIndex = 0
+
+        if isinstance(action, int):
+            action = self.A[action]
+
         action = 'Stop' if action not in self.get_legal_actions(0) else action
+
         # perform "doAction" for the pacman
         self.game.agents[agentIndex].doAction(self.game.state, action)
         self.game.take_action(agentIndex, action)
@@ -81,11 +94,12 @@ class PacmanEnv(gym.Env):
                 self.render()
                 reward += self.game.state.data.scoreChange
 
-        return self.game.state, reward, self.game.gameOver, dict()
+        # return self.game.state, reward, self.game.gameOver, dict()
+        return self.my_render(), reward, self.game.gameOver, dict()
 
     def reset(self):
         # self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining
-        self.beQuiet = False # For now always visualize the game
+        self.beQuiet = True
         if self.beQuiet:
             # Suppress output and graphics
             from .pacman import textDisplay
@@ -99,15 +113,23 @@ class PacmanEnv(gym.Env):
                                        self.catchExceptions, self.symX, self.symY)
         self.game.start_game()
 
+        return self.my_render()
+
     def render(self, mode='human', close=False):
         self.game.render()
-        if mode == "rgb_array":
-            image = self.display.get_image()
-            return image
+        # if mode == "rgb_array":
+        #     image = self.display.get_image()
+        #     return image
+
+    def my_render(self):
+        return self.game.my_render(grid_size=self.grid_size)
 
 
     def get_legal_actions(self, agentIndex):
         return self.game.state.getLegalActions(agentIndex)
+
+    def get_action_meanings(self):
+        return self.A
 
 
 
