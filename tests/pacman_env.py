@@ -35,7 +35,8 @@ all_actions = env.A
 
 # Initial State
 initial_state = env.game.state
-
+action_sequence = ['Stop', 'East', 'North', 'North', 'South', 'East']
+# self.A = ['Stop','North', 'South', 'West', 'East']
 
 while not env.game.gameOver:
     # action = random.choice(all_actions)

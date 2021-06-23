@@ -7,6 +7,39 @@ import numpy as np
 import random as rd
 
 
+def sample_layout(layout):
+    agent_positions, food_positions = sample_positions(layout)
+    new_agentPositions = []
+    for i, agent_position in enumerate(agent_positions):
+        if i == 0: # add pacman position
+            new_agentPositions.append((True, agent_position))
+        else: # add ghost positions
+            new_agentPositions.append((False, agent_position))
+    layout.agentPositions = new_agentPositions
+
+    for h in range(layout.height):
+        for w in range(layout.width):
+            layout.food.data[h][w] = (h,w) in food_positions
+    return layout
+
+
+
+def sample_positions(layout):
+
+    all_valid_positions = []
+    for h in range(layout.height):
+        for w in range(layout.width):
+            if not layout.walls[w][h]:
+                all_valid_positions.append((w,h))
+
+    pos_num = len(layout.agentPositions)
+    food_num = np.count_nonzero(np.array(layout.food.data)==True)
+    positions = rd.sample(all_valid_positions,pos_num+food_num)
+
+    return positions[:pos_num], positions[pos_num:]
+
+
+
 class PacmanEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     def __init__(self,layout, pacman, ghosts, display, numGames, record, numTraining = 0, numGhostTraining = 0, withoutShield = 0, catchExceptions=False, timeout=60, symX=False, symY=False):
@@ -34,6 +67,10 @@ class PacmanEnv(gym.Env):
         self.symY = symY
         self.rules = ClassicGameRules(timeout)
         self.grid_size = 4
+
+
+        ######
+
 
         import __main__
         __main__.__dict__['_display'] = self.display
@@ -86,13 +123,14 @@ class PacmanEnv(gym.Env):
 
         reward = self.game.state.data.scoreChange
 
-        if not self.game.gameOver:
-            for agentIndex in range(1, len(self.game.agents)):
-                state = self.game.get_observation(agentIndex)
-                action = self.game.calculate_action(agentIndex, state)
-                self.game.take_action(agentIndex, action)
-                self.render()
-                reward += self.game.state.data.scoreChange
+        # move the ghosts
+        # if not self.game.gameOver:
+        #     for agentIndex in range(1, len(self.game.agents)):
+        #         state = self.game.get_observation(agentIndex)
+        #         action = self.game.calculate_action(agentIndex, state)
+        #         self.game.take_action(agentIndex, action)
+        #         self.render()
+        #         reward += self.game.state.data.scoreChange
 
         # return self.game.state, reward, self.game.gameOver, dict()
         return self.my_render(), reward, self.game.gameOver, dict()
@@ -109,7 +147,9 @@ class PacmanEnv(gym.Env):
             self.gameDisplay = self.display
             self.rules.quiet = False
 
-        self.game = self.rules.newGame(self.layout, self.pacman, self.ghosts, self.gameDisplay, self.beQuiet,
+        sampled_layout = sample_layout(self.layout)
+
+        self.game = self.rules.newGame(sampled_layout, self.pacman, self.ghosts, self.gameDisplay, self.beQuiet,
                                        self.catchExceptions, self.symX, self.symY)
         self.game.start_game()
 

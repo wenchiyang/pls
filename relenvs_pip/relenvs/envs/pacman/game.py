@@ -30,8 +30,8 @@ import numpy as np
 
 # grey scale
 WALL_COLOR = 0.25
-PACMAN_COLOR = 0.5
-GHOST_COLOR = 0.75
+GHOST_COLOR = 0.5
+PACMAN_COLOR = 0.75
 FOOD_COLOR = 1
 
 

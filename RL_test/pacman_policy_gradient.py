@@ -34,13 +34,16 @@ def draw(image):
 class PolicyNet(nn.Module):
     def __init__(self, input_size, output_size):
         super(PolicyNet, self).__init__()
-        self.affine1 = nn.Linear(input_size, 128)
-        self.affine2 = nn.Linear(128, output_size)
+        self.affine1 = nn.Conv2d(in_channels=1, out_channels=12, kernel_size=4, stride=(1,1), padding="same")
+        self.affine2 = nn.Linear(input_size*input_size*12, output_size)
+        # self.affine1 = nn.Linear(input_size, 128)
+        # self.affine2 = nn.Linear(128, output_size)
 
     def forward(self, x):
-        xx = x.reshape(x.shape[0], -1)
+        xx = x.reshape(1, 1, x.shape[-2], x.shape[-1])
         xx = F.relu(self.affine1(xx))
-        action_scores = self.affine2(xx)
+        xx = th.flatten(xx, 1)
+        action_scores = F.relu(self.affine2(xx))
         return F.softmax(action_scores, dim=1)
 
 def update(replay):
@@ -90,8 +93,10 @@ if __name__ == '__main__':
     height = env.layout.height
     width = env.layout.width
 
-    input_size = grid_size * height * grid_size * width
+    # input_size = grid_size * height * grid_size * width
+    input_size = height * grid_size
     output_size = 5
+
 
 
     # for CartPole-v0
@@ -106,17 +111,18 @@ if __name__ == '__main__':
     env.seed(SEED)
 
     policy = PolicyNet(input_size, output_size)
-    optimizer = optim.Adam(policy.parameters(), lr=1e-2)
-    running_reward = 10.0
+    optimizer = optim.Adam(policy.parameters(), lr=1e-4)
+    running_reward = 400
     replay = ch.ExperienceReplay()
 
     for i_episode in count(1):
         state = env.reset()
-        for t in range(1000):  # Don't infinite loop while learning
+        # draw(state[0])
+        for t in range(100):  # Don't infinite loop while learning
             mass = Categorical(policy(state))
             action = mass.sample()
             old_state = state
-            state, reward, done, _ = env.step(int(action[0]))
+            state, reward, done, _ = env.step(action)
             # draw(state[0])
             replay.append(old_state,
                           action,
@@ -131,14 +137,18 @@ if __name__ == '__main__':
                 break
 
         #  Compute termination criterion
-        running_reward = running_reward * 0.99 + t * 0.01
-        # if running_reward > env.spec.reward_threshold:
-        if running_reward > 20:
+        # running_reward = running_reward * 0.99 + t * 0.01
+        # # if running_reward > env.spec.reward_threshold:
+        # if running_reward > 200:
+        #     print('Solved! Running reward is now {} and '
+        #           'the last episode runs to {} time steps!'.format(running_reward, t))
+        #     break
+
+        running_reward = running_reward * 0.99 + reward * 0.01
+        if running_reward > 450:
             print('Solved! Running reward is now {} and '
                   'the last episode runs to {} time steps!'.format(running_reward, t))
             break
-
-
 
         # Update policy
         update(replay)
