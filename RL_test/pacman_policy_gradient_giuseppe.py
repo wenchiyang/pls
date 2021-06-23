@@ -201,11 +201,11 @@ if __name__ == '__main__':
         #           'the last episode runs to {} time steps!'.format(running_reward, t))
         #     break
 
-        running_reward = running_reward * 0.99 + reward * 0.01
-        if running_reward > 450:
-            print('Solved! Running reward is now {} and '
-                  'the last episode runs to {} time steps!'.format(running_reward, t))
-            break
+        # running_reward = running_reward * 0.99 + reward * 0.01
+        # if running_reward > 450:
+        #     print('Solved! Running reward is now {} and '
+        #           'the last episode runs to {} time steps!'.format(running_reward, t))
+        #     break
 
         # Update policy
         update(replay, policy)
