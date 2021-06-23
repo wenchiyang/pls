@@ -24,6 +24,43 @@ np.random.seed(SEED)
 th.manual_seed(SEED)
 
 
+class Logger(envs.Logger):
+    def __init__(self, env, interval=1000, episode_interval=10, title=None, logger=None):
+        super(Logger, self).__init__(env, interval=1000, episode_interval=10, title=None, logger=None)
+
+    def _episodes_length_rewards(self, rewards, dones):
+        """
+        When dealing with array rewards and dones (as for VecEnv) the length
+        and rewards are only computed on the first dimension.
+        (i.e. the first sub-process.)
+        """
+        episode_rewards = []
+        episode_lengths = []
+        accum = 0.0
+        length = 0
+        for r, d in zip(rewards, dones):
+            if not isinstance(d, bool):
+                d = bool(d.flat[0])
+                r = float(r.flat[0])
+            if not d:
+                accum += r
+                length += 1
+            else:
+                ### wenchi
+                accum += r
+                length += 1
+                ###
+                episode_rewards.append(accum)
+                episode_lengths.append(length)
+                accum = 0.0
+                length = 0
+        if length > 0:
+            episode_rewards.append(accum)
+            episode_lengths.append(length)
+        return episode_rewards, episode_lengths
+
+
+
 def draw(image):
     # image_rgb
     # cv2.imshow("image", image)
@@ -106,7 +143,7 @@ if __name__ == '__main__':
     # input_size = 4
     # output_size = 2
 
-    env = envs.Logger(env, interval=1000)
+    env = Logger(env, interval=1000)
     env = envs.Torch(env)
     env.seed(SEED)
 
