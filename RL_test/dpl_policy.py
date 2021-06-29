@@ -89,13 +89,13 @@ class DPLSafePolicy(nn.Module):
         return actions
 
 
-h = torch.tensor([[10., 2., 7.]])
-image_encoder = lambda x: x
-image_encoder.hidden_size = 3
-dpl_policy = DPLSafePolicy(image_encoder=image_encoder)
-
-
-print(dpl_policy(h))
+# h = torch.tensor([[10., 2., 7.]])
+# image_encoder = lambda x: x
+# image_encoder.hidden_size = 3
+# dpl_policy = DPLSafePolicy(image_encoder=image_encoder)
+#
+#
+# print(dpl_policy(h))
 
 
 
