@@ -16,8 +16,6 @@ action(3)::action(left);
 action(4)::action(right).
 
 
-
-
 % Ghost and Pacman positions are mutually exclusive for now (i.e. only one ghost and one pacman).
 ghost(0)::ghost(0,0);
 ghost(1)::ghost(0,1);
@@ -42,7 +40,7 @@ transition_with_wall(X,Y,A,X1,Y1) :- transition(X,Y,A,X1,Y1), wall(X1,Y1), X2=X,
 transition_with_wall(X,Y,A,X1,Y1) :- transition(X,Y,A,X1,Y1), \+ wall(X1,Y1), X2=X1, Y2=Y1.
 
 
-unsafe :- pacman(X,Y), action(A), transition(X,Y,A,X1,Y1), ghost(X1,Y1).
+unsafe :- pacman(X,Y), action(A), transition_with_wall(X,Y,A,X1,Y1), ghost(X1,Y1).
 safe :- \+ unsafe.
 
 evidence(safe).
