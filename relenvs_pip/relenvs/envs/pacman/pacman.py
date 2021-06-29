@@ -110,7 +110,7 @@ class GameState:
 
         # Time passes
         if agentIndex == 0:
-            state.data.scoreChange += -TIME_PENALTY # Penalty for waiting around
+            state.data.scoreChange += self.reward_time # Penalty for waiting around
         else:
             GhostRules.decrementTimer( state.data.agentStates[agentIndex] )
 
@@ -234,14 +234,26 @@ class GameState:
     # You shouldn't need to call these directly #
     #############################################
 
-    def __init__( self, prevState = None ):
+    def __init__( self, prevState = None,
+                  reward_goal=None,
+                  reward_crash=None,
+                  reward_food=None,
+                  reward_time=None):
         """
         Generates a new state by copying information from its predecessor.
         """
         if prevState != None: # Initial state
             self.data = GameStateData(prevState.data)
+            self.reward_goal = prevState.reward_goal
+            self.reward_crash = prevState.reward_crash
+            self.reward_food = prevState.reward_food
+            self.reward_time = prevState.reward_time
         else:
             self.data = GameStateData()
+            self.reward_goal = reward_goal
+            self.reward_crash = reward_crash
+            self.reward_food = reward_food
+            self.reward_time = reward_time
 
     def deepCopy( self ):
         state = GameState( self )
@@ -264,11 +276,12 @@ class GameState:
 
         return str(self.data)
 
-    def initialize( self, layout, numGhostAgents=1000 ):
+    def initialize( self, layout, numGhostAgents):
         """
         Creates an initial game state from a layout array (see layout.py).
         """
         self.data.initialize(layout, numGhostAgents)
+
 
 ############################################################################
 #                     THE HIDDEN SECRETS OF PACMAN                         #
@@ -278,20 +291,33 @@ class GameState:
 
 SCARED_TIME = 40    # Moves ghosts are scared
 COLLISION_TOLERANCE = 0.7 # How close ghosts must be to Pacman to kill
-TIME_PENALTY = 1 # Number of points lost each round
+# REWARD_TIME = 0 # Number of points lost each round
+REWARD_GOAL = 0
+REWARD_CRASH = 0
+REWARD_FOOD = 10
+
 
 class ClassicGameRules:
     """
     These game rules manage the control flow of a game, deciding when
     and how the game starts and ends.
     """
-    def __init__(self, timeout=30):
+    def __init__(self, timeout, reward_goal, reward_crash, reward_food, reward_time):
         self.timeout = timeout
+        self.reward_goal = reward_goal
+        self.reward_crash = reward_crash
+        self.reward_food = reward_food
+        self.reward_time = reward_time
 
-    def newGame( self, layout, pacmanAgent, ghostAgents, display, quiet = False, catchExceptions=False, symX=False, symY=False):
+    def newGame( self, layout, pacmanAgent, ghostAgents, display, quiet=False,
+                 catchExceptions=False, symX=False, symY=False,):
         agents = [pacmanAgent] + ghostAgents[:layout.getNumGhosts()]
-        initState = GameState()
-        initState.initialize( layout, len(ghostAgents) )
+        initState = GameState(
+            reward_goal=self.reward_goal,
+            reward_crash=self.reward_crash,
+            reward_food=self.reward_food,
+            reward_time=self.reward_time)
+        initState.initialize( layout, len(ghostAgents))
         game = Game(agents, display, self, catchExceptions=catchExceptions,symX=symX, symY=symY)
         game.state = initState
         self.initialState = initState.deepCopy()
@@ -378,7 +404,7 @@ class PacmanRules:
         x,y = position
         # Eat food
         if state.data.food[x][y]:
-            state.data.scoreChange += 10
+            state.data.scoreChange += state.reward_food
             state.data.food = state.data.food.copy()
             state.data.food[x][y] = False
             state.data._foodEaten = position
@@ -390,7 +416,7 @@ class PacmanRules:
         if numFood == 0 and not state.data._lose:
             #if state.data._visitedExit == True:
             #if x==3 and y==1: #Exit hard coded
-            state.data.scoreChange += 500
+            state.data.scoreChange += state.reward_goal
             state.data._win = True
 
 
@@ -467,7 +493,7 @@ class GhostRules:
             state.data._eaten[agentIndex] = True
         else:
             if not state.data._win:
-                state.data.scoreChange -= 500
+                state.data.scoreChange += state.reward_crash
                 state.data._lose = True
     collide = staticmethod( collide )
 
@@ -526,7 +552,7 @@ def readCommand( argv ):
                       metavar='OPEN_FILE', default='')
     parser.add_option('-p', '--pacman', dest='pacman',
                       help=default('the agent TYPE in the pacmanAgents module to use'),
-                      metavar='TYPE', default='KeyboardAgent')
+                      metavar='TYPE', default='ApproximateQAgent') #default='KeyboardAgent'
     parser.add_option('-t', '--textGraphics', action='store_true', dest='textGraphics',
                       help='Display output as text only', default=False)
     parser.add_option('-q', '--quietTextGraphics', action='store_true', dest='quietGraphics',
@@ -551,7 +577,7 @@ def readCommand( argv ):
     parser.add_option('-y', '--numGhostTraining', dest='numGhostTraining', type='int',
                       help=default('How many episodes are used to learn ghost models (suppresses output)'), default=0)
     parser.add_option('-w', '--withoutShield', dest='withoutShield', type='int',
-                      help=default('Learning without a shield to get safe actions'), default=0)
+                      help=default('Learning without a shield to get safe actions'), default=1)
     parser.add_option('--frameTime', dest='frameTime', type='float',
                       help=default('Time to delay between frames; <0 means keyboard'), default=0.1)
     parser.add_option('-c', '--catchExceptions', action='store_true', dest='catchExceptions',
@@ -562,6 +588,15 @@ def readCommand( argv ):
                       help='enables optimizations for x-symetric labyrinths', default=False)
     parser.add_option('-j', '--symY', action='store_true', dest='symY',
                       help='Genables optimizations for y-symetric labyrinths', default=False)
+    parser.add_option('--reward-goal', dest='reward_goal', type='float',
+                      help=default('the reward of achieving the goal'), default=500.0)
+    parser.add_option('--reward-crash', dest='reward_crash', type='float',
+                      help=default('the reward of crashing into a ghost'), default=-500.0)
+    parser.add_option('--reward-food', dest='reward_food', type='float',
+                      help=default('the reward of eating a food'), default=10.0)
+    parser.add_option('--reward-time', dest='reward_time', type='float',
+                      help=default('the reward of performing an action'), default=-1.0)
+
 
     options, otherjunk = parser.parse_args(argv)
     if len(otherjunk) != 0:
@@ -580,15 +615,15 @@ def readCommand( argv ):
     pacmanType = loadAgent(options.pacman, noKeyboard)
     agentOpts = parseAgentArgs(options.agentArgs)
 
-    if options.numTraining > 0:
+    if options.numTraining >= 0:
         args['numTraining'] = options.numTraining
         if 'numTraining' not in agentOpts: agentOpts['numTraining'] = options.numTraining
 
-    if options.numGhostTraining > 0:
+    if options.numGhostTraining >= 0:
         args['numGhostTraining'] = options.numGhostTraining
         if 'numGhostTraining' not in agentOpts: agentOpts['numGhostTraining'] = options.numGhostTraining
 
-    if options.withoutShield > 0:
+    if options.withoutShield >= 0:
         args['withoutShield'] = options.withoutShield
         if 'withoutShield' not in agentOpts: agentOpts['withoutShield'] = options.withoutShield
 
@@ -627,6 +662,10 @@ def readCommand( argv ):
     args['timeout'] = options.timeout
     args['symX'] = options.symX
     args['symY'] = options.symY
+    args['reward_goal'] = options.reward_goal
+    args['reward_crash'] = options.reward_crash
+    args['reward_food'] = options.reward_food
+    args['reward_time'] = options.reward_time
 
     # Special case: recorded games don't use the runGames method or args structure
     if options.gameToReplay != None:

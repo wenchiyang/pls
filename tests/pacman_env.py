@@ -45,10 +45,10 @@ while not env.game.gameOver:
 
     # One can choose to use an image as an input as well
     # state_image = env.render(mode="rgb_array")
-    # env.render(mode="human")
+    env.render(mode="human")
 
     # state_image = env.my_render()
-    draw(state)
+    # draw(state)
 
 
 

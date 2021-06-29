@@ -25,7 +25,6 @@ def sample_layout(layout):
 
 
 def sample_positions(layout):
-
     all_valid_positions = []
     for h in range(layout.height):
         for w in range(layout.width):
@@ -42,8 +41,19 @@ def sample_positions(layout):
 
 class PacmanEnv(gym.Env):
     metadata = {'render.modes': ['human']}
-    def __init__(self,layout, pacman, ghosts, display, numGames, record, numTraining = 0, numGhostTraining = 0, withoutShield = 0, catchExceptions=False, timeout=60, symX=False, symY=False):
+    def __init__(self, layout, reward_goal, reward_crash, reward_food, reward_time):
         """"""
+
+        args = readCommand([
+            '--layout', layout,
+            '--reward-goal', str(reward_goal),
+            '--reward-crash', str(reward_crash),
+            '--reward-food', str(reward_food),
+            '--reward-time', str(reward_time)
+        ])
+
+
+
 
         # set OpenAI gym variables
         self._seed = 123
@@ -52,33 +62,41 @@ class PacmanEnv(gym.Env):
         self.history = []
 
         # port input values to fields
-        self.layout = layout
-        self.pacman = pacman
-        self.ghosts = ghosts
-        self.display = display
-        self.numGames = numGames
-        self.record = record
-        self.numTraining = numTraining
-        self.numGhostTraining = numGhostTraining
-        self.withoutShield = withoutShield
-        self.catchExceptions = catchExceptions
-        self.timeout = timeout
-        self.symX = symX
-        self.symY = symY
-        self.rules = ClassicGameRules(timeout)
-        self.grid_size = 4
+        self.layout = args['layout']
+        self.pacman = args['pacman']
+        self.ghosts = args['ghosts']
+        self.display = args['display']
+        self.numGames = args['numGames']
+        self.record = args['record']
+        self.numTraining = args['numTraining']
+        self.numGhostTraining = args['numGhostTraining']
+        self.withoutShield = args['withoutShield']
+        self.catchExceptions = args['catchExceptions']
+        self.timeout = args['timeout']
+        self.symX = args['symX']
+        self.symY = args['symY']
+
+        self.reward_goal = args['reward_goal']
+        self.reward_crash = args['reward_crash']
+        self.reward_food = args['reward_food']
+        self.reward_time = args['reward_time']
+
+        self.rules = ClassicGameRules(args['timeout'], self.reward_goal, self.reward_crash,
+                                      self.reward_food, self.reward_time)
+
 
 
         ######
 
+        self.grid_size = 1
 
         import __main__
         __main__.__dict__['_display'] = self.display
 
-        self.observation_space = Box(0, 255, (layout.height*self.grid_size, layout.width*self.grid_size, 3), np.uint8)
+        self.observation_space = Box(0, 255, (self.layout.height*self.grid_size, self.layout.width*self.grid_size, 3), np.uint8)
         self.action_space = Discrete(5)
         self.np_random = rd.seed(self._seed)
-        self.reward_range = (-500, 10)
+        self.reward_range = (0, 10)
 
         self.reset()
 
