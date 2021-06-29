@@ -86,22 +86,19 @@ def draw(image):
 
 
 class Encoder(nn.Module):
-    def __init__(self, input_size, output_size, grid_size):
+    def __init__(self, input_size, output_size):
         super(Encoder, self).__init__()
         hidden_size = 20
         self.encoder = nn.Sequential(
-            nn.Linear(input_size, 128),
-            nn.ReLU(),
-            nn.Linear(128, hidden_size),
+            nn.Linear(input_size, hidden_size),
             nn.ReLU(),
         )
         self.hidden_size = hidden_size
-        self.grid_size = grid_size
 
     def forward(self, x):
         xx = th.flatten(x, 1)
         hidden = self.encoder(xx)
-        return F.softmax(hidden, dim=1)
+        return hidden
 
 
 def update(replay):
@@ -157,7 +154,7 @@ if __name__ == '__main__':
     env = envs.Torch(env)
     env.seed(SEED)
 
-    image_encoder = Encoder(input_size, output_size, grid_size)
+    image_encoder = Encoder(input_size, output_size)
     policy = DPLSafePolicy(image_encoder=image_encoder)
     optimizer = optim.Adam(policy.parameters(), lr=learning_rate)
     running_reward = 400
