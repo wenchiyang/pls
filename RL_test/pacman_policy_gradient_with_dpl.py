@@ -15,6 +15,8 @@ import cherry as ch
 import cherry.envs as envs
 import matplotlib.pyplot as plt
 
+from RL_test.dpl_policy import DPLSafePolicy
+
 SEED = 567
 GAMMA = 0.99
 RENDER = False
@@ -70,26 +72,28 @@ def draw(image):
     plt.imshow(image, cmap='gray', vmin=0, vmax=1)
     plt.show()
 
-class PolicyNet(nn.Module):
+class Encoder(nn.Module):
     def __init__(self, input_size, output_size):
-        super(PolicyNet, self).__init__()
-        self.network = nn.Sequential(
+        super(Encoder, self).__init__()
+        hidden_size = 20
+        self.encoder = nn.Sequential(
             nn.Conv2d(1, 16, 3),
             nn.MaxPool2d(2, 2),
             nn.ReLU(),
             nn.Conv2d(16, 6, 3),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(6 * 5 * 5, 20),
+            nn.Linear(6 * 5 * 5, hidden_size),
             nn.ReLU(),
-            nn.Linear(20, output_size)
         )
+        self.hidden_size = hidden_size
 
 
-    def forward(self, x, T= 1):
+
+    def forward(self, x):
         xx = x.reshape(-1, 1, x.shape[-2], x.shape[-1])
-        action_scores = self.network(xx)
-        return F.softmax(action_scores/T, dim=1)
+        hidden = self.encoder(xx)
+        return hidden
 
 def update(replay, policy):
 
@@ -105,7 +109,7 @@ def update(replay, policy):
     states = replay.state()
     states = states.view(-1, 1, states.shape[1],states.shape[2])
     actions = replay.action().squeeze(-1)
-    log_probs = Categorical(policy(states, T=temperature)).log_prob(actions).unsqueeze(-1)
+    log_probs = Categorical(policy(states)).log_prob(actions).unsqueeze(-1)
     # Compute loss
     losses = -log_probs * rewards
     policy_loss = losses.sum()
@@ -162,7 +166,8 @@ if __name__ == '__main__':
     env = envs.Torch(env)
     env.seed(SEED)
 
-    policy = PolicyNet(input_size, output_size)
+    image_encoder = Encoder(input_size, output_size)
+    policy = DPLSafePolicy(image_encoder=image_encoder)
     optimizer = optim.Adam(policy.parameters(), lr=1e-4)
     running_reward = 400
     replay = ch.ExperienceReplay()
@@ -172,7 +177,7 @@ if __name__ == '__main__':
         # draw(state[0])
         for t in range(100):  # Don't infinite loop while learning
             with th.no_grad():
-                probs = policy(state, T=temperature)
+                probs = policy(state)
                 mass = Categorical(probs=probs)
                 action = mass.sample()
                 log_prob = mass.log_prob(action)
