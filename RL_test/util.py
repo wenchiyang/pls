@@ -50,3 +50,19 @@ def draw(image):
     plt.axis("off")
     plt.imshow(image, cmap='gray', vmin=0, vmax=1)
     plt.show()
+
+def initial_log(name, layout, map_seed, reward_goal, reward_crach, reward_food, reward_time,
+                shield, lr):
+    logger = getLogger(name)
+    logger.info(f"Map: {layout}")
+    logger.info(f"Map seed: {map_seed}")
+    logger.info(f"Reward structure: ")
+    logger.info(f"    goal = {reward_goal}")
+    logger.info(f"    crash = {reward_crach}")
+    logger.info(f"    food = {reward_food}")
+    logger.info(f"    time = {reward_time}")
+    logger.info(f"Shielded type: {shield['type']}")
+    if shield['type'] != "None":
+        logger.info(f"    Object detection: {shield['object_detection']}")
+    logger.info(f"    Seed: {shield['seed']}")
+    logger.info(f"    Learning rate: {lr}")

@@ -17,9 +17,9 @@ def sample_layout(layout):
             new_agentPositions.append((False, agent_position))
     layout.agentPositions = new_agentPositions
 
-    for h in range(layout.height):
-        for w in range(layout.width):
-            layout.food.data[h][w] = (h,w) in food_positions
+    for h in range(1, layout.height-1):
+        for w in range(1, layout.width-1):
+            layout.food.data[w][h] = (w,h) in food_positions
     return layout
 
 

@@ -30,7 +30,7 @@ class DeepProbLogLayer(nn.Module):
 
         tensorial = {}
         for k,v in stacked.items():
-            v = [b for a,b in sorted(v, key=lambda x:str(x[0]))]
+            v = [b for a,b in v]
             tensorial[k] = torch.cat(v, dim=-1)
 
         if self.single_output:

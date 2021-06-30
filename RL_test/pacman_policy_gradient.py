@@ -16,32 +16,18 @@ import cherry.envs as envs
 
 
 import os
-from RL_test.util import init_logger, create_logger
+from RL_test.util import init_logger, create_logger, initial_log
 from RL_test.util import draw as draw
 
 
-SEED = 567
-GAMMA = 0.99
-RENDER = False
-learning_rate = 1e-3
-logger_name = "policy_gradient"
 
-
-random.seed(SEED)
-np.random.seed(SEED)
-th.manual_seed(SEED)
-
-LAYOUT = 'testGrid'# Pick an layout from relenvs_pip/relenvs/envs/pacman/layouts
-REWARD_GOAL = 10
-REWARD_DIE = 0
-REWARD_FOOD = 0
-REWARD_TIME = -1
 
 
 
 class Logger(envs.Logger):
-    def __init__(self, env, interval=1000, episode_interval=10, title=None, logger=None):
+    def __init__(self, env, interval=1000, episode_interval=10, title=None, logger=None, logger_raw=None):
         super(Logger, self).__init__(env, interval, episode_interval, title, logger=logger)
+        self.logger_raw = logger_raw
 
     def _episodes_length_rewards(self, rewards, dones):
         """
@@ -74,6 +60,28 @@ class Logger(envs.Logger):
             episode_lengths.append(length)
         return episode_rewards, episode_lengths
 
+    def step(self, *args, **kwargs):
+        state, reward, done, info = self.env.step(*args, **kwargs)
+        self.all_rewards.append(reward)
+        self.all_dones.append(done)
+        self.num_steps += 1
+        # self.logger_raw.debug((reward, done))
+
+        if self.interval > 0 and self.num_steps % self.interval == 0:
+            msg, ep_stats, steps_stats = self.stats()
+            if self.is_vectorized:
+                info[0]['logger_steps_stats'] = steps_stats
+                info[0]['logger_ep_stats'] = ep_stats
+            else:
+                info['logger_steps_stats'] = steps_stats
+                info['logger_ep_stats'] = ep_stats
+            self.logger.info(msg)
+        if isinstance(done, bool):
+            if done:
+                self.num_episodes += 1
+        else:
+            self.num_episodes += sum(done)
+        return state, reward, done, info
 
 class PolicyNet(nn.Module):
     def __init__(self, input_size, output_size):
@@ -90,7 +98,7 @@ class PolicyNet(nn.Module):
         return F.softmax(action_scores, dim=1)
 
 
-def update(replay):
+def update(replay, optimizer, GAMMA):
     policy_loss = []
 
     # Discount and normalize rewards
@@ -110,14 +118,30 @@ def update(replay):
 
 
 
-if __name__ == '__main__':
+def main(step_limit=10000):
+    SEED = 567
+    GAMMA = 0.99
+    RENDER = False
+    learning_rate = 1e-3
+    logger_name = "policy_gradient"
+
+    random.seed(SEED)
+    np.random.seed(SEED)
+    th.manual_seed(SEED)
+
+    LAYOUT = 'grid2x2'  # Pick an layout from relenvs_pip/relenvs/envs/pacman/layouts
+    REWARD_GOAL = 10
+    REWARD_CRASH = 0
+    REWARD_FOOD = 0
+    REWARD_TIME = -1
+
     # Wrap environments
     env_name = 'Pacman-v0'
 
     args = {
         'layout': LAYOUT,
         'reward_goal': str(REWARD_GOAL),
-        'reward_crash': str(REWARD_DIE),
+        'reward_crash': str(REWARD_CRASH),
         'reward_food': str(REWARD_FOOD),
         'reward_time': str(REWARD_TIME)
     }
@@ -131,14 +155,26 @@ if __name__ == '__main__':
     input_size = (height * grid_size) * (width * grid_size)
     output_size = 5
 
-    logger_file = os.path.join(os.path.dirname(__file__), f"{logger_name}.log")
-    logf = open(logger_file, "w")
+    #####   logging   #############
+    logger_name_info = logger_name
+    logger_file_info = os.path.join(os.path.dirname(__file__), f"{logger_name_info}_{LAYOUT}.log")
+    logf_info = open(logger_file_info, "w")
+    logger_info = init_logger(verbose=3, name=logger_name, out=logf_info)
+    create_logger(logger_name_info, 3)
+    initial_log(logger_name_info, LAYOUT, 123, REWARD_GOAL, REWARD_CRASH, REWARD_FOOD, REWARD_TIME,
+                shield={"type": "None", "seed": SEED}, lr=learning_rate)
 
-    logger = init_logger(verbose=3, name=logger_name, out=logf)
-    create_logger(logger_name, 3)
+    #####   logging_raw   #############
+    logger_name_raw = logger_name + "_raw"
+    logger_file_raw = os.path.join(os.path.dirname(__file__), f"{logger_name_raw}_{LAYOUT}.log")
+    logf_raw = open(logger_file_raw, "w")
+    logger_raw = init_logger(verbose=3, name=logger_name_raw, out=logf_raw)
+    create_logger(logger_name_raw, 3)
+    initial_log(logger_name_raw, LAYOUT, 123, REWARD_GOAL, REWARD_CRASH, REWARD_FOOD, REWARD_TIME,
+                shield={"type": "None", "seed": SEED}, lr=learning_rate)
 
 
-    env = Logger(env, interval=100, logger=logger)
+    env = Logger(env, interval=100, logger=logger_info, logger_raw=logger_raw)
     env = envs.Torch(env)
     env.seed(SEED)
 
@@ -147,6 +183,7 @@ if __name__ == '__main__':
     running_reward = 400
     replay = ch.ExperienceReplay()
 
+    s = 0
 
     for i_episode in count(1):
         state = env.reset()
@@ -171,10 +208,16 @@ if __name__ == '__main__':
                           done,
                           # Cache log_prob for later
                           log_prob=log_prob)
+
+            logger_raw.debug((reward, done))
+            s += 1
+
             if RENDER:
                 env.render()
             if done:
                 break
+        if s > step_limit:
+            break
 
         #  Compute termination criterion
         # running_reward = running_reward * 0.99 + t * 0.01
@@ -191,5 +234,7 @@ if __name__ == '__main__':
         #     break
 
         # Update policy
-        update(replay)
+        update(replay, optimizer, GAMMA)
         replay.empty()
+
+# main()
