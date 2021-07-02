@@ -15,9 +15,9 @@ from sampling_traces import unpickle_from_file, coord_to_node_id, node_id_to_coo
 from problog.logic import Term, Constant
 import dgl.nn.pytorch as dglnn
 
-LAYOUT = "TestGrid" # We can change the layout by changing relenvs_pip/relvens/envs/pacman/layouts/testGrid.lay
-NUM_SAMPLE_TRACES = 10
-trace_file = LAYOUT+"_traces_"+str(NUM_SAMPLE_TRACES)+".p"
+LAYOUT = "testGrid" # We can change the layout by changing relenvs_pip/relvens/envs/pacman/layouts/testGrid.lay
+NUM_SAMPLE_TRACES = 20
+NUM_SAMPLE_STATES = 20
 MAX_ARITY = 2 # FIXME: do not hard code this. This is the max arity of state predicates
 
 # We use the standard message and reduce functions
@@ -32,7 +32,7 @@ class RGCN(nn.Module):
         self.layers = nn.ModuleList()
 
         # Hidden Layers
-        for i in range(1):
+        for i in range(3):
             self.layers.append(dglnn.HeteroGraphConv({
             rel: dglnn.GraphConv(in_feats, hid_feats, activation=F.relu)
             for rel in rel_names}, aggregate='sum'))
@@ -46,55 +46,41 @@ class RGCN(nn.Module):
     def forward(self, graph, inputs, **kwargs):
         # inputs is features of nodes
         h = inputs
-        for layer in self.layers:
-            h = layer(graph, h, **kwargs)
+        for i, layer in enumerate(self.layers):
+            if i == 0:
+                h = layer(graph, h, **kwargs)
+            else:
+                h = layer(graph, h)
         return h
 
 
 class HeteroClassifier(nn.Module):
-    def __init__(self, in_dim, hidden_dim, n_classes, rel_names, use_edge_features=True):
+    def __init__(self, in_dim, hidden_dim, n_classes, rel_names):
         super().__init__()
         self.layers = nn.ModuleList()
         self.layers.append(
             RGCN(in_dim, hidden_dim, n_classes, rel_names)
         )
-        # self.rgcn1 = RGCN(in_dim, hidden_dim, hidden_dim, rel_names)
-        # self.classify = nn.Linear(hidden_dim, n_classes)
-        self.use_edge_features = use_edge_features
 
     def forward(self, g):
-        if self.use_edge_features:
-            # We need to manually port the edge features to the rgcn layer
-            etypes = [key[1] for key in g.edata['arg_pos'].keys()]
-            edge_features = {
-                etype: {
-                    'edge_weight': g.edges[etype].data['arg_pos']
-                } for etype in etypes}
-            kwargs = {'mod_kwargs': edge_features}
-        else:
-            kwargs = {}
+        # if self.use_edge_features:
+        #     # We need to manually port the edge features to the rgcn layer
+        #     etypes = [key[1] for key in g.edata['arg_pos'].keys()]
+        #     edge_features = {
+        #         etype: {
+        #             'edge_weight': g.edges[etype].data['arg_pos']
+        #         } for etype in etypes}
+        #     kwargs = {'mod_kwargs': edge_features}
+        # else:
+        #     kwargs = {}
 
         h = g.ndata['feat']
         # call the layer
-        for layer in self.layers:
-            h = layer(g, h, **kwargs)
-
-        with g.local_scope():
-            g.ndata['h'] = h
-            # FIXME: The dim should be equal to n_classes?
-            g.apply_nodes(lambda nodes: {'h': th.mean(nodes.data['h'], dim=1)}, ntype='move')
-            return g.ndata['h']
-
+        for i, layer in enumerate(self.layers):
+            # if i != len(self.layers) - 1:
+            h = layer(g, h)
         # return h
-
-        # with g.local_scope():
-        #     g.ndata['h'] = h
-        #     # Calculate graph representation by average readout.
-        #     hg = 0
-        #     for ntype in g.ntypes:
-        #         hg = hg + dgl.mean_nodes(g, 'h', ntype=ntype)
-        #     return self.classify(hg)
-
+        return h['move'].reshape(-1, 5) # FIXME: 5 comes from g.batch_num_nodes('move')
 
 
 
@@ -113,7 +99,7 @@ class PacmanDataset(DGLDataset):
         traces = unpickle_from_file(self.trace_file)
         for trace in traces:
             # for state, action, reward in trace:
-            for state, action, reward in trace:
+            for state, action , reward, bad_actions  in trace:
                 # get all atom types
                 atom_types = list(set([atom.functor for atom in state]))
                 # create a name dict, an edge dict, an edge feature dict
@@ -169,10 +155,19 @@ class PacmanDataset(DGLDataset):
                 graph.nodes['constant'].data['feat'] = \
                     th.ones((graph.number_of_nodes('constant'), MAX_ARITY), dtype=th.float32)
 
-                # # TODO: create available actions for DQN
+                # FIXME = 5 comes from num of vailable actions
+                label = th.ones(5, dtype=th.float32)
+                for bad_action in bad_actions:
+                    label[name_node_dict['move'][bad_action]] = 0
+
+                # TODO: labeling actions for DQN
                 # graph.nodes['move'].data['label'] = th.zeros((graph.number_of_nodes('move'), 1), dtype=th.float32)
-                # selected_move_node_index = name_node_dict['move'][action]
-                # graph.nodes['move'].data['label'][selected_move_node_index] = th.ones(1)
+                # label = th.arange(graph.number_of_nodes('move'))
+                # if reward < -300:
+                #     # selected_move_node_index = name_node_dict['move'][action]
+                #     label = label[label != name_node_dict['move'][action]]
+                #     # graph.nodes['move'].data['label'][selected_move_node_index] = th.zeros(1)
+
 
                 # # create the graph label
                 # temp_label = self.safe_label_of_state(state)
@@ -184,10 +179,8 @@ class PacmanDataset(DGLDataset):
 
                 # save the graph and the graph label
                 self.graphs.append(graph)
-                self.labels.append(reward)
-
-
-                ################ Draw #####################
+                self.labels.append(label)
+                # ################ Draw #####################
                 # # We prepare name tags of node and save in node_name_dict {node_id: node_name}
                 # node_name_dict = {type: {} for type in name_node_dict}
                 # # reverse keys and values of name_node_dict
@@ -303,11 +296,12 @@ def to_homo_networkx(g):
 def evaluate(model, g, labels):
     model.eval()
     with th.no_grad():
-        logits = model(g)['move']
-        # _, indices = th.max(logits, dim=1)
-        correct = th.sum(logits == labels)
+        logits = model(g)
 
-        loss = loss_func_4(logits, labels.double())
+        # _, indices = th.max(logits, dim=1)
+        correct = th.sum((logits > 0).long() == labels)
+
+        loss = loss_func(logits, labels)
 
         # fp = th.sum((indices == True) & (labels == False))
         # tp = th.sum((indices == True) & (labels == True))
@@ -318,8 +312,8 @@ def evaluate(model, g, labels):
         # recall = tp / (tp + fn)
         # f1 = 2 * (precision * recall) / (precision + recall)
 
-
-        return correct.item() * 1.0 / len(labels), loss #f1, precision, recall
+        # return 0, loss
+        return correct.item() * 1.0 / len(labels.reshape(-1)), loss #f1, precision, recall
 
 
 # This is to sample mini batches
@@ -327,8 +321,7 @@ def collate(samples):
     # graphs, labels = map(list, zip(*samples))
     graphs, labels = map(list, zip(*samples))
     batched_graph = dgl.batch(graphs)
-    # flat_labels = [l for label in labels for l in label]
-    return batched_graph, th.tensor(labels)
+    return batched_graph, th.stack(labels)
 
 def plot_losses(epoch_losses1):
     plt.title('train loss')
@@ -340,35 +333,38 @@ def plot_losses(epoch_losses1):
 
 # Randomly sample some traces of the pacman domain
 # You can comment out this line to always use the same traces
-trace_file, rel_width = sample(layout=LAYOUT, sampling_episodes=NUM_SAMPLE_TRACES)
-# rel_width = 8
+# trace_file, rel_width = sample(layout=LAYOUT, sampling_episodes=NUM_SAMPLE_TRACES)
+# rel_width = 4
+train_trace_file, train_rel_width = sample_no_env(layout=LAYOUT, num_states=NUM_SAMPLE_STATES)
+test_trace_file, test_rel_width = sample_no_env(layout=TESTLAYOUT, num_states=NUM_SAMPLE_STATES)
 
 # Some hyper parameters
 in_dim = MAX_ARITY
-hidden_dim = 8
+hidden_dim = 32
 n_classes = 1 # binary classification
-learning_rate = 1e-1
-out_dim = 8
+learning_rate = 0.1
+
 
 # Create dataset
-dataset = PacmanDataset(trace_file, rel_width, n_classes)
-
-trainset, validateset, testset = dgl.data.utils.split_dataset(dataset, frac_list=[0.9,0.0,0.1])
+trainset = PacmanDataset(train_trace_file, train_rel_width, n_classes)
+testset = PacmanDataset(test_trace_file, test_rel_width, n_classes)
+# trainset, validateset, testset = dgl.data.utils.split_dataset(dataset, frac_list=[0.9,0.0,0.1])
 
 batch_size_train = 32
-epochs = 100
+epochs = 1000
 # Use PyTorch's DataLoader and the collate function defined before.
 data_loader_train = DataLoader(trainset, batch_size=batch_size_train, shuffle=True, collate_fn=collate)
 
 
 # Create graph classifier and train
-graph_classifier = HeteroClassifier(in_dim, hidden_dim, n_classes, rel_names=dataset.graphs[0].etypes, use_edge_features=True)
+graph_classifier = HeteroClassifier(in_dim, hidden_dim, n_classes, rel_names=trainset.graphs[0].etypes)
 # graph_classifier = RGCN(in_dim, hidden_dim, n_classes, rel_names=dataset.graphs[0].etypes)
 
 # graph_loss_func_1 = nn.CrossEntropyLoss(weight=th.tensor([1., 1.]))
+# graph_loss_func_1 = nn.CrossEntropyLoss()
 # graph_loss_func_2 = nn.NLLLoss()
 # graph_loss_func_3 = F.binary_cross_entropy_with_logits(x, y)
-loss_func_4 = nn.MSELoss()  # nn.L1Loss()
+loss_func = nn.BCEWithLogitsLoss(pos_weight=th.tensor([10., 10., 10., 10., 10.]))
 
 graph_optimizer = th.optim.Adam(graph_classifier.parameters(), lr=learning_rate)
 dur = []
@@ -379,17 +375,17 @@ for epoch in range(epochs):
     t0 = time.time()
     for (iter, (g, labels)) in enumerate(data_loader_train):
         graph_classifier.train()
-        graph_logits = graph_classifier(g)['move']
-
-        train_loss = loss_func_4(graph_logits, labels.float())
+        graph_logits = graph_classifier(g)
+        # graph_logits = graph_logits.squeeze(1)
+        train_loss = loss_func(graph_logits, labels)
 
         ## graph_loss_func_1
         # train_loss = graph_loss_func_1(graph_logits, labels.long())
 
         ## graph_loss_func_2
         # graph_logp = F.log_softmax(graph_logits, 1)
-        # graph_loss = graph_loss_func_2(graph_logp, labels.long())
-
+        # train_loss = graph_loss_func_2(graph_logits, labels)
+        #
         ## graph_loss_func_3
         # y = th.zeros(batch_size, n_classes)
         # y[range(y.shape[0]), labels] = 1
@@ -405,9 +401,8 @@ for epoch in range(epochs):
     # evaluate
     train_acc, dd = evaluate(graph_classifier, g, labels)
 
-    test_graph = dgl.batch(testset.dataset.graphs)
-    # test_labels = th.tensor([l for label in testset.dataset.labels for l in label])
-    test_labels = th.tensor(testset.dataset.labels)
+    test_graph = dgl.batch(testset.graphs)
+    test_labels = th.stack(testset.labels)
     test_acc, test_loss = evaluate(graph_classifier, test_graph, test_labels)
 
     test_accs.append(test_acc)
@@ -415,9 +410,9 @@ for epoch in range(epochs):
 
     print(f"Epoch {epoch:05d} | " +
           f"\tTrain Loss {train_loss.item():.4f} | " +
-          # f"\tTrain Acc {train_acc:.4f} | " +
+          f"\tTrain Acc {train_acc:.4f} | " +
           f"\t\tTest Loss {test_loss.item():.4f} | " +
-          # f"\tTest Acc {test_acc:.4f} | " +
+          f"\tTest Acc {test_acc:.4f} | " +
           f"\t\tTime(s) {np.mean(dur):.4f} | ")
 
 

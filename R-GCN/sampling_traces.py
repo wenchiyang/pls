@@ -14,27 +14,33 @@ def node_id_to_coord(width, node_id):
     return int(node_id) % width, int(node_id) // width
 
 
-def relationize(state, action):
+def relationize(width, height, agentStates, layoutwalls, layoutfood, action):
     relstate = []
-    width = state.data.layout.width
-    height = state.data.layout.height
 
     # Add agents atoms: pacman(loc) and ghost(id,loc)
-    for i, loc in enumerate([i.configuration.pos for i in (state.data.agentStates)]):
-        if i == 0:
-            relstate.append(Term("pacman", Constant(coord_to_node_id(width, loc[0], loc[1]))))
-        else:
-            relstate.append(Term("ghost", Constant(i), Constant(coord_to_node_id(width, loc[0], loc[1]))))
+    pacman_i, pacman_j = [i for i in (agentStates)][0]
+    pacman_loc = Constant(coord_to_node_id(width, int(pacman_i), int(pacman_j)))
+    ghost_i, ghost_j = [i for i in (agentStates)][1]
+    ghost_loc = Constant(coord_to_node_id(width, int(ghost_i), int(ghost_j)))
+
+    relstate.append(Term("pacman", Constant(pacman_loc)))
+    relstate.append(Term("ghost", Constant(1), Constant(ghost_loc)))
+
+    # for i, loc in enumerate([f for f in agentStates]): # i.configuration.pos
+    #     if i == 0:
+    #         relstate.append(Term("pacman", Constant(coord_to_node_id(width, loc[0], loc[1]))))
+    #     else:
+    #         relstate.append(Term("ghost", Constant(i), Constant(coord_to_node_id(width, loc[0], loc[1]))))
 
     # Add wall(loc) atoms
-    walls = np.array(state.data.layout.walls.data).T
+    walls = np.array(layoutwalls).T
     for j, row in enumerate(walls):
         for i, c in enumerate(row):
             if c:
                 relstate.append(Term("wall", Constant(coord_to_node_id(width, i, j))))
 
     # Add food(loc) atoms
-    food = np.array(state.data.food.data).T
+    food = np.array(layoutfood).T
     for j, row in enumerate(food):
         for i, c in enumerate(row):
             if c:
@@ -50,14 +56,19 @@ def relationize(state, action):
             links = [Term("link", Constant(loc), Constant(neighboring_loc)) for neighboring_loc in neighboring_locs]
             relstate += links
 
-    # # Add available actions
-    i, j = [i.configuration.pos for i in (state.data.agentStates)][0]
-    pacman_loc = Constant(coord_to_node_id(width, i, j))
-    # neighboring_locs = [Constant(coord_to_node_id(width, ii, jj))
-    #                     for (ii, jj) in [(i, j - 1), (i - 1, j), (i + 1, j), (i, j + 1), (i, j)] # South, West, East, North, Stop
-    #                     if 0 <= ii < width and 0 <= jj < height]
-    # moves = [Term("move", Constant(pacman_loc), Constant(neighboring_loc)) for neighboring_loc in neighboring_locs]
-    # relstate += moves
+
+
+
+
+
+    i = pacman_i
+    j = pacman_j
+    # Add available actions
+    neighboring_locs = [Constant(coord_to_node_id(width, ii, jj))
+                        for (ii, jj) in [(i, j - 1), (i - 1, j), (i + 1, j), (i, j + 1), (i, j)] # South, West, East, North, Stop
+                        if 0 <= ii < width and 0 <= jj < height]
+    moves = [Term("move", Constant(pacman_loc), Constant(neighboring_loc)) for neighboring_loc in neighboring_locs]
+    relstate += moves
 
     # Add selected actions
     action_links = {
@@ -71,9 +82,15 @@ def relationize(state, action):
     action_link = Constant(coord_to_node_id(width, action_links[action][0], action_links[action][1]))
     relaction = Term("move", Constant(pacman_loc), Constant(action_link))
 
-    relstate.append(relaction)
-
-    return relstate, relaction, width
+    # for testing
+    if ghost_loc in neighboring_locs:
+        bad_actions = [Term("move", Constant(pacman_loc), Constant(ghost_loc)),
+                       Term("move", Constant(pacman_loc), Constant(pacman_loc))
+                       ]
+    else:
+        # bad_actions = [Term("move", Constant(pacman_loc), Constant(pacman_loc))]
+        bad_actions = []
+    return relstate, relaction, width, bad_actions
 
 
 
@@ -102,8 +119,11 @@ def sample(layout='smallGrid2', sampling_episodes=200):
         while not env.game.gameOver:
             action = random.choice(all_actions)
             next_state, reward, is_gameOver, _ = env.step(action)
-            rel_current_state, rel_action, rel_width = relationize(current_state, action)
-            trace.append((rel_current_state, rel_action, reward))
+            rel_current_state, rel_action, rel_width, bad_actions = \
+                relationize(current_state.data.layout.width, current_state.data.layout.height,
+                            current_state.data.agentStates, current_state.data.layout.walls.data,
+                            current_state.data.food.data, action)
+            trace.append((rel_current_state, rel_action, reward, bad_actions))
             current_state = next_state
         # # Add the last state of the trace
         # rel_current_state, rel_action, rel_width = relationize(current_state, action)
@@ -127,38 +147,75 @@ def unpickle_from_file(filename):
     infile.close()
     return pickled
 
-def sample_no_env(num_states):
+def sample_no_env(layout='smallGrid2', num_states=20):
+    ENV_NAME = 'Pacman-v0'
+
+    SIMPLE_ENV_ARGS = readCommand([
+        '--layout', layout,
+        '--withoutShield', '1',
+        '--pacman', 'ApproximateQAgent',
+        '--numGhostTraining', '0',
+        '--numTraining', str(1),  # Training episodes
+        '--numGames', str(1)  # Total episodes
+    ])
+
+    # Get an simple environment
+    env = gym.make(ENV_NAME, **SIMPLE_ENV_ARGS)
+    current_state = env.game.state
+
+
     from random import randrange
-    height = 2
-    width = 2
+    height = current_state.data.layout.height
+    width = current_state.data.layout.width
     traces = []
-    relstates = []
+    trace = []
+
+    walls = np.array(current_state.data.layout.walls.data).T
+    wall_coords = []
+    for j, row in enumerate(walls):
+        for i, c in enumerate(row):
+            if c:
+                wall_coords.append((i, j))
+
     for n in range(num_states):
-        relstate = []
-        pacman_i = randrange(0, height)
-        pacman_j = randrange(0, width)
-        ghost_i = randrange(0, height)
-        ghost_j = randrange(0, width)
-        relstate.append(Term("pacman", Constant(coord_to_node_id(width, pacman_i, pacman_j))))
-        relstate.append(Term("ghost", Constant(0), Constant(coord_to_node_id(width, ghost_i, ghost_j))))
+        pacman_i = int(randrange(0, width))
+        pacman_j = int(randrange(0, height))
+        while (pacman_i, pacman_j) in wall_coords:
+            pacman_i = int(randrange(0, width))
+            pacman_j = int(randrange(0, height))
+        ghost_i = int(randrange(0, width))
+        ghost_j = int(randrange(0, height))
+        while (ghost_i, ghost_j) == (pacman_i, pacman_j) or (ghost_i, ghost_j) in wall_coords:
+            ghost_i = int(randrange(0, width))
+            ghost_j = int(randrange(0, height))
 
-        # Add link(loc, loc) atoms
-        for j in range(height):
-            for i in range(width):
-                loc = Constant(coord_to_node_id(width, i, j))
-                neighboring_locs = [Constant(coord_to_node_id(width, ii, jj))
-                                    for (ii, jj) in [(i, j - 1), (i - 1, j), (i + 1, j), (i, j + 1)]
-                                    if 0 <= ii < width and 0 <= jj < height]
-                links = [Term("link", Constant(loc), Constant(neighboring_loc)) for neighboring_loc in neighboring_locs]
-                for link in links:
-                    relstate.append(link)
+        layoutfood = current_state.data.food.data
+        sampling_food = []
+        for row in layoutfood:
+            sampling_food_row = []
+            for cell in row:
+                if cell:
+                    sampling_food_row.append(random.choice([True, False]))
+                else:
+                    sampling_food_row.append(False)
+            sampling_food.append(sampling_food_row)
 
-        relstates.append(relstate)
 
-    traces.append(relstates)
+        rel_current_state, rel_action, rel_width, bad_actions = \
+            relationize(width,
+                        height,
+                        [(pacman_i, pacman_j), (ghost_i, ghost_j)],
+                        current_state.data.layout.walls.data,
+                        layoutfood,
+                        action='Stop')
+        trace.append((rel_current_state, rel_action, 0, bad_actions))
+
+    traces.append(trace)  # one trace
     filename = f"random_{num_states}.p"
     pickle_to_file(filename, traces)
     return filename, width
+
+
 
 def draw():
     import networkx as nx
