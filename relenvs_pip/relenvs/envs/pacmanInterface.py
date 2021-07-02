@@ -41,7 +41,7 @@ def sample_positions(layout):
 
 class PacmanEnv(gym.Env):
     metadata = {'render.modes': ['human']}
-    def __init__(self, layout, reward_goal, reward_crash, reward_food, reward_time):
+    def __init__(self, layout, seed, reward_goal, reward_crash, reward_food, reward_time):
         """"""
 
         args = readCommand([
@@ -56,7 +56,7 @@ class PacmanEnv(gym.Env):
 
 
         # set OpenAI gym variables
-        self._seed = 123
+        self._seed = seed
         self.A = ['Stop','North', 'South', 'West', 'East']
         self.steps = 0
         self.history = []

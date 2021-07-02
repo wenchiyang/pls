@@ -6,7 +6,6 @@ import numpy as np
 import re
 
 def parse(logger_file):
-
     f = open(logger_file, 'r')
     line = f.readline()
     datapoints = []
@@ -77,11 +76,9 @@ def make_chart1(data_series):
 
 def make_chart2(data_series):
 
-    # data_series[1] += len(data_series[0])
-
     combined_data_series = pd.concat(data_series, keys=['no_dpl','dpl'], names=['exp'])
     combined_data_series = combined_data_series.reset_index(0)
-    combined_data_series['series'] = combined_data_series['exp'] + " "+ combined_data_series['variable']
+    combined_data_series['series'] = combined_data_series['exp'] + " " + combined_data_series['variable']
 
     # Data is prepared, now make a chart
     # selection_first_name = alt.selection_multi(fields=['exp_name'], empty='none')
@@ -130,7 +127,7 @@ if __name__ == "__main__":
     # logger_file_no_dpl = "policy_gradient_good.log"
     # logger_file_dpl = "policy_gradient_dpl_good.log"
     logger_file_no_dpl = "policy_gradient_grid2x2.log"
-    logger_file_dpl = "policy_gradient_dpl_grid2x2.log"
+    logger_file_dpl = "policy_gradient_dpl_grid2x2_1e-3.log"
     data_series_no_dpl = create_data_series(logger_file_no_dpl)
     data_series_dpl = create_data_series(logger_file_dpl)
-    make_chart1([data_series_no_dpl, data_series_dpl])
+    make_chart2([data_series_no_dpl, data_series_dpl])

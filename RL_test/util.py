@@ -2,6 +2,19 @@ import logging
 import sys
 from logging import getLogger
 import matplotlib.pyplot as plt
+import os
+
+from pathlib import Path
+
+def create_loggers(names, args, timestamp):
+    folderpath = os.path.join(os.path.dirname(__file__), timestamp)
+    Path(folderpath).mkdir(parents=True, exist_ok=True)
+    for name in names:
+        logger_file = os.path.join(folderpath, f"{name}.log")
+        logf = open(logger_file, "w")
+        init_logger(verbose=3, name=name, out=logf)
+        initial_log(name, args)
+
 
 def init_logger(verbose=None, name="policy_gradient", out=None):
     """Initialize default logger.
@@ -15,10 +28,9 @@ def init_logger(verbose=None, name="policy_gradient", out=None):
     """
     if out is None:
         out = sys.stdout
-
     logger = logging.getLogger(name)
     ch = logging.StreamHandler(out)
-    formatter = logging.Formatter('[%(levelname)s] %(message)s')
+    formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s', datefmt='%Y/%m/%d %H:%M:%S')
     ch.setFormatter(formatter)
     logger.addHandler(ch)
     if not verbose:
@@ -33,17 +45,15 @@ def init_logger(verbose=None, name="policy_gradient", out=None):
         level = max(1, 12 - verbose)  # between 9 and 1
         logger.setLevel(level)
         logger.log(level, "Output level: %s" % level)
-    return logger
 
-def create_logger(name, verbose):
-    levels = [logging.WARNING, logging.INFO, logging.DEBUG] + list(range(9, 0, -1))
-    verbose = max(0, min(len(levels) - 1, verbose))
-    logger = getLogger(name)
-    ch = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter("[%(levelname)s] %(message)s")
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
-    logger.setLevel(levels[verbose])
+    # levels = [logging.WARNING, logging.INFO, logging.DEBUG] + list(range(9, 0, -1))
+    # verbose = max(0, min(len(levels) - 1, verbose))
+    # logger = getLogger(name)
+    # ch = logging.StreamHandler(sys.stdout)
+    # formatter = logging.Formatter("[%(levelname)s] %(message)s")
+    # ch.setFormatter(formatter)
+    # logger.addHandler(ch)
+    # logger.setLevel(levels[verbose])
 
 
 def draw(image):
@@ -51,18 +61,19 @@ def draw(image):
     plt.imshow(image, cmap='gray', vmin=0, vmax=1)
     plt.show()
 
-def initial_log(name, layout, map_seed, reward_goal, reward_crach, reward_food, reward_time,
-                shield, lr):
+def initial_log(name, args):
     logger = getLogger(name)
-    logger.info(f"Map: {layout}")
-    logger.info(f"Map seed: {map_seed}")
-    logger.info(f"Reward structure: ")
-    logger.info(f"    goal = {reward_goal}")
-    logger.info(f"    crash = {reward_crach}")
-    logger.info(f"    food = {reward_food}")
-    logger.info(f"    time = {reward_time}")
-    logger.info(f"Shielded type: {shield['type']}")
-    if shield['type'] != "None":
-        logger.info(f"    Object detection: {shield['object_detection']}")
-    logger.info(f"    Seed: {shield['seed']}")
-    logger.info(f"    Learning rate: {lr}")
+    logger.info(f"Layout:           {args['layout']}")
+    logger.info(f"Learning rate:    {args['learning_rate']}")
+    logger.info(f"Shield:           {args['shield']}")
+    logger.info(f"Object detection: {args['object_detection']}")
+    logger.info(f"Reward goal:      {args['reward_goal']}")
+    logger.info(f"Reward crash:     {args['reward_crash']}")
+    logger.info(f"Reward food:      {args['reward_food']}")
+    logger.info(f"Reward time:      {args['reward_time']}")
+    logger.info(f"Step limit:       {args['step_limit']}")
+    logger.info(f"Logger:           {args['logger_name']}")
+    logger.info(f"Seed:             {args['seed']}")
+    logger.info(f"Gamma:            {args['gamma']}")
+    logger.info(f"Render:           {args['render']}")
+
