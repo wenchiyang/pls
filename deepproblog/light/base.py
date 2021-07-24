@@ -5,12 +5,12 @@ from problog.sdd_formula import SDD
 from deepproblog.light.semiring import GraphSemiring
 from collections import defaultdict
 
-class DeepProbLogLayer(nn.Module):
 
-    def __init__(self, program, queries="", evidence="", single_output = None):
+class DeepProbLogLayer(nn.Module):
+    def __init__(self, program, queries="", evidence="", single_output=None):
         super().__init__()
-        query = "\n".join(["query(%s)."% q for q in queries])
-        self.program = "\n\n".join([program,evidence,query])
+        query = "\n".join(["query(%s)." % q for q in queries])
+        self.program = "\n\n".join([program, evidence, query])
         self.lf = LogicFormula.create_from(self.program)
         self.dag = LogicDAG.create_from(self.lf)
         self.sdd = SDD.create_from(self.dag)
@@ -23,20 +23,17 @@ class DeepProbLogLayer(nn.Module):
             self.semiring.set_weights({self.single_output: x})
         else:
             self.semiring.set_weights(x)
-        out = self.sdd.evaluate(semiring = self.semiring)
+        out = self.sdd.evaluate(semiring=self.semiring)
         stacked = defaultdict(list)
-        for k,v in out.items():
-            stacked[k.functor].append((k,v))
+        for k, v in out.items():
+            stacked[k.functor].append((k, v))
 
         tensorial = {}
-        for k,v in stacked.items():
-            v = [b for a,b in v]
+        for k, v in stacked.items():
+            v = [b for a, b in v]
             tensorial[k] = torch.cat(v, dim=-1)
 
         if self.single_output:
             return tensorial[self.single_output]
         else:
             return tensorial
-
-
-

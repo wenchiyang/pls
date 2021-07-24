@@ -7,7 +7,6 @@ from itertools import count
 
 import torch as th
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
 
@@ -15,7 +14,7 @@ import cherry as ch
 import cherry.envs as envs
 import matplotlib.pyplot as plt
 
-from RL_test.dpl_policy import DPLSafePolicy
+from src.dpl_policy import DPLSafePolicy
 
 SEED = 567
 GAMMA = 0.99

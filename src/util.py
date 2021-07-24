@@ -3,17 +3,26 @@ import sys
 from logging import getLogger
 import matplotlib.pyplot as plt
 import os
-
+import torch as th
 from pathlib import Path
 
-def create_loggers(names, args, timestamp):
-    folderpath = os.path.join(os.path.dirname(__file__), timestamp)
-    Path(folderpath).mkdir(parents=True, exist_ok=True)
+
+def myformat(tensor):
+    s = str(tensor)
+    s = "".join(s.split())
+    return s
+
+
+def create_loggers(folder, names):
+    # folderpath = os.path.join(os.path.dirname(__file__), timestamp)
+    Path(folder).mkdir(parents=True, exist_ok=True)
     for name in names:
-        logger_file = os.path.join(folderpath, f"{name}.log")
+        logger_file = os.path.join(folder, f"{name}.log")
         logf = open(logger_file, "w")
         init_logger(verbose=3, name=name, out=logf)
-        initial_log(name, args)
+        # initial_log(name, args)
+        if "raw" not in name:
+            init_logger(verbose=3, name=name)
 
 
 def init_logger(verbose=None, name="policy_gradient", out=None):
@@ -30,7 +39,9 @@ def init_logger(verbose=None, name="policy_gradient", out=None):
         out = sys.stdout
     logger = logging.getLogger(name)
     ch = logging.StreamHandler(out)
-    formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s', datefmt='%Y/%m/%d %H:%M:%S')
+    formatter = logging.Formatter(
+        "[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%Y/%m/%d %H:%M:%S"
+    )
     ch.setFormatter(formatter)
     logger.addHandler(ch)
     if not verbose:
@@ -58,8 +69,9 @@ def init_logger(verbose=None, name="policy_gradient", out=None):
 
 def draw(image):
     plt.axis("off")
-    plt.imshow(image, cmap='gray', vmin=0, vmax=1)
+    plt.imshow(image, cmap="gray", vmin=0, vmax=1)
     plt.show()
+
 
 def initial_log(name, args):
     logger = getLogger(name)
@@ -77,3 +89,30 @@ def initial_log(name, args):
     logger.info(f"Gamma:            {args['gamma']}")
     logger.info(f"Render:           {args['render']}")
 
+
+def get_ground_ghost(input, center_color, detect_color):
+    # find center coord
+    r, c = (input == center_color).nonzero(as_tuple=True)
+    neighbors = [
+        input[r - 1, c],  # up
+        input[r + 1, c],  # down
+        input[r, c - 1],  # left
+        input[r, c + 1],  # right
+    ]
+    neigh = (th.stack(neighbors) == detect_color).float().view(-1)
+    no_ghost = (1 - neigh.sum()).view(-1)
+    res = th.cat((no_ghost, neigh)).view(1, -1)
+    return res
+
+
+def get_ground_wall(input, center_color, detect_color):
+    # find center coord
+    r, c = (input == center_color).nonzero(as_tuple=True)
+    neighbors = [
+        input[r - 1, c],  # up
+        input[r + 1, c],  # down
+        input[r, c - 1],  # left
+        input[r, c + 1],  # right
+    ]
+    res = (th.stack(neighbors) == detect_color).float().view(1, -1)
+    return res

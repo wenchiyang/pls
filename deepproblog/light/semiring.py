@@ -1,8 +1,8 @@
 from problog.evaluator import Semiring
 import torch
 
-class GraphSemiring(Semiring):
 
+class GraphSemiring(Semiring):
     def __init__(self):
         Semiring.__init__(self)
         self.eps = 1e-12
@@ -42,7 +42,5 @@ class GraphSemiring(Semiring):
     def value(self, a):
         """Transform the given external value into an internal value."""
         i = int(a.args[0])
-        v = self.weights[a.functor][:, i:i+1]
+        v = self.weights[a.functor][:, i : i + 1]
         return v
-
-

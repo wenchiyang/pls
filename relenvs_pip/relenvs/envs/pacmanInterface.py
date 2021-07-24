@@ -189,6 +189,10 @@ class PacmanEnv(gym.Env):
     def get_action_meanings(self):
         return self.A
 
+    @staticmethod
+    def constraint_func(self):
+        return
+
 
 
 
