@@ -8,5 +8,9 @@ setup(
         "torch",
         "cherry-rl",
         "altair",
+        "matplotlib",
+        "problog",
+        "dask[distributed]",
+        "asyncssh",
     ],  # And any other dependencies required
 )

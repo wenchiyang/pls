@@ -2,20 +2,23 @@ from dask.distributed import Client, LocalCluster, performance_report, SSHCluste
 from os.path import join, abspath
 from os import getcwd
 from workflows.execute_workflow import train_models as train_models
-
+import time
 
 if __name__ == "__main__":
-    # cluster = SSHCluster(
-    #     hosts=[
-    #         "134.58.41.141",
-    #         "134.58.41.142",
-    #            ],
-    #     remote_python="/home/wenchi/.pyenv/shims/python",
-    #     connect_options={
-    #         "config": "/Users/wenchi/PycharmProjects/NeSysourse/src/config.txt"
-    #     }
-    # )
+    cluster = SSHCluster(
+        hosts=[
+            "134.58.41.141",
+            "134.58.41.142",
+               ],
+        remote_python="/home/wenchi/.pyenv/shims/python",
+        # connect_options={
+        #     "config": "/Users/wenchi/PycharmProjects/NeSysourse/src/config.txt"
+        # }
+    )
     print("hu")
+    time.wait(10)
+    cluster.close()
+
     # client = Client(cluster)
 
     # cluster = LocalCluster(
