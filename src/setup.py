@@ -10,6 +10,7 @@ setup(
         "altair",
         "matplotlib",
         "problog",
+        "pysdd",
         "dask[distributed]",
         "asyncssh",
         "bokeh"
