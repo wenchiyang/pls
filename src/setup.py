@@ -12,5 +12,6 @@ setup(
         "problog",
         "dask[distributed]",
         "asyncssh",
+        "bokeh"
     ],  # And any other dependencies required
 )

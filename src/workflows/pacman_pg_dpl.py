@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
 from datetime import datetime
-from os import path
+from os import path, getcwd
 import cherry as ch
 import cherry.envs as envs
 
@@ -162,7 +162,7 @@ def main(folder, config):
 
     #####   Initialize network   #############
 
-    program_path = path.abspath(path.join("src", "data", f'{config["model_features"]["params"]["program_type"]}.pl'))
+    program_path = path.abspath(path.join(getcwd(), "src", "data", f'{config["model_features"]["params"]["program_type"]}.pl'))
     if config["model_features"]["params"]["shield"]:
         image_encoder = Encoder(
             n_pixels,
