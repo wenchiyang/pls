@@ -5,6 +5,9 @@ import pandas as pd
 import numpy as np
 import re
 import os
+import json
+from pathlib import Path
+
 
 # TODO: refer to this function in the main file
 def _episodes_length_rewards(rewards, dones):
@@ -56,6 +59,7 @@ def parse_raw_dpl_new(logger_file):
             if "---  Step " in line:
                 d = defaultdict(float)
                 d["n_steps"] = int(step_pattern.findall(line, pos=timestamp_pos)[0])
+                f.readline()
                 tensor = tensor_pattern.findall(f.readline(), pos=timestamp_pos)[0]
                 d["shield_probs"] = [
                     float(prob) for prob in float_pattern.findall(tensor)
@@ -100,63 +104,6 @@ def parse_raw_dpl_new(logger_file):
     return dataseries_raw
 
 
-# def parse_raw_dpl_new_temp(logger_file):
-#     """
-#     Parses dpl logger files
-#     """
-#     float_pattern = re.compile(r"([-+]?\d*\.\d+e[+-]?\d+|[-+]?\d*\.\d+|\d+)")
-#     tensor_pattern = re.compile(r"\(\[(.*)\]")
-#     step_pattern = re.compile(r"----  Step (\d+)  ")
-#     timestamp_pos = 22 # Skip the timestamp at the start of the line
-#     f = open(logger_file, 'r')
-#     line = f.readline()
-#     datapoints = []
-#     # count = 0
-#     while line:
-#         try:
-#             if '---  Step ' in line:
-#                 d = defaultdict(float)
-#                 d['n_steps'] = int(step_pattern.findall(line, pos=timestamp_pos)[0])
-#                 tensor = tensor_pattern.findall(f.readline(), pos=timestamp_pos)[0]
-#                 d['shield_probs'] = [float(prob) for prob in float_pattern.findall(tensor)]
-#                 tensor = tensor_pattern.findall(f.readline(), pos=timestamp_pos)[0]
-#                 d['base_probs'] = [float(prob) for prob in float_pattern.findall(tensor)]
-#                 tensor = tensor_pattern.findall(f.readline(), pos=timestamp_pos)[0]
-#                 d['ghost_probs'] = [float(prob) for prob in float_pattern.findall(tensor)]
-#                 tensor = tensor_pattern.findall(f.readline(), pos=timestamp_pos)[0]
-#                 d['ghost_truth'] = [float(prob) for prob in float_pattern.findall(tensor)]
-#                 tensor = tensor_pattern.findall(f.readline(), pos=timestamp_pos)[0]
-#                 d['pacman_probs'] = [float(prob) for prob in float_pattern.findall(tensor)]
-#                 tensor = tensor_pattern.findall(f.readline(), pos=timestamp_pos)[0]
-#                 d['pacman_truth'] = [float(prob) for prob in float_pattern.findall(tensor)]
-#                 # tensor = tensor_pattern.findall(f.readline(), pos=timestamp_pos)[0]
-#                 # d['food_probs'] = [float(prob) for prob in float_pattern.findall(tensor)]
-#                 # tensor = tensor_pattern.findall(f.readline(), pos=timestamp_pos)[0]
-#                 # d['food_truth'] = [float(prob) for prob in float_pattern.findall(tensor)]
-#                 # tensor = tensor_pattern.findall(f.readline(), pos=timestamp_pos)[0]
-#                 # d['wall_probs'] = [float(prob) for prob in float_pattern.findall(tensor)]
-#                 # tensor = tensor_pattern.findall(f.readline(), pos=timestamp_pos)[0]
-#                 # d['wall_truth'] = [float(prob) for prob in float_pattern.findall(tensor)]
-#                 # tensor = tensor_pattern.findall(f.readline(), pos=timestamp_pos)[0]
-#                 # d['eat_food'] = [float(prob) for prob in float_pattern.findall(tensor)]
-#                 # tensor = tensor_pattern.findall(f.readline(), pos=timestamp_pos)[0]
-#                 # d['safe_current'] = [float(prob) for prob in float_pattern.findall(tensor)]
-#                 # tensor = tensor_pattern.findall(f.readline(), pos=timestamp_pos)[0]
-#                 # d['safe_next'] = [float(prob) for prob in float_pattern.findall(tensor)]
-#                 d['reward'] = float(float_pattern.findall(f.readline(), pos=timestamp_pos)[0])
-#                 d['done'] = "True" in f.readline()
-#                 datapoints.append(d)
-#         except:
-#             break
-#         line = f.readline()
-#
-#     keys = list(datapoints[0].keys())
-#     values = list(zip(*[list(d.values()) for d in datapoints]))
-#     dataseries_raw = dict(zip(keys, values))
-#
-#     return dataseries_raw
-
-
 def parse_raw(logger_file):
     """
     Parses no dpl logger files
@@ -170,6 +117,7 @@ def parse_raw(logger_file):
         if "---  Step " in line:
             d = defaultdict(float)
             d["n_steps"] = [int(s) for s in line.split() if s.isdigit()][0]
+            f.readline()
             d["reward"] = float(
                 float_pattern.findall(f.readline(), pos=timestamp_pos)[0]
             )
@@ -222,10 +170,6 @@ def create_data_series_dpl(logger_file, window_size, window_speed):
     avg_ghost_detect_err = moving_average_probs(
         dataseries["ghost_probs"], dataseries["ghost_truth"], window_size, window_speed
     )
-    # avg_pacman_detect_err = moving_average_probs(dataseries["pacman_probs"], dataseries["pacman_truth"], window_size,
-    #                                              window_speed)
-    # avg_food_detect_err = moving_average_probs(dataseries["food_probs"], dataseries["food_truth"], window_size,
-    #                                              window_speed)
     avg_wall_detect_err = moving_average_probs(
         dataseries["wall_probs"], dataseries["wall_truth"], window_size, window_speed
     )
@@ -242,39 +186,6 @@ def create_data_series_dpl(logger_file, window_size, window_speed):
     ).melt("n_steps", var_name="feature")
 
     return df_features, df_avg_prob_err
-
-
-# def create_data_series_dpl_temp(logger_file, window_size, window_speed):
-#     """For dpl"""
-#     dataseries = parse_raw_dpl_new_temp(logger_file)
-#     ########  make data series  #########
-#     avg_rs, avg_ls, avg_last_rs = moving_average_rewards(dataseries["reward"], dataseries["done"], window_size, window_speed)
-#     df_features = pd.DataFrame({
-#         'n_steps': [i for i in range(1, len(avg_rs) + 1)],
-#         'reward': avg_rs,
-#         'length': avg_ls,
-#         'safety': avg_last_rs  # average last reward in the past {window_size} steps
-#     }).melt('n_steps', var_name='feature')
-#
-#     ########  make base policy accuracy data series  #########
-#     avg_base_policy_err = moving_average_probs(dataseries["shield_probs"], dataseries["base_probs"], window_size, window_speed)
-#     avg_ghost_detect_err = moving_average_probs(dataseries["ghost_probs"], dataseries["ghost_truth"], window_size, window_speed)
-#     avg_pacman_detect_err = moving_average_probs(dataseries["pacman_probs"], dataseries["pacman_truth"], window_size,
-#                                                  window_speed)
-#     # avg_food_detect_err = moving_average_probs(dataseries["food_probs"], dataseries["food_truth"], window_size,
-#     #                                              window_speed)
-#     # avg_wall_detect_err = moving_average_probs(dataseries["wall_probs"], dataseries["wall_truth"], window_size, window_speed)
-#
-#     df_avg_prob_err = pd.DataFrame({
-#         'n_steps': [i for i in range(1, len(avg_ghost_detect_err) + 1)],
-#         'base policy safety diff': avg_base_policy_err,
-#         'ghost detection error': avg_ghost_detect_err,
-#         'pacman detection error': avg_pacman_detect_err,
-#         # 'food detection error': avg_food_detect_err.
-#         # 'wall detection error': avg_wall_detect_err,
-#     }).melt('n_steps', var_name='feature')
-#
-#     return df_features, df_avg_prob_err
 
 
 def moving_average_rewards(rewards, dones, window_size, window_speed):
@@ -318,32 +229,6 @@ def moving_average_probs(shielded_probs, base_probs, window_size, window_speed):
         avg_prob_diffs.append(avg_prob_diff)
         start += window_speed
     return avg_prob_diffs
-
-
-# def make_chart(data_series):
-#     combined_data_series = pd.concat(data_series, keys=['pg','pg_dpl','pg_dpl_detect'], names=['setting'])
-#     combined_data_series = combined_data_series.reset_index(0)
-#     combined_data_series['series'] = combined_data_series['setting'] + " " + combined_data_series['variable']
-#
-#     selector = alt.selection_single(empty='all', fields=['series'])
-#     base = alt.Chart(combined_data_series).properties(
-#         width=500,
-#         height=250
-#     ).add_selection(selector)
-#
-#     timeseries = base.mark_line(
-#         opacity=0.5
-#     ).encode(
-#         x=alt.X('n_steps:O',
-#                 axis=alt.Axis(title='Steps (x100)', tickMinStep=30)),
-#         y=alt.Y('value:O',
-#                 sort="descending"),
-#         color=alt.Color('series:O')
-#     ).transform_filter(
-#         selector
-#     )
-#
-#     timeseries.show()
 
 
 def make_chart2(data_series, title, keys, window_speed=1000):
@@ -399,47 +284,67 @@ def make_chart2(data_series, title, keys, window_speed=1000):
     return chart
 
 
-if __name__ == "__main__":
-    ######  specify log files  ###################
-    folderpath = os.path.join(os.path.dirname(__file__), "20210722_16:47")
-    file_pg = "pg_grid5x5_raw"
-    file_pg_shield = "pg_shield_smallGrid_raw"
-    file_pg_detect_shield = "pg_detect_shield_grid5x5_raw"
-    logger_files = [
-        file_pg,
-        # file_pg_shield,
-        file_pg_detect_shield,
-    ]
+def process(folder, config):
+    window_size = config["visualize_settings"]["window_size"]
+    window_speed = config["visualize_settings"]["window_speed"]
 
-    window_size = 2000
-    window_speed = 1000
+    logger_name = config["raw_logger"]
+
+    dpl = "dpl" in logger_name or "detect" in logger_name or "shield" in logger_name
+    pkl_path = os.path.join(folder, f"{logger_name}.pkl")
+    pkl_err_path = os.path.join(folder, f"{logger_name}_prob_err.pkl")
+
+    # process log files if pkl files dont exist
+    if not os.path.isfile(pkl_path) or (dpl and not os.path.isfile(pkl_err_path)):
+        log_path = os.path.join(folder, f"{logger_name}.log")
+        if dpl:
+            df_features, df_avg_prob_err = create_data_series_dpl(
+                log_path, window_size=window_size, window_speed=window_speed
+            )
+            df_avg_prob_err.to_pickle(pkl_err_path)
+        else:
+            df_features = create_data_series(
+                log_path, window_size=window_size, window_speed=window_speed
+            )
+        # store pkl file for later
+        df_features.to_pickle(pkl_path)
+
+
+def read_dfs(folder, config):
+    process(folder, config)
+
+    logger_name = config["raw_logger"]
+    dpl = "dpl" in logger_name or "detect" in logger_name or "shield" in logger_name
+    pkl_path = os.path.join(folder, f"{logger_name}.pkl")
+    pkl_err_path = os.path.join(folder, f"{logger_name}_prob_err.pkl")
+
+    # load pkl files
+    df_features = pd.read_pickle(pkl_path)
+    df_policy_err = None
+
+    if dpl:
+        df_policy_err = pd.read_pickle(pkl_err_path)
+
+    return df_features, df_policy_err
+
+
+def create_chart_shield(exp_folder):
+
     dfs_features = []
     dfs_prob_err = []
-    for logger_file in logger_files:
-        dpl = "dpl" in logger_file or "detect" in logger_file or "shield" in logger_file
-        pkl_path = os.path.join(folderpath, f"{logger_file}.pkl")
-        pkl_err_path = os.path.join(folderpath, f"{logger_file}_prob_err.pkl")
-        # process log files if pkl files dont exist
-        if not os.path.isfile(pkl_path) or (dpl and not os.path.isfile(pkl_err_path)):
-            log_path = os.path.join(folderpath, f"{logger_file}.log")
-            if dpl:
-                df_features, df_avg_prob_err = create_data_series_dpl(
-                    log_path, window_size=window_size, window_speed=window_speed
-                )
-                df_avg_prob_err.to_pickle(pkl_err_path)
-            else:
-                df_features = create_data_series(
-                    log_path, window_size=window_size, window_speed=window_speed
-                )
-            # store pkl file for later
-            df_features.to_pickle(pkl_path)
-        # load pkl files
-        df_features = pd.read_pickle(pkl_path)
+
+    for exp in ["pg", "pg_shield", "pg_shield_detect"]:
+        folder = os.path.join(exp_folder, exp)
+        config_file = os.path.join(folder, "config.json")
+        with open(config_file) as json_data_file:
+            config = json.load(json_data_file)
+
+        df_features, df_policy_err = read_dfs(folder, config)
         dfs_features.append(df_features)
-        if dpl:
-            df_policy_err = pd.read_pickle(pkl_err_path)
+        if df_policy_err is not None:
             dfs_prob_err.append(df_policy_err)
 
+    window_speed = config["visualize_settings"]["window_speed"]
     ######  make a charts  ###################
     #  make a chart for reward, length and safety during training
     feature_chart = make_chart2(
@@ -447,7 +352,7 @@ if __name__ == "__main__":
         title="Features over training time",
         keys=[
             "PG",
-            # 'PG shield',
+            "PG shield",
             "PG shield detect",
         ],
         window_speed=window_speed,
@@ -458,12 +363,31 @@ if __name__ == "__main__":
         dfs_prob_err,
         title="DPL features",
         keys=[
-            # 'PG shield',
+            "PG shield",
             "PG shield detect",
         ],
         window_speed=window_speed,
     )
 
-    ######  show charts  ###################
+    ######  save charts  ###################
     chart = feature_chart & prob_err_chart
-    chart.show()
+
+    chart_path = os.path.join(exp_folder, "figs", "pg.json")
+    Path(os.path.dirname(chart_path)).mkdir(parents=True, exist_ok=True)
+    chart.save(chart_path)
+    chart_path = os.path.join(exp_folder, "figs", "pg.html")
+    chart.save(chart_path)
+    # chart.show(chart_path)
+
+def main():
+    exps_folder = os.path.join(
+        os.path.dirname(__file__), "..", "..", "experiments",
+    )
+
+    exps = ["grid2x3_1_ghost", "grid3x3_1_ghost", "grid5x5_1_ghost",
+         "grid5x5_3_ghosts", "grid5x5_5_ghosts"]
+    for exp in exps:
+        exp_folder = os.path.join(exps_folder, exp)
+        create_chart_shield(exp_folder)
+
+main()

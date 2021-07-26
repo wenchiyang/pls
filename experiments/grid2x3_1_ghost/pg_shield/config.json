@@ -26,7 +26,11 @@
       "detect_ghosts": false,
       "detect_walls": false
     }
+  },
 
+  "visualize_settings": {
+    "window_size": 2000,
+    "window_speed": 1000
   }
 
 }

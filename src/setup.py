@@ -8,6 +8,7 @@ setup(
         "torch",
         "cherry-rl",
         "altair",
+        "altair_saver",
         "matplotlib",
         "problog",
         "pysdd",
