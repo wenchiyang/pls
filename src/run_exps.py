@@ -18,7 +18,7 @@ if __name__ == "__main__":
     # )
 
     cluster = LocalCluster(
-        n_workers=4,
+        n_workers=8,
         processes=True,
         threads_per_worker=1,
         dashboard_address=":8787"
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     client = Client(cluster)
 
     exps_folder = abspath(join(getcwd(), "experiments"))
-    exps = ["grid2x2_1_ghost"]
+    exps = ["smallGrid", "smallGrid2"]
     types = ["pg", "pg_shield", "pg_shield_detect"]
 
     tasks = []
