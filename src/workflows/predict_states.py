@@ -1,5 +1,5 @@
 import torch as th
-from src.dpl_policy import Encoder, DPLSafePolicy, PolicyNet
+from dpl_policy import Encoder, DPLSafePolicy, PolicyNet
 import os
 import json
 import random
@@ -9,7 +9,7 @@ import cherry.envs as envs
 import relenvs
 from itertools import count
 from torch.distributions import Categorical
-from src.util import draw
+from util import draw
 
 def load(folder, config):
     """

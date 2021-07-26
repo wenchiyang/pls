@@ -1,5 +1,6 @@
-from src.workflows.pacman_pg_dpl import main as pg_dpl
-from src.workflows.predict_states import main as predict
+from workflows.pacman_pg_dpl import main as pg_dpl
+from workflows.predict_states import main as predict
+from workflows.predict_states import main as ac_dpl
 import json
 import os
 
@@ -17,4 +18,11 @@ def predict_states(folder):
 
     predict(folder, config)
 
-# train_models("/Users/wenchi/PycharmProjects/NeSysourse/experiments/grid3x3_1_ghost/pg")
+
+def train_ac_models(folder):
+    path = os.path.join(folder, "config.json")
+    with open(path) as json_data_file:
+        config = json.load(json_data_file)
+
+    ac_dpl(folder, config)
+

@@ -15,9 +15,9 @@ from os import path
 import cherry as ch
 import cherry.envs as envs
 
-from src.util import create_loggers, draw, myformat
+from util import create_loggers, draw, myformat
 
-from src.dpl_policy import DPLSafePolicy, Encoder, PolicyNet
+from dpl_policy import DPLSafePolicy, Encoder, PolicyNet
 import relenvs
 
 
