@@ -14,6 +14,7 @@ setup(
         "pysdd",
         "dask[distributed]",
         "asyncssh",
-        "bokeh"
+        "bokeh",
+        "stable-baselines3[extra]"
     ],  # And any other dependencies required
 )

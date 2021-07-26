@@ -379,15 +379,25 @@ def create_chart_shield(exp_folder):
     chart.save(chart_path)
     # chart.show(chart_path)
 
+
 def main():
     exps_folder = os.path.join(
-        os.path.dirname(__file__), "..", "..", "experiments",
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "experiments",
     )
 
-    exps = ["grid2x3_1_ghost", "grid3x3_1_ghost", "grid5x5_1_ghost",
-         "grid5x5_3_ghosts", "grid5x5_5_ghosts"]
+    exps = [
+        "grid2x2_1_ghost",
+        # "grid3x3_1_ghost",
+        # "grid5x5_1_ghost",
+        # "grid5x5_3_ghosts",
+        # "grid5x5_5_ghosts",
+    ]
     for exp in exps:
         exp_folder = os.path.join(exps_folder, exp)
         create_chart_shield(exp_folder)
+
 
 main()

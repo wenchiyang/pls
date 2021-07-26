@@ -1,0 +1,4 @@
+*.log
+*.pkl
+*model
+*.html
