@@ -24,7 +24,7 @@
       "learning_rate": 1e-3,
       "seed": 567,
       "gamma": 0.99,
-      "step_limit": 4000,
+      "step_limit": 400000,
       "program_type": "relative_loc",
       "shield": true,
       "detect_ghosts": true,

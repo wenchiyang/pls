@@ -6,7 +6,7 @@ import time
 
 if __name__ == "__main__":
     cluster = LocalCluster(
-        n_workers=8,
+        n_workers=4,
         processes=True,
         threads_per_worker=1,
         dashboard_address=":8787"
@@ -15,7 +15,7 @@ if __name__ == "__main__":
     client = Client(cluster)
 
     exps_folder = abspath(join(getcwd(), "experiments"))
-    exps = ["grid_2x2_1_ghost", "grid_2x3_1_ghost"]
+    exps = ["grid2x3_1_ghost", "grid3x3_1_ghost"]
     types = ["ppo", "ppo_shield", "ppo_shield_detect"]
 
     tasks = []
