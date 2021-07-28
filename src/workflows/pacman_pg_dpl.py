@@ -15,7 +15,7 @@ from os import path, getcwd
 import cherry as ch
 import cherry.envs as envs
 
-from util import create_loggers, draw, myformat
+from util import create_loggers, myformat
 
 from dpl_policy import DPLSafePolicy, Encoder, PolicyNet
 import relenvs
@@ -190,6 +190,9 @@ def main(folder, config):
         for t in range(100):  # Don't infinite loop while learning
             total_steps += 1
             if total_steps > step_limit:
+                # save the model
+                model_path = path.join(folder, "model")
+                th.save(policy.state_dict(), model_path)
                 break
             logger_raw.debug(f"---------  Step {total_steps}  ---------------")
             logger_raw.debug(f"State:          {myformat(state.data)}")
@@ -220,11 +223,8 @@ def main(folder, config):
                 env.render()
             if done:
                 break
+
         if total_steps > step_limit:
-            # save the model
-            import os
-            model_path = os.path.join(folder, "model")
-            th.save(policy.state_dict(), model_path)
             break
 
         # Update policy

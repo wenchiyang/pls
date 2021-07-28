@@ -1,10 +1,10 @@
 from workflows.pacman_pg_dpl import main as pg_dpl
 from workflows.predict_states import main as predict
-from workflows.predict_states import main as ac_dpl
+from workflows.pacman_ppo_dpl import main as ppo_dpl
 import json
 import os
 
-def train_models(folder):
+def train_pg_models(folder):
     path = os.path.join(folder, "config.json")
     with open(path) as json_data_file:
         config = json.load(json_data_file)
@@ -19,10 +19,10 @@ def predict_states(folder):
     predict(folder, config)
 
 
-def train_ac_models(folder):
+def train_ppo_models(folder):
     path = os.path.join(folder, "config.json")
     with open(path) as json_data_file:
         config = json.load(json_data_file)
 
-    ac_dpl(folder, config)
+    ppo_dpl(folder, config)
 

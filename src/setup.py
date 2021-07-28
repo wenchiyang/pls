@@ -4,17 +4,22 @@ setup(
     name="gradient_shielding",
     version="0.0.1",
     install_requires=[
+        # environment
         "gym",
         "torch",
         "cherry-rl",
-        "altair",
-        "altair_saver",
-        "matplotlib",
+        "stable-baselines3[extra]",
+        # shielding
         "problog",
         "pysdd",
+        # experiments -- dask
         "dask[distributed]",
         "asyncssh",
         "bokeh",
-        "stable-baselines3[extra]"
+        # visialization
+        "tensorboard",
+        "altair",
+        "altair_saver",
+        "matplotlib",
     ],  # And any other dependencies required
 )
