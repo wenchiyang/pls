@@ -15,7 +15,7 @@ if __name__ == "__main__":
     client = Client(cluster)
 
     exps_folder = abspath(join(getcwd(), "experiments"))
-    exps = ["grid2x3_1_ghost", "grid3x3_1_ghost"]
+    exps = ["grid2x2_1_ghost"]
     types = ["ppo", "ppo_shield", "ppo_shield_detect"]
 
     tasks = []

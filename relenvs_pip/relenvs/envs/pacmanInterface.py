@@ -155,8 +155,13 @@ class PacmanEnv(gym.Env):
         self.game.take_action(agentIndex, action)
         self.render()
 
+
         reward = self.game.state.data.scoreChange
 
+        if self.game.gameOver:
+            eps_info = {"last_r": reward}
+        else:
+            eps_info = dict()
         # move the ghosts
         # if not self.game.gameOver:
         #     for agentIndex in range(1, len(self.game.agents)):
@@ -167,7 +172,7 @@ class PacmanEnv(gym.Env):
         #         reward += self.game.state.data.scoreChange
 
         # return self.game.state, reward, self.game.gameOver, dict()
-        return self.my_render(), reward, self.game.gameOver, dict()
+        return self.my_render(), reward, self.game.gameOver, eps_info
 
     def reset(self):
         # self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining

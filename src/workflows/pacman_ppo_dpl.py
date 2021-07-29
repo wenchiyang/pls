@@ -12,12 +12,12 @@ from os.path import join, abspath
 from os import getcwd
 import json
 
-from dpl_policy_stable_baselines import DPLActorCriticPolicy, Encoder, DPLPolicyGradientPolicy
+from dpl_policy_stable_baselines import DPLActorCriticPolicy, Encoder, DPLPPO,  DPLPolicyGradientPolicy
 import relenvs
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
-
+from torch import nn
 
 def main(folder, config):
     """
@@ -63,7 +63,7 @@ def main(folder, config):
         # filename=folder,
         allow_early_resets=False,
         # reset_keywords=(),
-        # info_keywords=(),
+        info_keywords=(["last_r"]),
     )
 
     grid_size = env.grid_size
@@ -85,7 +85,10 @@ def main(folder, config):
     )
 
     #####   Configure model   #############
-    model = PPO(
+    net_arch = config["model_features"]["params"]["net_arch_shared"] + \
+            [dict(pi=config["model_features"]["params"]["net_arch_pi"],
+                  vf=config["model_features"]["params"]["net_arch_vf"])]
+    model = DPLPPO(
         DPLActorCriticPolicy,
         env,
         verbose=0,
@@ -99,10 +102,10 @@ def main(folder, config):
         _init_setup_model=True,
         policy_kwargs={
             "image_encoder": image_encoder,
-            "net_arch": [dict(pi=config["model_features"]["params"]["net_arch_pi"],
-                              vf=config["model_features"]["params"]["net_arch_vf"])]
+            "net_arch": net_arch,
+            "activation_fn": nn.ReLU
         },
-        seed = config["model_features"]["params"]["seed"]
+        seed=config["model_features"]["params"]["seed"]
     )
 
 
@@ -113,12 +116,11 @@ def main(folder, config):
     )
 
 
-#
+
 # exps_folder = abspath(join(getcwd(), "experiments"))
 #
-#
 # exp = "grid2x2_1_ghost"
-# types = ["ppo"]
+# types = ["ppo", "ppo_shield", "ppo_shield_detect"]
 #
 # for type in types:
 #     folder = join(exps_folder, exp, type)

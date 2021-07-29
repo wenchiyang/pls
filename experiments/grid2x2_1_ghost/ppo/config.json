@@ -29,8 +29,9 @@
       "shield": false,
       "detect_ghosts": false,
       "detect_walls": false,
-      "net_arch_pi": [128, 128],
-      "net_arch_vf": [128, 128]
+      "net_arch_shared": [],
+      "net_arch_pi": [128],
+      "net_arch_vf": [128]
     }
   },
 

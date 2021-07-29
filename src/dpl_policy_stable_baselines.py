@@ -13,7 +13,15 @@ from stable_baselines3.common.torch_layers import (
 from stable_baselines3.common.distributions import CategoricalDistribution
 from torch.distributions import Categorical
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
-from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
+from stable_baselines3.common.type_aliases import GymEnv, Schedule
+from stable_baselines3 import PPO
+from stable_baselines3.common.monitor import Monitor
+import time
+import numpy as np
+from stable_baselines3.common.type_aliases import GymObs, MaybeCallback, GymStepReturn
+from stable_baselines3.common.utils import obs_as_tensor, safe_mean
+
+
 WALL_COLOR = 0.25
 GHOST_COLOR = 0.5
 PACMAN_COLOR = 0.75
@@ -47,43 +55,13 @@ class Encoder(nn.Module):
 class DPLActorCriticPolicy(ActorCriticPolicy):
     def __init__(
         self,
-        observation_space: gym.spaces.Space,
-        action_space: gym.spaces.Space,
-        lr_schedule: Schedule,
-        net_arch: Optional[List[Union[int, Dict[str, List[int]]]]] = None,
-        activation_fn: Type[nn.Module] = nn.Tanh,
-        ortho_init: bool = True,
-        use_sde: bool = False,
-        log_std_init: float = 0.0,
-        full_std: bool = True,
-        sde_net_arch: Optional[List[int]] = None,
-        use_expln: bool = False,
-        squash_output: bool = False,
-        features_extractor_class: Type[BaseFeaturesExtractor] = FlattenExtractor,
-        features_extractor_kwargs: Optional[Dict[str, Any]] = None,
-        normalize_images: bool = True,
-        optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
-        optimizer_kwargs: Optional[Dict[str, Any]] = None,
-        image_encoder: Encoder = None
+        *args,
+        image_encoder: Encoder = None,
+        **kwargs
     ):
         super(DPLActorCriticPolicy, self).__init__(
-            observation_space=observation_space,
-            action_space=action_space,
-            lr_schedule=lr_schedule,
-            net_arch=net_arch,
-            activation_fn=activation_fn,
-            ortho_init=ortho_init,
-            use_sde=use_sde,
-            log_std_init=log_std_init,
-            full_std=full_std,
-            sde_net_arch=sde_net_arch,
-            use_expln=use_expln,
-            squash_output=squash_output,
-            features_extractor_class=features_extractor_class,
-            features_extractor_kwargs=features_extractor_kwargs,
-            normalize_images=normalize_images,
-            optimizer_class=optimizer_class,
-            optimizer_kwargs=optimizer_kwargs
+            *args,
+            **kwargs
         )
 
         self.image_encoder = image_encoder
@@ -169,6 +147,65 @@ class DPLActorCriticPolicy(ActorCriticPolicy):
         actions = mass.sample()
         log_prob = mass.log_prob(actions)
         return actions, values, log_prob
+
+class DPLPPO(PPO):
+    def __init__(self, *args, **kwargs):
+        super(DPLPPO, self).__init__(*args, **kwargs)
+
+    def learn(
+            self,
+            total_timesteps: int,
+            callback: MaybeCallback = None,
+            log_interval: int = 1,
+            eval_env: Optional[GymEnv] = None,
+            eval_freq: int = -1,
+            n_eval_episodes: int = 5,
+            tb_log_name: str = "OnPolicyAlgorithm",
+            eval_log_path: Optional[str] = None,
+            reset_num_timesteps: bool = True,
+    ) -> "OnPolicyAlgorithm":
+        iteration = 0
+
+        total_timesteps, callback = self._setup_learn(
+            total_timesteps, eval_env, callback, eval_freq, n_eval_episodes, eval_log_path, reset_num_timesteps,
+            tb_log_name
+        )
+
+        callback.on_training_start(locals(), globals())
+
+        while self.num_timesteps < total_timesteps:
+
+            continue_training = self.collect_rollouts(self.env, callback, self.rollout_buffer,
+                                                      n_rollout_steps=self.n_steps)
+
+            if continue_training is False:
+                break
+
+            iteration += 1
+            self._update_current_progress_remaining(self.num_timesteps, total_timesteps)
+
+            # Display training infos
+            if log_interval is not None and iteration % log_interval == 0:
+                fps = int(self.num_timesteps / (time.time() - self.start_time))
+                self.logger.record("time/iterations", iteration, exclude="tensorboard")
+                if len(self.ep_info_buffer) > 0 and len(self.ep_info_buffer[0]) > 0:
+                    self.logger.record("rollout/ep_rew_mean",
+                                       safe_mean([ep_info["r"] for ep_info in self.ep_info_buffer]))
+                    self.logger.record("rollout/ep_len_mean",
+                                       safe_mean([ep_info["l"] for ep_info in self.ep_info_buffer]))
+                    self.logger.record("rollout/ep_last_r_mean",
+                                       safe_mean([ep_info["last_r"] for ep_info in self.ep_info_buffer]))
+                self.logger.record("time/fps", fps)
+                self.logger.record("time/time_elapsed", int(time.time() - self.start_time), exclude="tensorboard")
+                self.logger.record("time/total_timesteps", self.num_timesteps, exclude="tensorboard")
+                self.logger.dump(step=self.num_timesteps)
+
+            self.train()
+
+        callback.on_training_end()
+
+        return self
+
 
 
 class DPLPolicyGradientPolicy(OnPolicyAlgorithm):
