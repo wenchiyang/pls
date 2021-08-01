@@ -6,7 +6,7 @@ from workflows.execute_workflow import train_ppo_models
 
 if __name__ == "__main__":
     cluster = LocalCluster(
-        n_workers=4,
+        n_workers=16,
         processes=True,
         threads_per_worker=1,
         dashboard_address=":8787"
