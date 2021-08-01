@@ -12,6 +12,8 @@ import torch.optim as optim
 from torch.distributions import Categorical
 from datetime import datetime
 from os import path, getcwd
+from os.path import abspath, join
+import json
 import cherry as ch
 import cherry.envs as envs
 
@@ -90,9 +92,6 @@ class Logger(envs.Logger):
         return state, reward, done, info
 
 
-
-
-
 def update(replay, optimizer, GAMMA):
 
     policy_loss = []
@@ -131,9 +130,7 @@ def main(folder, config):
     logger_info_name = config["info_logger"]
     logger_raw_name = config["raw_logger"]
     # timestamp = datetime.now().strftime("%Y%m%d_%H:%M")
-    create_loggers(
-        folder, [logger_info_name, logger_raw_name]
-    )
+    create_loggers(folder, [logger_info_name, logger_raw_name])
 
     logger_info = getLogger(logger_info_name)
     logger_raw = getLogger(logger_raw_name)
@@ -162,7 +159,14 @@ def main(folder, config):
 
     #####   Initialize network   #############
 
-    program_path = path.abspath(path.join(getcwd(), "src", "data", f'{config["model_features"]["params"]["program_type"]}.pl'))
+    program_path = abspath(
+        join(
+            getcwd(),
+            "src",
+            "data",
+            f'{config["model_features"]["params"]["program_type"]}.pl',
+        )
+    )
     if config["model_features"]["params"]["shield"]:
         image_encoder = Encoder(
             n_pixels,
@@ -171,16 +175,15 @@ def main(folder, config):
             config["model_features"]["params"]["detect_ghosts"],
             config["model_features"]["params"]["detect_walls"],
             program_path,
-            logger=logger_raw
+            logger=logger_raw,
         )
         policy = DPLSafePolicy(image_encoder=image_encoder)
     else:
         policy = PolicyNet(n_pixels, n_actions)
 
-    optimizer = optim.Adam(policy.parameters(), lr=config["model_features"]["params"]["learning_rate"])
-
-
-
+    optimizer = optim.Adam(
+        policy.parameters(), lr=config["model_features"]["params"]["learning_rate"]
+    )
 
     replay = ch.ExperienceReplay()
     total_steps = 0
@@ -230,3 +233,20 @@ def main(folder, config):
         # Update policy
         update(replay, optimizer, gamma)
         replay.empty()
+
+
+#
+# exps_folder = abspath(join(getcwd(), "experiments"))
+#
+# exp = "grid2x2_1_ghost"
+# types = ["pg_shield_detect"]
+#
+# for type in types:
+#     folder = join(exps_folder, exp, type)
+#
+#     path = join(folder, "config.json")
+#     with open(path) as json_data_file:
+#         config = json.load(json_data_file)
+#
+#     # example(folder, config)
+#     main(folder, config)

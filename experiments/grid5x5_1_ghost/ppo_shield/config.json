@@ -5,7 +5,7 @@
   "info_logger": "ppo_shield_info",
 
   "env_features": {
-    "layout": "grid3x3",
+    "layout": "grid5x5_1_ghost",
     "reward_goal": 10,
     "reward_crash": -10,
     "reward_food": 0,
@@ -24,7 +24,7 @@
       "learning_rate": 1e-3,
       "seed": 567,
       "gamma": 0.99,
-      "step_limit": 100000,
+      "step_limit": 200000,
       "program_type": "relative_loc",
       "shield": true,
       "detect_ghosts": false,

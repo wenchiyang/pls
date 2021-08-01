@@ -11,6 +11,7 @@ from itertools import count
 from torch.distributions import Categorical
 from util import draw
 
+
 def load(folder, config):
     """
     todo
@@ -62,6 +63,7 @@ def load(folder, config):
         policy.load_state_dict(th.load(path))
 
     return env, policy
+
 
 def main(folder, config):
     env, policy = load(folder, config)

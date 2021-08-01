@@ -12,12 +12,18 @@ from os.path import join, abspath
 from os import getcwd
 import json
 
-from dpl_policy_stable_baselines import DPLActorCriticPolicy, Encoder, DPLPPO,  DPLPolicyGradientPolicy
+from dpl_policy_stable_baselines import (
+    DPLActorCriticPolicy,
+    Encoder,
+    DPLPPO,
+    DPLPolicyGradientPolicy,
+)
 import relenvs
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
 from torch import nn
+
 
 def main(folder, config):
     """
@@ -54,13 +60,12 @@ def main(folder, config):
     }
 
     env = gym.make(env_name, **env_args)
-    eval_env = gym.make(env_name, **env_args)
+    # eval_env = gym.make(env_name, **env_args)
 
     # logger_raw_filename = join(folder, f'{config["info_logger"]}.log')
     # tb_log_filename = join(folder, f'{config["info_logger"]}_tb.log')
     env = Monitor(
         env,
-        # filename=folder,
         allow_early_resets=False,
         # reset_keywords=(),
         info_keywords=(["last_r"]),
@@ -72,22 +77,26 @@ def main(folder, config):
     n_pixels = (height * grid_size) * (width * grid_size)
     n_actions = len(env.A)
 
-
     # #####   Initialize network   #############
-    program_path = abspath(join("src", "data", f'{config["model_features"]["params"]["program_type"]}.pl'))
+    program_path = abspath(
+        join("src", "data", f'{config["model_features"]["params"]["program_type"]}.pl')
+    )
     image_encoder = Encoder(
         n_pixels,
         n_actions,
         config["model_features"]["params"]["shield"],
         config["model_features"]["params"]["detect_ghosts"],
         config["model_features"]["params"]["detect_walls"],
-        program_path
+        program_path,
     )
 
     #####   Configure model   #############
-    net_arch = config["model_features"]["params"]["net_arch_shared"] + \
-            [dict(pi=config["model_features"]["params"]["net_arch_pi"],
-                  vf=config["model_features"]["params"]["net_arch_vf"])]
+    net_arch = config["model_features"]["params"]["net_arch_shared"] + [
+        dict(
+            pi=config["model_features"]["params"]["net_arch_pi"],
+            vf=config["model_features"]["params"]["net_arch_vf"],
+        )
+    ]
     model = DPLPPO(
         DPLActorCriticPolicy,
         env,
@@ -103,31 +112,13 @@ def main(folder, config):
         policy_kwargs={
             "image_encoder": image_encoder,
             "net_arch": net_arch,
-            "activation_fn": nn.ReLU
+            "activation_fn": nn.ReLU,
+            "optimizer_class": th.optim.Adam,
         },
-        seed=config["model_features"]["params"]["seed"]
+        seed=config["model_features"]["params"]["seed"],
     )
-
 
     model.set_logger(new_logger)
 
-    model.learn(
-        total_timesteps=config["model_features"]["params"]["step_limit"]
-    )
+    model.learn(total_timesteps=config["model_features"]["params"]["step_limit"])
 
-
-
-# exps_folder = abspath(join(getcwd(), "experiments"))
-#
-# exp = "grid2x2_1_ghost"
-# types = ["ppo", "ppo_shield", "ppo_shield_detect"]
-#
-# for type in types:
-#     folder = join(exps_folder, exp, type)
-#
-#     path = join(folder, "config.json")
-#     with open(path) as json_data_file:
-#         config = json.load(json_data_file)
-#
-#     # example(folder, config)
-#     main(folder, config)

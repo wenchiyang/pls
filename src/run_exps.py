@@ -2,7 +2,7 @@ from dask.distributed import Client, LocalCluster, performance_report, SSHCluste
 from os.path import join, abspath
 from os import getcwd
 from workflows.execute_workflow import train_ppo_models
-import time
+
 
 if __name__ == "__main__":
     cluster = LocalCluster(
@@ -15,8 +15,19 @@ if __name__ == "__main__":
     client = Client(cluster)
 
     exps_folder = abspath(join(getcwd(), "experiments"))
-    exps = ["grid2x2_1_ghost"]
-    types = ["ppo", "ppo_shield", "ppo_shield_detect"]
+    exps = [
+        "grid2x2_1_ghost",
+        "grid2x3_1_ghost",
+        "grid3x3_1_ghost",
+        "grid5x5_1_ghost",
+        "grid5x5_3_ghosts",
+        "grid5x5_5_ghosts",
+            ]
+    types = [
+        "ppo",
+        "ppo_shield",
+        "ppo_shield_detect"
+    ]
 
     tasks = []
     for exp in exps:
