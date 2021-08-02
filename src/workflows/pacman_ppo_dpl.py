@@ -1,25 +1,12 @@
 import random
 import gym
 import numpy as np
-from logging import getLogger
-
-from itertools import count
 
 import torch as th
-import torch.optim as optim
-from torch.distributions import Categorical
 from os.path import join, abspath
-from os import getcwd
-import json
 
-from dpl_policy_stable_baselines import (
-    DPLActorCriticPolicy,
-    Encoder,
-    DPLPPO,
-    DPLPolicyGradientPolicy,
-)
+from dpl_policy_stable_baselines import DPLActorCriticPolicy, Encoder, DPLPPO
 import relenvs
-from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
 from torch import nn
@@ -30,9 +17,7 @@ def main(folder, config):
     Runs policy gradient with deep problog
     """
     #####   Read from config   #############
-    step_limit = config["model_features"]["params"]["step_limit"]
-    render = config["env_features"]["render"]
-    gamma = config["model_features"]["params"]["gamma"]
+    # render = config["env_features"]["render"]
 
     random.seed(config["model_features"]["params"]["seed"])
     np.random.seed(config["model_features"]["params"]["seed"])
@@ -40,13 +25,6 @@ def main(folder, config):
 
     #####   Initialize loggers   #############
     new_logger = configure(folder, ["stdout", "tensorboard"])
-
-    # logger_info_name = config["info_logger"]
-    # logger_raw_name = config["raw_logger"]
-    # create_loggers(folder, [logger_info_name, logger_raw_name])
-    #
-    # logger_info = getLogger(logger_info_name)
-    # logger_raw = getLogger(logger_raw_name)
 
     #####   Initialize env   #############
     env_name = "Pacman-v0"
@@ -62,8 +40,6 @@ def main(folder, config):
     env = gym.make(env_name, **env_args)
     # eval_env = gym.make(env_name, **env_args)
 
-    # logger_raw_filename = join(folder, f'{config["info_logger"]}.log')
-    # tb_log_filename = join(folder, f'{config["info_logger"]}_tb.log')
     env = Monitor(
         env,
         allow_early_resets=False,
@@ -121,4 +97,5 @@ def main(folder, config):
     model.set_logger(new_logger)
 
     model.learn(total_timesteps=config["model_features"]["params"]["step_limit"])
-
+    # model.learn(total_timesteps=500)
+    model.save(join(folder, "model"))

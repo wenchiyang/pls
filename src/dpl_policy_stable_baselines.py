@@ -2,7 +2,7 @@ from torch import nn
 from deepproblog.light import DeepProbLogLayer
 import torch as th
 from util import get_ground_wall
-from typing import Any, Dict, Optional, Type, Union, List, Tuple
+from typing import Any, Dict, Optional, Type, Union, List, Tuple, Generator, NamedTuple
 from stable_baselines3.common.policies import ActorCriticPolicy, BasePolicy
 import gym
 from stable_baselines3.common.torch_layers import (
@@ -13,7 +13,12 @@ from stable_baselines3.common.torch_layers import (
 from stable_baselines3.common.distributions import make_proba_distribution
 from torch.distributions import Categorical
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
-from stable_baselines3.common.type_aliases import GymEnv, Schedule, MaybeCallback
+from stable_baselines3.common.type_aliases import (
+    GymEnv,
+    Schedule,
+    MaybeCallback,
+    RolloutBufferSamples,
+)
 from stable_baselines3 import PPO
 import time
 import numpy as np
@@ -21,9 +26,10 @@ from stable_baselines3.common.utils import obs_as_tensor, safe_mean
 from stable_baselines3.common.vec_env import VecEnv
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.buffers import RolloutBuffer
+from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 from gym import spaces
-from stable_baselines3.common.utils import explained_variance
 from torch.nn import functional as F
+from stable_baselines3.common.vec_env import VecNormalize
 
 WALL_COLOR = 0.25
 GHOST_COLOR = 0.5
@@ -40,7 +46,6 @@ class Encoder(nn.Module):
         detect_ghosts,
         detect_walls,
         program_path,
-        # logger,
     ):
         super(Encoder, self).__init__()
         self.input_size = input_size
@@ -49,11 +54,97 @@ class Encoder(nn.Module):
         self.detect_walls = detect_walls
         self.n_actions = n_actions
         self.program_path = program_path
-        # self.logger = logger
 
     def forward(self, x):
         xx = th.flatten(x, 1)
         return xx
+
+
+class DPLRolloutBufferSamples(NamedTuple):
+    observations: th.Tensor
+    actions: th.Tensor
+    old_values: th.Tensor
+    old_log_prob: th.Tensor
+    advantages: th.Tensor
+    returns: th.Tensor
+    ghosts_errors: th.Tensor
+    walls_errors: th.Tensor
+
+
+class DPLRolloutBuffer(RolloutBuffer):
+    def __init__(self, *args, **kwargs):
+        self.ghosts_errors = None
+        self.walls_errors = None
+        super(DPLRolloutBuffer, self).__init__(*args, **kwargs)
+
+    def reset(self) -> None:
+        self.ghosts_errors = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+        self.walls_errors = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+        super(DPLRolloutBuffer, self).reset()
+
+    def add(
+        self,
+        obs: np.ndarray,
+        action: np.ndarray,
+        reward: np.ndarray,
+        episode_start: np.ndarray,
+        value: th.Tensor,
+        log_prob: th.Tensor,
+        ghosts_error: th.Tensor,
+        walls_error: th.Tensor,
+    ) -> None:
+        self.ghosts_errors[self.pos] = ghosts_error.clone().cpu().numpy()
+        self.walls_errors[self.pos] = walls_error.clone().cpu().numpy()
+        super(DPLRolloutBuffer, self).add(
+            obs, action, reward, episode_start, value, log_prob
+        )
+
+    def get(
+        self, batch_size: Optional[int] = None
+    ) -> Generator[DPLRolloutBufferSamples, None, None]:
+        assert self.full, ""
+        indices = np.random.permutation(self.buffer_size * self.n_envs)
+        # Prepare the data
+        if not self.generator_ready:
+
+            _tensor_names = [
+                "observations",
+                "actions",
+                "values",
+                "log_probs",
+                "advantages",
+                "returns",
+                "ghosts_errors",
+                "walls_errors",
+            ]
+
+            for tensor in _tensor_names:
+                self.__dict__[tensor] = self.swap_and_flatten(self.__dict__[tensor])
+            self.generator_ready = True
+
+        # Return everything, don't create minibatches
+        if batch_size is None:
+            batch_size = self.buffer_size * self.n_envs
+
+        start_idx = 0
+        while start_idx < self.buffer_size * self.n_envs:
+            yield self._get_samples(indices[start_idx : start_idx + batch_size])
+            start_idx += batch_size
+
+    def _get_samples(
+        self, batch_inds: np.ndarray, env: Optional[VecNormalize] = None
+    ) -> DPLRolloutBufferSamples:
+        data = (
+            self.observations[batch_inds],
+            self.actions[batch_inds],
+            self.values[batch_inds].flatten(),
+            self.log_probs[batch_inds].flatten(),
+            self.advantages[batch_inds].flatten(),
+            self.returns[batch_inds].flatten(),
+            self.ghosts_errors[batch_inds].flatten(),
+            self.walls_errors[batch_inds].flatten(),
+        )
+        return DPLRolloutBufferSamples(*tuple(map(self.to_torch, data)))
 
 
 class DPLActorCriticPolicy(ActorCriticPolicy):
@@ -147,15 +238,12 @@ class DPLActorCriticPolicy(ActorCriticPolicy):
         ###############################
 
         self.image_encoder = image_encoder
-        # self.logger = self.image_encoder.logger
         self.input_size = self.image_encoder.input_size
         self.shield = self.image_encoder.shield
         self.detect_ghosts = self.image_encoder.detect_ghosts
         self.detect_walls = self.image_encoder.detect_walls
         self.n_actions = self.image_encoder.n_actions
         self.program_path = self.image_encoder.program_path
-
-        # self.base_policy_layer = self.policy
 
         if self.detect_ghosts:
             self.ghost_layer = nn.Sequential(
@@ -192,35 +280,6 @@ class DPLActorCriticPolicy(ActorCriticPolicy):
 
         self._build(lr_schedule)
 
-        # self.optimizer = self.optimizer_class(self.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
-
-    def _build(self, lr_schedule: Schedule) -> None:
-        """
-        Create the networks and the optimizer.
-
-        :param lr_schedule: Learning rate schedule
-            lr_schedule(1) is the initial learning rate
-        """
-        super(DPLActorCriticPolicy, self)._build(lr_schedule)
-        # if self.ortho_init:
-        #     # TODO: check for features_extractor
-        #     # Values from stable-baselines.
-        #     # features_extractor/mlp values are
-        #     # originally from openai/baselines (default gains/init_scales).
-        #     module_gains = {
-        #         self.features_extractor: np.sqrt(2),
-        #         self.mlp_extractor: np.sqrt(2),
-        #         self.action_net: 0.01,
-        #         self.value_net: 1,
-        #         self.ghost_layer: 0.01,
-        #         self.wall_layer:0.01
-        #     }
-        #     for module, gain in module_gains.items():
-        #         module.apply(partial(self.init_weights, gain=gain))
-        #
-        # # Setup optimizer with initial learning rate
-        # self.optimizer = self.optimizer_class(self.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
-
     def forward(self, x, deterministic: bool = False):
         """
         Forward pass in all the networks (actor and critic)
@@ -241,7 +300,14 @@ class DPLActorCriticPolicy(ActorCriticPolicy):
         if not self.shield:
             actions = distribution.get_actions(deterministic=deterministic)
             log_prob = distribution.log_prob(actions)
-            return actions, values, log_prob, distribution
+            return (
+                actions,
+                values,
+                log_prob,
+                distribution,
+                th.zeros((1, 1)),
+                th.zeros((1, 1)),
+            )
 
         ghosts_ground_relative = get_ground_wall(x[0], PACMAN_COLOR, GHOST_COLOR)
         wall_ground_relative = get_ground_wall(x[0], PACMAN_COLOR, WALL_COLOR)
@@ -262,7 +328,15 @@ class DPLActorCriticPolicy(ActorCriticPolicy):
         actions = mass.sample()
         log_prob = mass.log_prob(actions)
 
-        return actions, values, log_prob, mass
+        with th.no_grad():
+            ghosts_error = (
+                (ghosts_ground_relative - ghosts).abs().sum(dim=1).reshape((-1, 1))
+            )
+            walls_error = (
+                (wall_ground_relative - walls).abs().sum(dim=1).reshape((-1, 1))
+            )
+
+        return actions, values, log_prob, mass, ghosts_error, walls_error
 
     def evaluate_actions(
         self, obs: th.Tensor, actions: th.Tensor
@@ -276,19 +350,27 @@ class DPLActorCriticPolicy(ActorCriticPolicy):
         :return: estimated value, log likelihood of taking those actions
             and entropy of the action distribution.
         """
-        # latent_pi, latent_vf, latent_sde = self._get_latent(obs)
-        # # distribution = self._get_action_dist_from_latent(latent_pi, latent_sde)
-        # values = self.value_net(latent_vf)
 
-        _actions, values, log_prob, mass = self.forward(obs)
+        _actions, values, log_prob, mass, ghosts_error, walls_error = self.forward(obs)
 
         log_prob = mass.log_prob(actions)
-        return values, log_prob, mass.entropy()
+        return values, log_prob, mass.entropy(), ghosts_error, walls_error
 
 
 class DPLPPO(PPO):
     def __init__(self, *args, **kwargs):
+
         super(DPLPPO, self).__init__(*args, **kwargs)
+        buffer_cls = DPLRolloutBuffer
+        self.rollout_buffer = buffer_cls(
+            self.n_steps,
+            self.observation_space,
+            self.action_space,
+            self.device,
+            gamma=self.gamma,
+            gae_lambda=self.gae_lambda,
+            n_envs=self.n_envs,
+        )
 
     def _setup_model(self) -> None:
         super(DPLPPO, self)._setup_model()
@@ -409,7 +491,14 @@ class DPLPPO(PPO):
             with th.no_grad():
                 # Convert to pytorch tensor or to TensorDict
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
-                actions, values, log_probs, mass = self.policy.forward(obs_tensor)
+                (
+                    actions,
+                    values,
+                    log_probs,
+                    mass,
+                    ghosts_error,
+                    walls_error,
+                ) = self.policy.forward(obs_tensor)
             actions = actions.cpu().numpy()
 
             # Rescale and perform action
@@ -442,6 +531,8 @@ class DPLPPO(PPO):
                 self._last_episode_starts,
                 values,
                 log_probs,
+                ghosts_error,
+                walls_error,
             )
             self._last_obs = new_obs
             self._last_episode_starts = dones
@@ -449,7 +540,7 @@ class DPLPPO(PPO):
         with th.no_grad():
             # Compute value for the last timestep
             obs_tensor = obs_as_tensor(new_obs, self.device)
-            _, values, _, _ = self.policy.forward(obs_tensor)
+            _, values, _, _, _, _ = self.policy.forward(obs_tensor)
 
         rollout_buffer.compute_returns_and_advantage(last_values=values, dones=dones)
 
@@ -491,7 +582,7 @@ class DPLPPO(PPO):
                 if self.use_sde:
                     self.policy.reset_noise(self.batch_size)
 
-                values, log_prob, entropy = self.policy.evaluate_actions(
+                values, log_prob, entropy, _, _ = self.policy.evaluate_actions(
                     rollout_data.observations, actions
                 )
 
@@ -596,6 +687,12 @@ class DPLPPO(PPO):
         self.logger.record("train/clip_range", clip_range)
         if self.clip_range_vf is not None:
             self.logger.record("train/clip_range_vf", clip_range_vf)
+        self.logger.record(
+            "train/ghosts_errors", np.mean(self.rollout_buffer.ghosts_errors.flatten())
+        )
+        self.logger.record(
+            "train/walls_errors", np.mean(self.rollout_buffer.walls_errors.flatten())
+        )
 
 
 class DPLPolicyGradientPolicy(OnPolicyAlgorithm):
@@ -730,4 +827,5 @@ class DPLPolicyGradientPolicy(OnPolicyAlgorithm):
         mass = Categorical(probs=actions)
         actions = mass.sample()
         log_prob = mass.log_prob(actions)
+
         return actions, values, log_prob
