@@ -20,7 +20,7 @@ import cherry.envs as envs
 from util import create_loggers, myformat
 
 from dpl_policy import DPLSafePolicy, Encoder, PolicyNet
-import relenvs
+import pacman_gym
 
 
 class Logger(envs.Logger):

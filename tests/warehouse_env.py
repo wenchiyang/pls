@@ -1,6 +1,6 @@
 import gym
-import relenvs
-from relenvs.envs import warehouseInterface
+import pacman_gym
+from pacman_gym.envs import warehouseInterface
 
 ENV_NAME = 'Warehouse-v0'
 

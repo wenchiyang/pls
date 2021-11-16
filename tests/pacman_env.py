@@ -1,9 +1,9 @@
 import gym
-from relenvs.envs.pacmanInterface import readCommand
+from pacman_gym.envs.pacmanInterface import readCommand
 import random
-import cv2
+# import cv2
 import matplotlib.pyplot as plt
-import numpy as np
+# import numpy as np
 
 def draw(image):
     plt.axis("off")
@@ -13,8 +13,8 @@ def draw(image):
 
 ENV_NAME = 'Pacman-v0'
 
-# Pick an layout from relenvs_pip/relenvs/envs/pacman/layouts
-layout='testGrid'
+# Pick an layout from pacman_gym/pacman_gym/envs/pacman/layouts
+layout='grid2x2'
 sampling_episodes = 1
 
 SIMPLE_ENV_ARGS = readCommand([
@@ -26,32 +26,27 @@ SIMPLE_ENV_ARGS = readCommand([
         '--numGames', str(sampling_episodes)  # Total episodes
     ])
 
+env_args = {
+        "layout": "grid2x2",
+        "seed": 456,
+        "reward_goal": 10,
+        "reward_crash": -10,
+        "reward_food": 0,
+        "reward_time": -1
+    }
 
 # Get the environment and extract the number of actions.
-env = gym.make(ENV_NAME, **SIMPLE_ENV_ARGS)
+env = gym.make(ENV_NAME, **env_args)
 
 # all actions
 all_actions = env.A
 
-# Initial State
-initial_state = env.game.state
-action_sequence = ['Stop', 'East', 'North', 'North', 'South', 'East']
-# self.A = ['Stop','North', 'South', 'West', 'East']
-
+state = env.reset()
 while not env.game.gameOver:
-    # action = random.choice(all_actions)
     action = random.choice(range(5))
     state, reward, is_gameOver, _ = env.step(action)
 
-    # One can choose to use an image as an input as well
-    # state_image = env.render(mode="rgb_array")
-    env.render(mode="human")
-
-    # state_image = env.my_render()
-    # draw(state)
-
-
-
+    env.render()
 
 env.game.end_game()
 

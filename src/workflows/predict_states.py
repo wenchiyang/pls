@@ -6,7 +6,7 @@ import random
 import numpy as np
 import gym
 import cherry.envs as envs
-import relenvs
+import pacman_gym
 from itertools import count
 from torch.distributions import Categorical
 from util import draw

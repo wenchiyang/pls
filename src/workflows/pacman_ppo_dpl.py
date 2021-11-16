@@ -6,7 +6,7 @@ import torch as th
 from os.path import join, abspath
 
 from dpl_policy_stable_baselines import DPLActorCriticPolicy, Encoder, DPLPPO
-import relenvs
+import pacman_gym
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
 from torch import nn
