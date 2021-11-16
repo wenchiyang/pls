@@ -3,6 +3,7 @@
   "workflow_name": "ppo",
   "raw_logger": "ppo_raw",
   "info_logger": "ppo_info",
+  "env_type": "Pacman-v0",
 
   "env_features": {
     "layout": "grid2x2",
