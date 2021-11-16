@@ -10,6 +10,7 @@ def train(folder):
     path = os.path.join(folder, "config.json")
     with open(path) as json_data_file:
         config = json.load(json_data_file)
+
     learner = config["workflow_name"]
     if learner == "pg":
         pg_dpl(folder, config)

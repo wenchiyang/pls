@@ -1,5 +1,5 @@
 import gym
-import relenvs
+import pacman_gym
 
 ENV_NAME = 'Blockworld-v0'
 env = gym.make(ENV_NAME)

@@ -2,6 +2,7 @@ import random
 import gym
 import numpy as np
 from logging import getLogger
+from util import draw
 
 from itertools import count
 
@@ -13,7 +14,6 @@ from torch.distributions import Categorical
 from datetime import datetime
 from os import path, getcwd
 from os.path import abspath, join
-import json
 import cherry as ch
 import cherry.envs as envs
 
@@ -21,7 +21,7 @@ from util import create_loggers, myformat
 
 from dpl_policy import DPLSafePolicy, Encoder, PolicyNet
 import pacman_gym
-
+import gym_sokoban
 
 class Logger(envs.Logger):
     def __init__(
@@ -93,7 +93,6 @@ class Logger(envs.Logger):
 
 
 def update(replay, optimizer, GAMMA):
-
     policy_loss = []
 
     # Discount and normalize rewards
@@ -112,6 +111,25 @@ def update(replay, optimizer, GAMMA):
     policy_loss_sum.backward()
     optimizer.step()
 
+def setup_env(folder, config):
+    #####   Initialize loggers   #############
+    logger_info_name = config["info_logger"]
+    logger_raw_name = config["raw_logger"]
+    create_loggers(folder, [logger_info_name, logger_raw_name])
+
+    logger_info = getLogger(logger_info_name)
+    logger_raw = getLogger(logger_raw_name)
+
+    #####   Initialize env   #############
+    env_name = config["env_type"]
+    env_args = config["env_features"]
+    env = gym.make(env_name, **env_args)
+
+    env = Logger(env, interval=1000, logger=logger_info, logger_raw=logger_raw)
+    env = envs.Torch(env)
+
+    return env
+
 
 def main(folder, config):
     """
@@ -120,42 +138,29 @@ def main(folder, config):
     #####   Read from config   #############
     step_limit = config["model_features"]["params"]["step_limit"]
     render = config["env_features"]["render"]
+    render_mode = config["model_features"]["params"]["render_mode"]
     gamma = config["model_features"]["params"]["gamma"]
+    logger_raw_name = config["raw_logger"]
+    max_steps = config["model_features"]["params"]["max_steps"]
 
     random.seed(config["model_features"]["params"]["seed"])
     np.random.seed(config["model_features"]["params"]["seed"])
     th.manual_seed(config["model_features"]["params"]["seed"])
 
-    #####   Initialize loggers   #############
-    logger_info_name = config["info_logger"]
-    logger_raw_name = config["raw_logger"]
-    # timestamp = datetime.now().strftime("%Y%m%d_%H:%M")
-    create_loggers(folder, [logger_info_name, logger_raw_name])
 
-    logger_info = getLogger(logger_info_name)
-    logger_raw = getLogger(logger_raw_name)
+    env = setup_env(folder, config)
 
-    #####   Initialize env   #############
-    env_name = "Pacman-v0"
-    env_args = {
-        "layout": config["env_features"]["layout"],
-        "seed": config["env_features"]["seed"],
-        "reward_goal": config["env_features"]["reward_goal"],
-        "reward_crash": config["env_features"]["reward_crash"],
-        "reward_food": config["env_features"]["reward_food"],
-        "reward_time": config["env_features"]["reward_time"],
-    }
-
-    env = gym.make(env_name, **env_args)
-    env = Logger(env, interval=1000, logger=logger_info, logger_raw=logger_raw)
-    env = envs.Torch(env)
-    env.seed(config["env_features"]["seed"])
 
     grid_size = env.grid_size
-    height = env.layout.height
-    width = env.layout.width
-    n_pixels = (height * grid_size) * (width * grid_size)
-    n_actions = len(env.A)
+    height = env.grid_height
+    width = env.grid_weight
+    color_channels = env.color_channels
+    n_pixels = (height * grid_size) * (width * grid_size) * color_channels
+    n_actions = env.action_size
+    # n_actions = 5
+
+    #####   Get loggers   #############
+    logger_raw = getLogger(logger_raw_name)
 
     #####   Initialize network   #############
 
@@ -188,9 +193,10 @@ def main(folder, config):
     replay = ch.ExperienceReplay()
     total_steps = 0
     for i_episode in count(1):
-        state = env.reset()
+        state = env.reset(observation_mode=render_mode, render=render)
+
         # draw(state[0])
-        for t in range(100):  # Don't infinite loop while learning
+        for t in range(max_steps):  # Don't infinite loop while learning
             total_steps += 1
             if total_steps > step_limit:
                 # save the model
@@ -207,7 +213,7 @@ def main(folder, config):
             log_prob = mass.log_prob(action)
 
             old_state = state
-            state, reward, done, _ = env.step(action)
+            state, reward, done, _ = env.step(action, observation_mode=render_mode)
 
             replay.append(
                 old_state,
@@ -222,8 +228,9 @@ def main(folder, config):
             logger_raw.debug(f"Reward:         {reward}")
             logger_raw.debug(f"Done:           {done}")
             logger_raw.handlers[0].flush()
-            if render:
-                env.render()
+
+            # if render:
+            env.render(render=render)
             if done:
                 break
 

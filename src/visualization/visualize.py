@@ -377,7 +377,7 @@ def create_chart_shield(exp_folder):
     chart.save(chart_path)
     chart_path = os.path.join(exp_folder, "figs", "pg.html")
     chart.save(chart_path)
-    # chart.show(chart_path)
+    chart.show(chart_path)
 
 
 def main():

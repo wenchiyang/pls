@@ -3,6 +3,7 @@
   "workflow_name": "pg",
   "raw_logger": "pg_raw",
   "info_logger": "pg_info",
+  "env_type": "Pacman-v0",
 
   "env_features": {
     "layout": "grid2x2",
@@ -24,7 +25,9 @@
       "program_type": "relative_loc",
       "shield": false,
       "detect_ghosts": false,
-      "detect_walls": false
+      "detect_walls": false,
+      "max_steps": 100,
+      "render_mode": "human"
     }
   },
 

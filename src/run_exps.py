@@ -6,7 +6,8 @@ from workflows.execute_workflow import train
 def test():
     exps_folder = abspath(join(getcwd(), "experiments"))
     types = [
-        "grid2x2_1_ghost/pg",
+        # "grid2x2_1_ghost/pg",
+        "sokoban/pg",
     ]
     # for exp in exps:
     for type in types:
