@@ -6,11 +6,26 @@ import torch as th
 from os.path import join, abspath
 
 from dpl_policy_stable_baselines import DPLActorCriticPolicy, Encoder, DPLPPO
-import pacman_gym
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
 from torch import nn
+import pacman_gym
+import gym_sokoban
 
+def setup_env(folder, config):
+    #####   Initialize env   #############
+    env_name = config["env_type"]
+    env_args = config["env_features"]
+
+    env = gym.make(env_name, **env_args)
+
+    env = Monitor(
+        env,
+        allow_early_resets=False,
+        # reset_keywords=(),
+        info_keywords=(["last_r"]),
+    )
+    return env
 
 def main(folder, config):
     """
@@ -26,37 +41,21 @@ def main(folder, config):
     #####   Initialize loggers   #############
     new_logger = configure(folder, ["stdout", "tensorboard"])
 
-    #####   Initialize env   #############
-    env_name = "Pacman-v0"
-    env_args = {
-        "layout": config["env_features"]["layout"],
-        "seed": config["env_features"]["seed"],
-        "reward_goal": config["env_features"]["reward_goal"],
-        "reward_crash": config["env_features"]["reward_crash"],
-        "reward_food": config["env_features"]["reward_food"],
-        "reward_time": config["env_features"]["reward_time"],
-    }
 
-    env = gym.make(env_name, **env_args)
-    # eval_env = gym.make(env_name, **env_args)
-
-    env = Monitor(
-        env,
-        allow_early_resets=False,
-        # reset_keywords=(),
-        info_keywords=(["last_r"]),
-    )
+    env = setup_env(folder, config)
 
     grid_size = env.grid_size
-    height = env.layout.height
-    width = env.layout.width
-    n_pixels = (height * grid_size) * (width * grid_size)
-    n_actions = len(env.A)
+    height = env.grid_height
+    width = env.grid_weight
+    color_channels = env.color_channels
+    n_pixels = (height * grid_size) * (width * grid_size) * color_channels
+    n_actions = env.action_size
 
     # #####   Initialize network   #############
     program_path = abspath(
         join("src", "data", f'{config["model_features"]["params"]["program_type"]}.pl')
     )
+
     image_encoder = Encoder(
         n_pixels,
         n_actions,

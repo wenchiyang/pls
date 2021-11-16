@@ -157,7 +157,7 @@ def main(folder, config):
     color_channels = env.color_channels
     n_pixels = (height * grid_size) * (width * grid_size) * color_channels
     n_actions = env.action_size
-    # n_actions = 5
+
 
     #####   Get loggers   #############
     logger_raw = getLogger(logger_raw_name)

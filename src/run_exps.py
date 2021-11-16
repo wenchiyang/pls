@@ -7,6 +7,7 @@ def test():
     exps_folder = abspath(join(getcwd(), "experiments"))
     types = [
         # "grid2x2_1_ghost/pg",
+        # "sokoban/ppo",
         "sokoban/pg",
     ]
     # for exp in exps:

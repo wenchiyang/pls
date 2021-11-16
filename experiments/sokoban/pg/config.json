@@ -1,0 +1,44 @@
+{
+  "workflow_type": "pacman_pg_dpl",
+  "workflow_name": "pg",
+  "raw_logger": "pg_raw",
+  "info_logger": "pg_info",
+  "env_type": "Sokoban-v0",
+
+  "env_features": {
+    "num_boxes": 1,
+    "max_steps": 200,
+    "dim_room": [5, 5],
+    "penalty_for_step": -1,
+    "penalty_box_off_target": -1,
+    "reward_box_on_target": 1,
+    "reward_finished": 10,
+    "reward_last": 0,
+    "render": false,
+    "render_mode": "tiny_rgb_array"
+  },
+
+  "model_features": {
+    "name": "no_shielding",
+    "params": {
+      "learning_rate": 1e-3,
+      "seed": 488,
+      "gamma": 0.99,
+      "step_limit": 2000000,
+      "program_type": "relative_loc",
+      "shield": false,
+      "detect_ghosts": false,
+      "detect_walls": false,
+      "max_steps": 200,
+      "render_mode": "tiny_rgb_array"
+    }
+  },
+
+  "visualize_settings": {
+    "window_size": 2000,
+    "window_speed": 1000
+  }
+
+}
+
+
