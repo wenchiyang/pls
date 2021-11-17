@@ -1,15 +1,12 @@
 import torch as th
-from dpl_policy import Encoder, DPLSafePolicy, PolicyNet
+from dpl_policy.pg.pacman_pg import Encoder, DPLSafePolicy, PolicyNet
 import os
-import json
 import random
 import numpy as np
 import gym
 import cherry.envs as envs
-import pacman_gym
 from itertools import count
 from torch.distributions import Categorical
-from util import draw
 
 
 def load(folder, config):

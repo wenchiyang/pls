@@ -5,7 +5,7 @@ import numpy as np
 import torch as th
 from os.path import join, abspath
 
-from dpl_policy_stable_baselines import DPLActorCriticPolicy, Encoder, DPLPPO
+from dpl_policy.ppo.pacman_ppo import DPLActorCriticPolicy, Encoder, DPLPPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
 from torch import nn

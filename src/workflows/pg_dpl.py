@@ -2,16 +2,12 @@ import random
 import gym
 import numpy as np
 from logging import getLogger
-from util import draw
 
 from itertools import count
 
 import torch as th
-import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
-from datetime import datetime
 from os import path, getcwd
 from os.path import abspath, join
 import cherry as ch
@@ -19,7 +15,7 @@ import cherry.envs as envs
 
 from util import create_loggers, myformat
 
-from dpl_policy import DPLSafePolicy, Encoder, PolicyNet
+from dpl_policy.pg.pacman_pg import DPLSafePolicy, Encoder, PolicyNet
 import pacman_gym
 import gym_sokoban
 
