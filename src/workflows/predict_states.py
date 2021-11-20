@@ -1,5 +1,5 @@
 import torch as th
-from dpl_policy.pg.pacman_pg import Encoder, DPLSafePolicy, PolicyNet
+from dpl_policy.pacman.pacman_pg import Encoder, DPLSafePolicy, PolicyNet
 import os
 import random
 import numpy as np

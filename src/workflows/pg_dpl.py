@@ -13,11 +13,10 @@ from os.path import abspath, join
 import cherry as ch
 import cherry.envs as envs
 
-from util import create_loggers, myformat
+from dpl_policy.pacman.util import create_loggers, myformat
 
-from dpl_policy.pg.pacman_pg import DPLSafePolicy, Encoder, PolicyNet
-import pacman_gym
-import gym_sokoban
+from dpl_policy.pacman.pacman_pg import DPLSafePolicy, Encoder, PolicyNet
+
 
 class Logger(envs.Logger):
     def __init__(

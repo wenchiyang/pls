@@ -1,7 +1,7 @@
 from workflows.pg_dpl import main as pg_dpl
 from workflows.predict_states import main as predict
 from workflows.ppo_dpl import main as ppo_dpl
-from workflows.a2c_dpl import main as a2c_dpl
+# from workflows.a2c_dpl import main as a2c_dpl
 import json
 import os
 
@@ -16,8 +16,8 @@ def train(folder):
         pg_dpl(folder, config)
     elif "ppo" in learner:
         ppo_dpl(folder, config)
-    elif "a2c" in learner:
-        a2c_dpl(folder, config)
+    # elif "a2c" in learner:
+    #     a2c_dpl(folder, config)
 
 
 # def predict_states(folder):

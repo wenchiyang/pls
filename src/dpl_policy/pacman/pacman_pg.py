@@ -1,7 +1,7 @@
 from torch import nn
 from deepproblog.light import DeepProbLogLayer
 import torch as th
-from util import myformat, get_ground_wall
+from dpl_policy.pacman.util import myformat, get_ground_wall
 import torch.nn.functional as F
 
 

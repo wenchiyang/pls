@@ -10,10 +10,10 @@ def test():
         # "sokoban/pg",
 
         # "grid2x2_1_ghost/ppo",
-        # "sokoban/ppo",
+        # "sokoban/ppo2",
 
-        "grid2x2_1_ghost/ppo_shield",
-        # "sokoban/ppo_shield",
+        # "grid2x2_1_ghost/ppo_shield",
+        "sokoban/ppo_shield",
     ]
     # for exp in exps:
     for type in types:

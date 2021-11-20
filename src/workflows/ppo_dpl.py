@@ -5,7 +5,8 @@ import numpy as np
 import torch as th
 from os.path import join, abspath
 
-from dpl_policy.ppo.pacman_ppo import DPLActorCriticPolicy, Encoder, DPLPPO
+from dpl_policy.pacman.pacman_ppo import Pacman_DPLActorCriticPolicy, Pacman_Encoder, Pacman_DPLPPO
+from dpl_policy.sokoban.sokoban_ppo import Sokoban_DPLActorCriticPolicy, Sokoban_Encoder, Sokoban_DPLPPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
 from torch import nn
@@ -33,7 +34,6 @@ def main(folder, config):
     """
     #####   Read from config   #############
     # render = config["env_features"]["render"]
-
     random.seed(config["model_features"]["params"]["seed"])
     np.random.seed(config["model_features"]["params"]["seed"])
     th.manual_seed(config["model_features"]["params"]["seed"])
@@ -56,14 +56,7 @@ def main(folder, config):
         join("src", "data", f'{config["model_features"]["params"]["program_type"]}.pl')
     )
 
-    image_encoder = Encoder(
-        n_pixels,
-        n_actions,
-        config["model_features"]["params"]["shield"],
-        config["model_features"]["params"]["detect_ghosts"],
-        config["model_features"]["params"]["detect_walls"],
-        program_path,
-    )
+
 
     #####   Configure model   #############
     net_arch = config["model_features"]["params"]["net_arch_shared"] + [
@@ -72,8 +65,37 @@ def main(folder, config):
             vf=config["model_features"]["params"]["net_arch_vf"],
         )
     ]
-    model = DPLPPO(
-        DPLActorCriticPolicy,
+
+    env_name = config["env_type"]
+    if "Pacman" in env_name:
+        model_cls = Pacman_DPLPPO
+        policy_cls = Pacman_DPLActorCriticPolicy
+        image_encoder_cls = Pacman_Encoder
+        shielding_settings = {
+            "shield": config["model_features"]["params"]["shield"],
+            "detect_ghosts": config["model_features"]["params"]["detect_ghosts"],
+            "detect_walls": config["model_features"]["params"]["detect_walls"],
+        }
+    elif "Sokoban" in env_name:
+        model_cls = Sokoban_DPLPPO
+        policy_cls = Sokoban_DPLActorCriticPolicy
+        image_encoder_cls = Sokoban_Encoder
+        shielding_settings = {
+            "shield": config["model_features"]["params"]["shield"],
+            "detect_boxes": config["model_features"]["params"]["detect_boxes"],
+            "detect_walls": config["model_features"]["params"]["detect_walls"],
+            "detect_targets": config["model_features"]["params"]["detect_targets"],
+        }
+
+    image_encoder = image_encoder_cls(
+        n_pixels,
+        n_actions,
+        shielding_settings,
+        program_path
+    )
+
+    model = model_cls(
+        policy_cls,
         env,
         verbose=0,
         learning_rate=config["model_features"]["params"]["learning_rate"],

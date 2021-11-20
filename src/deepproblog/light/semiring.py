@@ -1,6 +1,4 @@
 from problog.evaluator import Semiring
-import torch
-
 
 class GraphSemiring(Semiring):
     def __init__(self):
