@@ -493,7 +493,12 @@ class Pacman_DPLPPO(PPO):
                     actions, self.action_space.low, self.action_space.high
                 )
 
-            new_obs, rewards, dones, infos = env.step(clipped_actions)
+            (
+                new_obs,
+                rewards,
+                dones,
+                infos
+            ) = env.step(clipped_actions)
 
             self.num_timesteps += env.num_envs
 
@@ -501,6 +506,9 @@ class Pacman_DPLPPO(PPO):
             callback.update_locals(locals())
             if callback.on_step() is False:
                 return False
+            for e in env.envs:
+                if not e.env.beQuiet:
+                    e.env.render()
 
             self._update_info_buffer(infos)
             n_steps += 1

@@ -23,7 +23,6 @@ def setup_env(folder, config):
     env = Monitor(
         env,
         allow_early_resets=False,
-        # reset_keywords=(),
         info_keywords=(["last_r"]),
     )
     return env
@@ -40,7 +39,6 @@ def main(folder, config):
 
     #####   Initialize loggers   #############
     new_logger = configure(folder, ["stdout", "tensorboard"])
-
 
     env = setup_env(folder, config)
 
@@ -62,7 +60,7 @@ def main(folder, config):
     net_arch = config["model_features"]["params"]["net_arch_shared"] + [
         dict(
             pi=config["model_features"]["params"]["net_arch_pi"],
-            vf=config["model_features"]["params"]["net_arch_vf"],
+            vf=config["model_features"]["params"]["net_arch_vf"]
         )
     ]
 
@@ -117,6 +115,8 @@ def main(folder, config):
 
     model.set_logger(new_logger)
 
-    model.learn(total_timesteps=config["model_features"]["params"]["step_limit"])
+    model.learn(
+        total_timesteps=config["model_features"]["params"]["step_limit"]
+    )
     # model.learn(total_timesteps=500)
     model.save(join(folder, "model"))

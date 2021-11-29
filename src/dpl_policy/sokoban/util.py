@@ -105,7 +105,7 @@ def get_ground_ghost(input, center_color, detect_color):
     return res
 
 
-def get_ground_relatives(input, center_colors, detect_colors, neighbors_relative_locs):
+def get_ground_relatives(input, center_colors, detect_colors, neighbors_relative_locs, out_of_boundary_value=False):
     centers = [th.tensor([center_color]*3, dtype=th.float32) for center_color in center_colors]
     detects = [th.tensor([detect_color]*3, dtype=th.float32) for detect_color in detect_colors]
 
@@ -120,7 +120,7 @@ def get_ground_relatives(input, center_colors, detect_colors, neighbors_relative
     for nr, nc in neighbors_relative_locs:
         # if coord is not valid
         if not (0 <= r_center+nr < dim_r and 0 <= c_center+nc < dim_c):
-            res.append(False)
+            res.append(out_of_boundary_value)
         elif any([(input[r_center+nr, c_center+nc] == detect).all() for detect in detects]):
             res.append(True)
         else:

@@ -22,21 +22,21 @@
     "name": "hard_shielding",
     "params": {
       "log_interval": 1,
-      "batch_size": 4,
-      "n_epochs": 10,
-      "n_steps": 20,
-      "learning_rate": 1e-4,
+      "batch_size": 128,
+      "n_epochs": 40,
+      "n_steps": 1024,
+      "learning_rate": 1e-3,
       "seed": 567,
       "gamma": 0.99,
-      "step_limit": 40000,
+      "step_limit": 45000,
       "program_type": "sokoban_relative",
       "shield": true,
       "detect_boxes": false,
       "detect_walls": false,
       "detect_targets": false,
       "net_arch_shared": [],
-      "net_arch_pi": [256],
-      "net_arch_vf": [256]
+      "net_arch_pi": [128],
+      "net_arch_vf": [128]
     }
   },
 
