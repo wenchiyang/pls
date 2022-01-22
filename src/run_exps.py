@@ -2,22 +2,27 @@ from dask.distributed import Client, LocalCluster, performance_report, SSHCluste
 from os.path import join, abspath
 from os import getcwd
 from workflows.execute_workflow import train
+from workflows.execute_workflow import evaluate as evaluate
 
-def test():
+def run_train():
     exps_folder = abspath(join(getcwd(), "experiments"))
     types = [
-        # "sokoban/pg",
-        # "sokoban_2boxes/ppo",
-        # "sokoban/ppo_shield",
-        # "sokoban/ppo_shield_detect2",
-        "grid2x2_1_ghost/ppo"
-
-
+        "sokoban/ppo",
     ]
     # for exp in exps:
     for type in types:
         path = join(exps_folder, type)
         train(path)
+
+def run_evaluate():
+    exps_folder = abspath(join(getcwd(), "experiments"))
+    types = [
+        "sokoban/ppo"
+    ]
+    # for exp in exps:
+    for type in types:
+        path = join(exps_folder, type)
+        evaluate(path)
 
 def main_cluster():
     cluster = LocalCluster(
@@ -51,4 +56,5 @@ def main_cluster():
 
 if __name__ == "__main__":
     # main_cluster()
-    test()
+    # run_train()
+    run_evaluate()

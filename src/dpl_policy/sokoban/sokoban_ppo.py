@@ -1,7 +1,7 @@
 from torch import nn
 from deepproblog.light import DeepProbLogLayer
 import torch as th
-from dpl_policy.sokoban.util import get_ground_relatives
+from dpl_policy.sokoban.util import get_ground_relatives, get_ground_corners
 from typing import Any, Dict, Optional, Type, Union, List, Tuple, Generator, NamedTuple
 from stable_baselines3.common.policies import ActorCriticPolicy, BasePolicy
 import gym
@@ -50,19 +50,19 @@ NEIGHBORS_RELATIVE_LOCS_BOX = [(-1, 0), (0, -1), (0, 1), (1, 0)]
 NEIGHBORS_RELATIVE_LOCS_WALL = \
     [
         (-3, 0), (-2, -1), (-2, 0), (-2, 1), (-1, -2),
-        (-1,-1), (-1,0), (-1,1), (-1,2), (0,-3),
+        # (-1,-1),
+        (-1,0),
+        # (-1,1),
+        (-1,2), (0,-3),
         (0,-2), (0,-1), (0,1), (0,2), (0,3),
-        (1,-2), (1,-1), (1,0), (1,1), (1,2),
+        (1,-2),
+        # (1,-1),
+        (1,0),
+        # (1,1),
+        (1,2),
         (2,-1), (2,0), (2,1), (3,0)
     ]
 
-#     [
-#     ( 0,  3), (-1, 2), (0, 2), (1, 2), (-2, 1),
-#     (-1,  1), ( 0, 1), (1, 1), (2, 1), (-3, 0),
-#     (-2,  0), (-1, 0), (1, 0), (2, 0), (3, 0),
-#     (-2, -1), (-1, -1), (0, -1), (1, -1), (2, -1),
-#     (-1, -2), (0, -2), (1, -2), (0, -3)
-# ]
 
 NEIGHBORS_RELATIVE_LOCS_TARGET = [( -2,0), (0,-2), (0, 2), (2, 0)]
 
@@ -78,8 +78,13 @@ class Sokoban_Encoder(nn.Module):
         self.input_size = input_size
         self.shield = shielding_settings["shield"]
         self.detect_boxes = shielding_settings["detect_boxes"]
+        self.detect_corners = shielding_settings["detect_corners"]
         self.detect_walls = shielding_settings["detect_walls"]
         self.detect_targets = shielding_settings["detect_targets"]
+        self.box_layer_output = shielding_settings["box_layer_output"]
+        self.corner_layer_output = shielding_settings["corner_layer_output"]
+        self.target_layer_output = shielding_settings["target_layer_output"]
+        self.wall_layer_output = shielding_settings["wall_layer_output"]
         self.n_actions = n_actions
         self.program_path = program_path
 
@@ -95,22 +100,22 @@ class Sokoban_DPLRolloutBufferSamples(NamedTuple):
     old_log_prob: th.Tensor
     advantages: th.Tensor
     returns: th.Tensor
-    boxes_error: th.Tensor
-    walls_errors: th.Tensor
-    targets_error: th.Tensor
+    # boxes_error: th.Tensor
+    # walls_errors: th.Tensor
+    # targets_error: th.Tensor
 
 
 class Sokoban_DPLRolloutBuffer(RolloutBuffer):
     def __init__(self, *args, **kwargs):
-        self.boxes_errors = None
-        self.walls_errors = None
-        self.targets_errors = None
+        # self.boxes_errors = None
+        # self.walls_errors = None
+        # self.targets_errors = None
         super(Sokoban_DPLRolloutBuffer, self).__init__(*args, **kwargs)
 
     def reset(self) -> None:
-        self.boxes_errors = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
-        self.walls_errors = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
-        self.targets_errors = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+        # self.boxes_errors = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+        # self.walls_errors = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+        # self.targets_errors = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         super(Sokoban_DPLRolloutBuffer, self).reset()
 
     def add(
@@ -121,14 +126,14 @@ class Sokoban_DPLRolloutBuffer(RolloutBuffer):
         episode_start: np.ndarray,
         value: th.Tensor,
         log_prob: th.Tensor,
-        errors
+        # errors
     ) -> None:
-        boxes_error = errors[0]
-        walls_error = errors[1]
-        targets_error = errors[2]
-        self.boxes_errors[self.pos] = boxes_error.clone().cpu().numpy()
-        self.walls_errors[self.pos] = walls_error.clone().cpu().numpy()
-        self.targets_errors[self.pos] = targets_error.clone().cpu().numpy()
+        # boxes_error = errors[0]
+        # walls_error = errors[1]
+        # targets_error = errors[2]
+        # self.boxes_errors[self.pos] = boxes_error.clone().cpu().numpy()
+        # self.walls_errors[self.pos] = walls_error.clone().cpu().numpy()
+        # self.targets_errors[self.pos] = targets_error.clone().cpu().numpy()
         super(Sokoban_DPLRolloutBuffer, self).add(
             obs, action, reward, episode_start, value, log_prob
         )
@@ -148,9 +153,9 @@ class Sokoban_DPLRolloutBuffer(RolloutBuffer):
                 "log_probs",
                 "advantages",
                 "returns",
-                "boxes_errors",
-                "walls_errors",
-                "targets_errors",
+                # "boxes_errors",
+                # "walls_errors",
+                # "targets_errors",
             ]
 
             for tensor in _tensor_names:
@@ -176,9 +181,9 @@ class Sokoban_DPLRolloutBuffer(RolloutBuffer):
             self.log_probs[batch_inds].flatten(),
             self.advantages[batch_inds].flatten(),
             self.returns[batch_inds].flatten(),
-            self.boxes_errors[batch_inds].flatten(),
-            self.walls_errors[batch_inds].flatten(),
-            self.targets_errors[batch_inds].flatten(),
+            # self.boxes_errors[batch_inds].flatten(),
+            # self.walls_errors[batch_inds].flatten(),
+            # self.targets_errors[batch_inds].flatten(),
         )
         return Sokoban_DPLRolloutBufferSamples(*tuple(map(self.to_torch, data)))
 
@@ -269,6 +274,12 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         self.detect_boxes = self.image_encoder.detect_boxes
         self.detect_walls = self.image_encoder.detect_walls
         self.detect_targets = self.image_encoder.detect_targets
+        self.detect_corners = self.image_encoder.detect_corners
+
+        self.box_layer_output = self.image_encoder.box_layer_output
+        self.wall_layer_output = self.image_encoder.wall_layer_output
+        self.target_layer_output = self.image_encoder.target_layer_output
+        self.corner_layer_output = self.image_encoder.corner_layer_output
 
         self.n_actions = self.image_encoder.n_actions
         self.program_path = self.image_encoder.program_path
@@ -277,15 +288,25 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             self.box_layer = nn.Sequential(
                 nn.Linear(self.input_size, 128),
                 nn.ReLU(),
-                nn.Linear(128, 4),
+                nn.Linear(128, self.box_layer_output),
                 # nn.Softmax()
                 nn.Sigmoid(),  # TODO : add a flag
             )
+
+        if self.detect_corners:
+            self.corner_layer = nn.Sequential(
+                nn.Linear(self.input_size, 128),
+                nn.ReLU(),
+                nn.Linear(128, self.corner_layer_output),
+                # nn.Softmax()
+                nn.Sigmoid(),
+            )
+
         if self.detect_walls:
             self.wall_layer = nn.Sequential(
                 nn.Linear(self.input_size, 128),
                 nn.ReLU(),
-                nn.Linear(128, 24),
+                nn.Linear(128, self.wall_layer_output),
                 # nn.Softmax()
                 nn.Sigmoid(),
             )
@@ -293,7 +314,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             self.target_layer = nn.Sequential(
                 nn.Linear(self.input_size, 128),
                 nn.ReLU(),
-                nn.Linear(128, 4),
+                nn.Linear(128, self.target_layer_output),
                 # nn.Softmax()
                 nn.Sigmoid(),
             )
@@ -311,8 +332,10 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 "safe_action(move_up)",
                 "safe_action(move_down)",
                 "safe_action(move_left)",
-                "safe_action(move_right)",
-                "safe_next",
+                "safe_action(move_right)"
+            ][:self.n_actions] + \
+            [
+                "safe_next"
             ]
 
             # self.evidences = [
@@ -348,12 +371,28 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         if not self.shield:
             actions = distribution.get_actions(deterministic=deterministic)
             log_prob = distribution.log_prob(actions)
+            probs = {
+                "prob_box": th.zeros(4),
+                "prob_corner":th.zeros(4),
+                "prob_wall":th.zeros(4),
+                "prob_target": th.zeros(4),
+            }
+
+            errors = {
+                "error_box": th.zeros(4),
+                "error_corner": th.zeros(4),
+                "error_wall": th.zeros(4),
+                "error_target": th.zeros(4)
+            }
+
+            base_actions = distribution.distribution.probs[0]
+
             return (
                 actions,
                 values,
                 log_prob,
-                distribution,
-                [th.zeros((1, 1)), th.zeros((1, 1)), th.zeros((1, 1))]
+                distribution.distribution,
+                [errors, probs, base_actions]
             )
 
         box_ground_relative = get_ground_relatives(
@@ -363,12 +402,13 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             NEIGHBORS_RELATIVE_LOCS_BOX,
             out_of_boundary_value=False
         )
-        wall_ground_relative = get_ground_relatives(
+
+        corner_ground_relative = get_ground_corners(
             x[0],
             [PLAYER_COLOR, PLAYER_ON_TARGET_COLOR],
             [WALL_COLOR],
-            NEIGHBORS_RELATIVE_LOCS_WALL,
-            out_of_boundary_value=True
+            NEIGHBORS_RELATIVE_LOCS_TARGET,
+            out_of_boundary_value=False
         )
         target_ground_relative = get_ground_relatives(
             x[0],
@@ -377,13 +417,34 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             NEIGHBORS_RELATIVE_LOCS_TARGET,
             out_of_boundary_value=False
         )
+        if "corner" in self.program_path:
+            wall_ground_relative = get_ground_relatives(
+                x[0],
+                [PLAYER_COLOR, PLAYER_ON_TARGET_COLOR],
+                [WALL_COLOR],
+                NEIGHBORS_RELATIVE_LOCS_TARGET,
+                out_of_boundary_value=True
+            )
+        else:
+            wall_ground_relative = get_ground_relatives(
+                x[0],
+                [PLAYER_COLOR, PLAYER_ON_TARGET_COLOR],
+                [WALL_COLOR],
+                NEIGHBORS_RELATIVE_LOCS_WALL,
+                out_of_boundary_value=True
+                )
         boxes = self.box_layer(obs) if self.detect_boxes else box_ground_relative
+        corners = self.corner_layer(obs) if self.detect_corners else corner_ground_relative
         walls = self.wall_layer(obs) if self.detect_walls else wall_ground_relative
         targets = self.target_layer(obs) if self.detect_targets else target_ground_relative
 
         base_actions = distribution.distribution.probs
         results = self.dpl_layer(
-            x={"box": boxes, "wall": walls, "target": targets, "action": base_actions}
+            x={"box": boxes,
+               "corner": corners,
+               "wall": walls,
+               "target": targets,
+               "action": base_actions}
         )
 
         # It's possible there is no safe actions, in that case safe_next is zero
@@ -399,17 +460,20 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         log_prob = mass.log_prob(actions)
 
         with th.no_grad():
-            boxes_error = (
-                (box_ground_relative - boxes).abs().sum(dim=1).reshape((-1, 1))
-            )
-            walls_error = (
-                (wall_ground_relative - walls).abs().sum(dim=1).reshape((-1, 1))
-            )
-            targets_error = (
-                (target_ground_relative - targets).abs().sum(dim=1).reshape((-1, 1))
-            )
+            object_detect_probs = dict()
+            object_detect_probs["prob_box"] = boxes[0]
+            object_detect_probs["prob_corner"] = corners[0]
+            object_detect_probs["prob_wall"] = walls[0]
+            object_detect_probs["prob_target"] = targets[0]
 
-        return actions, values, log_prob, mass, [boxes_error, walls_error, targets_error]
+            errors = dict()
+            errors["error_box"] = ((box_ground_relative - boxes).abs()[0])
+            errors["error_corner"] = ((corner_ground_relative - corners).abs()[0])
+            errors["error_wall"] = ((wall_ground_relative - walls).abs()[0])
+            errors["error_target"] = ((target_ground_relative - targets).abs()[0])
+
+
+        return actions, values, log_prob, mass, [errors, object_detect_probs, base_actions[0]]
 
     def evaluate_actions(
         self, obs: th.Tensor, actions: th.Tensor
@@ -432,7 +496,6 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
 
 class Sokoban_DPLPPO(PPO):
     def __init__(self, *args, **kwargs):
-
         super(Sokoban_DPLPPO, self).__init__(*args, **kwargs)
         buffer_cls = Sokoban_DPLRolloutBuffer
         self.rollout_buffer = buffer_cls(
@@ -569,8 +632,26 @@ class Sokoban_DPLPPO(PPO):
                     values,
                     log_probs,
                     mass,
-                    errors
+                    (errors, object_detect_probs, base_probs)
                 ) = self.policy.forward(obs_tensor)
+
+                for direction in [0,1,2,3]:
+                    self.logger.record(f"errors/error_box_{direction}", float(errors["error_box"][direction]))
+                    self.logger.record(f"errors/error_corner_{direction}", float(errors["error_corner"][direction]))
+                    self.logger.record(f"errors/error_wall_{direction}", float(errors["error_wall"][direction]))
+                    self.logger.record(f"errors/error_target_{direction}", float(errors["error_target"][direction]))
+                    self.logger.record(f"probs/prob_box_{direction}", float(object_detect_probs["prob_box"][direction]))
+                    self.logger.record(f"probs/prob_corner_{direction}", float(object_detect_probs["prob_corner"][direction]))
+                    self.logger.record(f"probs/prob_wall_{direction}", float(object_detect_probs["prob_wall"][direction]))
+                    self.logger.record(f"probs/prob_target_{direction}", float(object_detect_probs["prob_target"][direction]))
+                for act in range(env.action_space.n):
+                    action_lookup = env.envs[0].get_action_lookup()
+                    self.logger.record(f"policy/shielded_prob_{action_lookup[act]}", float(mass.probs[0][act]))
+                    self.logger.record(f"policy/base_prob_{action_lookup[act]}", float(base_probs[act]))
+                    self.logger.record(f"policy/diff_base_shield_prob_{action_lookup[act]}",
+                                       abs(float(base_probs[act])-float(mass.probs[0][act])))
+
+
             actions = actions.cpu().numpy()
 
             # Rescale and perform action
@@ -611,7 +692,7 @@ class Sokoban_DPLPPO(PPO):
                 self._last_episode_starts,
                 values,
                 log_probs,
-                errors
+                # errors
             )
             self._last_obs = new_obs
             self._last_episode_starts = dones
@@ -766,15 +847,15 @@ class Sokoban_DPLPPO(PPO):
         self.logger.record("train/clip_range", clip_range)
         if self.clip_range_vf is not None:
             self.logger.record("train/clip_range_vf", clip_range_vf)
-        self.logger.record(
-            "train/boxes_errors", np.mean(self.rollout_buffer.boxes_errors.flatten())
-        )
-        self.logger.record(
-            "train/walls_errors", np.mean(self.rollout_buffer.walls_errors.flatten())
-        )
-        self.logger.record(
-            "train/targets_errors", np.mean(self.rollout_buffer.targets_errors.flatten())
-        )
+        # self.logger.record(
+        #     "train/boxes_errors", np.mean(self.rollout_buffer.boxes_errors.flatten())
+        # )
+        # self.logger.record(
+        #     "train/walls_errors", np.mean(self.rollout_buffer.walls_errors.flatten())
+        # )
+        # self.logger.record(
+        #     "train/targets_errors", np.mean(self.rollout_buffer.targets_errors.flatten())
+        # )
 
 
 # class DPLPolicyGradientPolicy(OnPolicyAlgorithm):

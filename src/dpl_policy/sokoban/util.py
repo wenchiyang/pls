@@ -105,6 +105,56 @@ def get_ground_ghost(input, center_color, detect_color):
     return res
 
 
+def get_ground_corners(input, center_colors, wall_colors, neighbors_relative_locs, out_of_boundary_value=False):
+    centers = [th.tensor([center_color]*3, dtype=th.float32) for center_color in center_colors]
+    detects = [th.tensor([detect_color]*3, dtype=th.float32) for detect_color in wall_colors]
+
+    # find center coord: assuming there's only one
+    for r, row in enumerate(input):
+        for c, cell in enumerate(row):
+            if any([(cell == center).all() for center in centers]):
+                c_center = c
+                r_center = r
+    dim_r,dim_c = input.size()[:2]
+    res = []
+    for nr, nc in neighbors_relative_locs:
+        # if coord is not valid
+        if not (0 <= r_center+nr < dim_r and 0 <= c_center+nc < dim_c):
+            res.append(out_of_boundary_value)
+        elif any([(input[r_center+nr, c_center+nc] == detect).all() for detect in detects]):
+            res.append(out_of_boundary_value)
+        else:
+            # is this a corner?
+            if (nr, nc) == (0, -2):
+                bl = (0, -3)
+                nn = [(-1, -2), (1, -2)]
+            elif (nr, nc) == (0, 2):
+                bl = (0, 3)
+                nn = [(-1, 2), (1, 2)]
+            elif (nr, nc) == (2, 0):
+                bl = (3, 0)
+                nn = [(2, -1), (2, 1)]
+            elif (nr, nc) == (-2, 0):
+                bl = (-3, 0)
+                nn = [(-2, -1), (-2, 1)]
+            num_blocking_wall = False
+            if not (0 <= r_center + bl[0] < dim_r and 0 <= c_center + bl[1] < dim_c):
+                num_blocking_wall = True
+            elif any([(input[r_center + bl[0], c_center + bl[1]] == detect).all() for detect in detects]):
+                num_blocking_wall = True
+            num_neighboring_wall = 0
+            for nnr, nnc in nn:
+                if not (0 <= r_center+nnr < dim_r and 0 <= c_center+nnc < dim_c):
+                    num_neighboring_wall += 1
+                elif any([(input[r_center+nnr, c_center+nnc] == detect).all() for detect in detects]):
+                    num_neighboring_wall += 1
+            if num_blocking_wall and num_neighboring_wall >= 1:
+                res.append(True)
+            else:
+                res.append(False)
+    res = th.tensor(res).float().view(1, -1)
+    return res
+
 def get_ground_relatives(input, center_colors, detect_colors, neighbors_relative_locs, out_of_boundary_value=False):
     centers = [th.tensor([center_color]*3, dtype=th.float32) for center_color in center_colors]
     detects = [th.tensor([detect_color]*3, dtype=th.float32) for detect_color in detect_colors]
