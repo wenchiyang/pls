@@ -38,6 +38,7 @@ def evaluate(folder):
         return_episode_rewards=True
         # If True, a list of rewards and episode lengths per episode will be returned instead of the mean.
     )
+    print(ep_rewards, ep_lengths)
     # TODO: Store ep_rewards, ep_lengths somewhere
 
 

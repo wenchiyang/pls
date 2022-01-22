@@ -51,17 +51,9 @@ def setup_env(folder, config):
             "shield": config["model_features"]["params"]["shield"],
             "detect_boxes": config["model_features"]["params"]["detect_boxes"],
             "detect_corners": config["model_features"]["params"]["detect_corners"],
-            "detect_walls": config["model_features"]["params"]["detect_walls"],
-            "detect_targets": config["model_features"]["params"]["detect_targets"],
             "box_layer_output": config["model_features"]["params"]["box_layer_output"],
             "corner_layer_output": config["model_features"]["params"][
                 "corner_layer_output"
-            ],
-            "target_layer_output": config["model_features"]["params"][
-                "target_layer_output"
-            ],
-            "wall_layer_output": config["model_features"]["params"][
-                "wall_layer_output"
             ],
         }
 
