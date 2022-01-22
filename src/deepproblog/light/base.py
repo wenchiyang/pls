@@ -4,7 +4,7 @@ from problog.formula import LogicFormula, LogicDAG
 from problog.sdd_formula import SDD
 from deepproblog.light.semiring import GraphSemiring
 from collections import defaultdict
-from numba import njit
+
 import numpy as np
 
 class DeepProbLogLayer(nn.Module):
