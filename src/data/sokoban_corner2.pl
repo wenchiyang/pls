@@ -14,7 +14,6 @@ corner(1):: corner(-2, 0). % 8
 corner(2):: corner( 2, 0). % 11
 corner(3):: corner( 0,-2). % 17
 
-
 box_transition( X,  Y, no_op,       X,  Y).
 box_transition(-1,  0, push_left,  -2,  0).
 box_transition( 1,  0, push_right,  2,  0).

@@ -39,12 +39,41 @@ for combination in combinations:
     exps.append(folder)
 
 def run_train():
-    for exp in exps:
-        train(exp)
+    folder = os.path.join(
+        cwd,
+        "experiments_trials",
+        "sokoban_6x6",
+        # "dqn",
+        # "ppo",
+        "a2c",
+        "no_shielding",
+        # "batch_size_128",
+        # "n_epoch_40",
+        # "learning_rate_0.001",
+        # "clip_range_0.2",
+        # "max_steps_20"
+
+    )
+    train(folder)
+    # for exp in exps:
+    #     train(exp)
 
 def run_evaluate():
-    for exp in exps:
-        evaluate(exp)
+    folder = os.path.join(
+        cwd,
+        "experiments_trials",
+        "sokoban_6x6",
+        "ppo",
+        "hard_shielding",
+        f'batch_size_128',
+        f'n_epoch_40',
+        f'learning_rate_0.001',
+        f'clip_range_0.2',
+        # 'max_steps_200'
+    )
+    evaluate(folder)
+    # for exp in exps:
+    #     evaluate(exp)
 
 def main_cluster():
     cluster = LocalCluster(
@@ -65,6 +94,6 @@ def main_cluster():
 
 
 if __name__ == "__main__":
-    main_cluster()
-    # run_train()
+    # main_cluster()
+    run_train()
     # run_evaluate()

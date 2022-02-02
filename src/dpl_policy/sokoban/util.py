@@ -57,15 +57,6 @@ def init_logger(verbose=None, name="policy_gradient", out=None):
         logger.setLevel(level)
         logger.log(level, "Output level: %s" % level)
 
-    # levels = [logging.WARNING, logging.INFO, logging.DEBUG] + list(range(9, 0, -1))
-    # verbose = max(0, min(len(levels) - 1, verbose))
-    # logger = getLogger(name)
-    # ch = logging.StreamHandler(sys.stdout)
-    # formatter = logging.Formatter("[%(levelname)s] %(message)s")
-    # ch.setFormatter(formatter)
-    # logger.addHandler(ch)
-    # logger.setLevel(levels[verbose])
-
 
 def draw(image):
     plt.axis("off")
@@ -90,90 +81,114 @@ def initial_log(name, args):
     logger.info(f"Render:           {args['render']}")
 
 
-def get_ground_ghost(input, center_color, detect_color):
-    # find center coord
-    r, c = (input == center_color).nonzero(as_tuple=True)
-    neighbors = [
-        input[r - 1, c],  # up
-        input[r + 1, c],  # down
-        input[r, c - 1],  # left
-        input[r, c + 1],  # right
-    ]
-    neigh = (th.stack(neighbors) == detect_color).float().view(-1)
-    no_ghost = (1 - neigh.sum()).view(-1)
-    res = th.cat((no_ghost, neigh)).view(1, -1)
-    return res
-
-
-def get_ground_corners(input, center_colors, wall_colors, neighbors_relative_locs, out_of_boundary_value=False):
-    centers = [th.tensor([center_color]*3, dtype=th.float32) for center_color in center_colors]
-    detects = [th.tensor([detect_color]*3, dtype=th.float32) for detect_color in wall_colors]
-
-    # find center coord: assuming there's only one
-    for r, row in enumerate(input):
-        for c, cell in enumerate(row):
-            if any([(cell == center).all() for center in centers]):
-                c_center = c
-                r_center = r
-    dim_r,dim_c = input.size()[:2]
-    res = []
-    for nr, nc in neighbors_relative_locs:
-        # if coord is not valid
-        if not (0 <= r_center+nr < dim_r and 0 <= c_center+nc < dim_c):
-            res.append(out_of_boundary_value)
-        elif any([(input[r_center+nr, c_center+nc] == detect).all() for detect in detects]):
-            res.append(out_of_boundary_value)
+def get_ground_truth_of_corners(
+    input,
+    agent_colors,
+    obsacle_colors,
+    floor_color,
+    neighbors_relative_locs,
+    out_of_boundary_value=False,
+):
+    # find agent's location: We assume there's only one agent
+    for agent_color in agent_colors:
+        agent_loc_r, agent_loc_c = (input == agent_color)[:, :, 0].nonzero(
+            as_tuple=True
+        )
+        if agent_loc_r.numel() == 0:
+            continue
         else:
-            # is this a corner?
-            if (nr, nc) == (0, -2):
-                bl = (0, -3)
-                nn = [(-1, -2), (1, -2)]
-            elif (nr, nc) == (0, 2):
-                bl = (0, 3)
-                nn = [(-1, 2), (1, 2)]
-            elif (nr, nc) == (2, 0):
-                bl = (3, 0)
-                nn = [(2, -1), (2, 1)]
-            elif (nr, nc) == (-2, 0):
-                bl = (-3, 0)
-                nn = [(-2, -1), (-2, 1)]
-            num_blocking_wall = False
-            if not (0 <= r_center + bl[0] < dim_r and 0 <= c_center + bl[1] < dim_c):
-                num_blocking_wall = True
-            elif any([(input[r_center + bl[0], c_center + bl[1]] == detect).all() for detect in detects]):
-                num_blocking_wall = True
-            num_neighboring_wall = 0
-            for nnr, nnc in nn:
-                if not (0 <= r_center+nnr < dim_r and 0 <= c_center+nnc < dim_c):
-                    num_neighboring_wall += 1
-                elif any([(input[r_center+nnr, c_center+nnc] == detect).all() for detect in detects]):
-                    num_neighboring_wall += 1
-            if num_blocking_wall and num_neighboring_wall >= 1:
-                res.append(True)
-            else:
-                res.append(False)
-    res = th.tensor(res).float().view(1, -1)
+            agent_loc_r = int(agent_loc_r)
+            agent_loc_c = int(agent_loc_c)
+            break
+
+    r_limit, c_limit = input.size()[:2]
+
+    res = []
+    for rel_r, rel_c in neighbors_relative_locs:
+        neighbors_abs_loc_r, neighbors_abs_loc_c = (agent_loc_r + rel_r, agent_loc_c + rel_c)
+        if not in_bound((neighbors_abs_loc_r, neighbors_abs_loc_c), (r_limit, c_limit)):
+            res.append(out_of_boundary_value)
+        elif not (input[neighbors_abs_loc_r, neighbors_abs_loc_c] == floor_color)[0]:
+            res.append(False) # # if it is not a floor, it cannot be a corner
+        else:
+            abs_forward_loc, abs_side_locs = get_corresponding_corner_locs(agent_loc=(agent_loc_r, agent_loc_c), dir=(rel_r, rel_c))
+            res.append(is_corner(input, (r_limit, c_limit), abs_forward_loc, abs_side_locs, obsacle_colors))
+
+    res = th.tensor(res).float().reshape(1, -1)
     return res
 
-def get_ground_relatives(input, center_colors, detect_colors, neighbors_relative_locs, out_of_boundary_value=False):
-    centers = [th.tensor([center_color]*3, dtype=th.float32) for center_color in center_colors]
-    detects = [th.tensor([detect_color]*3, dtype=th.float32) for detect_color in detect_colors]
+def in_bound(loc, bound):
+    loc_r, loc_c = loc
+    r_limit, c_limit = bound
+    in_bound = 0 <= loc_r < r_limit and 0 <= loc_c < c_limit
+    return in_bound
 
-    # find center coord: assuming there's only one
-    for r, row in enumerate(input):
-        for c, cell in enumerate(row):
-            if any([(cell == center).all() for center in centers]):
-                c_center = c
-                r_center = r
-    dim_r,dim_c = input.size()[:2]
+def get_corresponding_corner_locs(agent_loc, dir):
+    d = {
+        (0, 2): {"forward": (0, 3), "side": [(1, 2), (-1, 2)]},
+        (-2, 0): {"forward": (-3, 0), "side": [(-2, 1), (-2, -1)]},
+        (2, 0): {"forward": (3, 0), "side": [(2, 1), (2, -1)]},
+        (0, -2): {"forward": (0, -3), "side": [(-1, -2), (1, -2)]},
+    }
+    rel_forward_loc = d[dir]["forward"]
+    rel_side_locs = d[dir]["side"]
+    abs_forward_loc = (agent_loc[0]+rel_forward_loc[0], agent_loc[1]+rel_forward_loc[1])
+    abs_side_locs = [(agent_loc[0]+rel_side_loc[0], agent_loc[1]+rel_side_loc[1]) for rel_side_loc in rel_side_locs]
+    return abs_forward_loc, abs_side_locs
+
+
+def is_corner(input, bound, forward_loc, side_locs, obsacle_colors):
+    forward_loc_r, forward_loc_c = forward_loc
+
+    if in_bound(forward_loc, bound) and not any(
+            (input[forward_loc_r, forward_loc_c] == obsacle_color)[0]
+            for obsacle_color in obsacle_colors
+        ):
+        return False
+    for side_loc_r, side_loc_c in side_locs:
+        if any(
+                (input[side_loc_r, side_loc_c] == obsacle_color)[0]
+                for obsacle_color in obsacle_colors
+        ):
+            return True
+    return False
+
+
+def get_ground_truth_of_box(
+    input,
+    agent_colors,
+    box_colors,
+    neighbors_relative_locs,
+    out_of_boundary_value=False,
+):
+    # find agent's location: We assume there's only one agent
+    for agent_color in agent_colors:
+        agent_loc_r, agent_loc_c = (input == agent_color)[:, :, 0].nonzero(
+            as_tuple=True
+        )
+        if agent_loc_r.numel() == 0:
+            continue
+        else:
+            agent_loc_r = int(agent_loc_r)
+            agent_loc_c = int(agent_loc_c)
+            break
+
+    r_limit, c_limit = input.size()[:2]
+    neighbors_abs_locs = [
+        (agent_loc_r + rel_r, agent_loc_c + rel_c)
+        for rel_r, rel_c in neighbors_relative_locs
+    ]
+
     res = []
-    for nr, nc in neighbors_relative_locs:
-        # if coord is not valid
-        if not (0 <= r_center+nr < dim_r and 0 <= c_center+nc < dim_c):
+    for neighbors_abs_loc_r, neighbors_abs_loc_c in neighbors_abs_locs:
+        if not in_bound((neighbors_abs_loc_r, neighbors_abs_loc_c), (r_limit, c_limit)):
             res.append(out_of_boundary_value)
-        elif any([(input[r_center+nr, c_center+nc] == detect).all() for detect in detects]):
+        elif any(
+            (input[neighbors_abs_loc_r, neighbors_abs_loc_c] == box_color)[0]
+            for box_color in box_colors
+        ):
             res.append(True)
         else:
             res.append(False)
-    res = th.tensor(res).float().view(1, -1)
+    res = th.tensor(res).float().reshape(1, -1)
     return res

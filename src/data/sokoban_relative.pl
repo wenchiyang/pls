@@ -8,10 +8,10 @@ action(6):: action(move_down);  % 6
 action(7):: action(move_left);  % 7
 action(8):: action(move_right). % 8
 
-box(0):: box( 0, 1). % 6
-box(1):: box(-1, 0). % 11
-box(2):: box( 1, 0). % 12
-box(3):: box( 0,-1). % 17
+box(0):: box( 0, 1). % 5
+box(1):: box(-1, 0). % 9
+box(2):: box( 1, 0). % 10
+box(3):: box( 0,-1). % 14
 
 wall( 0):: wall( 0, 3). % 0
 wall( 1):: wall(-1, 2). % 1
@@ -33,45 +33,41 @@ wall(16):: wall(-1,-1). % 16
 wall(17):: wall( 0,-1). % 17
 wall(18):: wall( 1,-1). % 18
 wall(19):: wall( 2,-1). % 19
-wall(20):: wall(-1,-2). % 20
-wall(21):: wall( 0,-2). % 21
-wall(22):: wall( 1,-2). % 22
-wall(23):: wall( 0,-3). % 23
 
 target(0):: target( 0, 2). % 2
-target(1):: target(-2, 0). % 10
-target(2):: target( 2, 0). % 13
-target(3):: target( 0,-2). % 21
+target(1):: target(-2, 0). % 8
+target(2):: target( 2, 0). % 11
+target(3):: target( 0,-2). % 17
 
 % transition(Action, NextPos)
-transition(action(no_op),      0,  0).
-transition(action(move_left), -1,  0).
-transition(action(move_right), 1,  0).
-transition(action(move_up),    0,  1).
-transition(action(move_down),  0, -1).
-transition(action(push_left), -1,  0).
-transition(action(push_right), 1,  0).
-transition(action(push_up),    0,  1).
-transition(action(push_down),  0, -1).
-
-transition_with_wall(action(A), NextX, NextY):-
-    transition(action(A), NextX, NextY),
-    \+wall(NextX, NextY),
-    \+box(NextX, NextY).
-
-transition_with_wall(action(A), 0, 0):-
-    transition(action(A), NextX, NextY),
-    wall(NextX, NextY).
-
-transition_with_wall(action(A), 0, 0):-
-    transition(action(A), NextX, NextY),
-    box(NextX, NextY),
-    has_neighboring_wall(NextX, NextY, A).
-
-transition_with_wall(action(A), 0, 0):-
-    transition(action(A), NextX, NextY),
-    box(NextX, NextY),
-    has_neighboring_box(NextX, NextY, A).
+%transition(action(no_op),      0,  0).
+%transition(action(move_left), -1,  0).
+%transition(action(move_right), 1,  0).
+%transition(action(move_up),    0,  1).
+%transition(action(move_down),  0, -1).
+%transition(action(push_left), -1,  0).
+%transition(action(push_right), 1,  0).
+%transition(action(push_up),    0,  1).
+%transition(action(push_down),  0, -1).
+%
+%transition_with_wall(action(A), NextX, NextY):-
+%    transition(action(A), NextX, NextY),
+%    \+wall(NextX, NextY),
+%    \+box(NextX, NextY).
+%
+%transition_with_wall(action(A), 0, 0):-
+%    transition(action(A), NextX, NextY),
+%    wall(NextX, NextY).
+%
+%transition_with_wall(action(A), 0, 0):-
+%    transition(action(A), NextX, NextY),
+%    box(NextX, NextY),
+%    has_neighboring_wall(NextX, NextY, A).
+%
+%transition_with_wall(action(A), 0, 0):-
+%    transition(action(A), NextX, NextY),
+%    box(NextX, NextY),
+%    has_neighboring_box(NextX, NextY, A).
 
 box_transition( X,  Y, action(no_op),       X,  Y):- box(X, Y).
 box_transition( X,  Y, action(move_left),   X,  Y):- box(X, Y).

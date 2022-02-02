@@ -5,18 +5,17 @@ import gym_sokoban
 import torch as th
 from torch import nn
 from os.path import join, abspath
-from dpl_policy.pacman.pacman_ppo import (
-    Pacman_DPLActorCriticPolicy,
-    Pacman_Encoder,
-    Pacman_DPLPPO,
-)
+# from dpl_policy.pacman.pacman_ppo import (
+#     Pacman_DPLActorCriticPolicy,
+#     Pacman_Encoder,
+#     Pacman_DPLPPO,
+# )
 from dpl_policy.sokoban.dpl_policy import (
     Sokoban_Encoder,
     Sokoban_Monitor,
-    Sokoban_DPLActorCriticPolicy,
-    Sokoban_Callback
+    Sokoban_DPLActorCriticPolicy
 )
-from dpl_policy.sokoban.sokoban_ppo import Sokoban_DPLPPO
+from dpl_policy.sokoban.sokoban_a2c import Sokoban_DPLA2C
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import CheckpointCallback
 import os
@@ -30,19 +29,19 @@ def setup_env(folder, config, program_path):
     env_args = config["env_features"]
     env = gym.make(env_name, **env_args)
 
-    if "Pacman" in env_name:
-        image_encoder_cls = Pacman_Encoder
-        shielding_settings = {
-            "shield": config["model_features"]["params"]["shield"],
-            "detect_ghosts": config["model_features"]["params"]["detect_ghosts"],
-            "detect_walls": config["model_features"]["params"]["detect_walls"],
-        }
-        # env = Pacman_Monitor(
-        #     env,
-        #     allow_early_resets=False,
-        #     program_path=program_path
-        # )
-    elif "Sokoban" in env_name:
+    # if "Pacman" in env_name:
+    #     image_encoder_cls = Pacman_Encoder
+    #     shielding_settings = {
+    #         "shield": config["model_features"]["params"]["shield"],
+    #         "detect_ghosts": config["model_features"]["params"]["detect_ghosts"],
+    #         "detect_walls": config["model_features"]["params"]["detect_walls"],
+    #     }
+    #     # env = Pacman_Monitor(
+    #     #     env,
+    #     #     allow_early_resets=False,
+    #     #     program_path=program_path
+    #     # )
+    if "Sokoban" in env_name:
         image_encoder_cls = Sokoban_Encoder
         shielding_settings = {
             "shield": config["model_features"]["params"]["shield"],
@@ -100,12 +99,11 @@ def main(folder, config):
     n_actions = env.action_size
 
     env_name = config["env_type"]
-    if "Pacman" in env_name:
-        model_cls = Pacman_DPLPPO
-        policy_cls = Pacman_DPLActorCriticPolicy
-
-    elif "Sokoban" in env_name:
-        model_cls = Sokoban_DPLPPO
+    # if "Pacman" in env_name:
+    #     model_cls = Pacman_DPLPPO
+    #     policy_cls = Pacman_DPLActorCriticPolicy
+    if "Sokoban" in env_name:
+        model_cls = Sokoban_DPLA2C
         policy_cls = Sokoban_DPLActorCriticPolicy
 
 
@@ -120,10 +118,10 @@ def main(folder, config):
         learning_rate=config["model_features"]["params"]["learning_rate"],
         n_steps=config["model_features"]["params"]["n_steps"],
         # n_steps: The number of steps to run for each environment per update
-        batch_size=config["model_features"]["params"]["batch_size"],
-        n_epochs=config["model_features"]["params"]["n_epochs"],
+        # batch_size=config["model_features"]["params"]["batch_size"],
+        # n_epochs=config["model_features"]["params"]["n_epochs"],
         gamma=config["model_features"]["params"]["gamma"],
-        clip_range=config["model_features"]["params"]["clip_range"],
+        # clip_range=config["model_features"]["params"]["clip_range"],
         tensorboard_log=folder,
         policy_kwargs={
             "image_encoder": image_encoder,
@@ -141,10 +139,8 @@ def main(folder, config):
 
     intermediate_model_path = join(folder, "model_checkpoints")
     checkpoint_callback = CheckpointCallback(save_freq=5e3, save_path=intermediate_model_path)
-    custom_callback = None
-    custom_callback = Sokoban_Callback(custom_callback)
 
-    model.learn(total_timesteps=config["model_features"]["params"]["step_limit"], callback=[custom_callback, checkpoint_callback])
+    model.learn(total_timesteps=config["model_features"]["params"]["step_limit"], callback=[checkpoint_callback])
     model.save(join(folder, "model"))
 
 
@@ -157,10 +153,10 @@ def load_model_and_env(folder, config):
         folder, config, program_path
     )
     env_name = config["env_type"]
-    if "Pacman" in env_name:
-        model_cls = Pacman_DPLPPO
-    elif "Sokoban" in env_name:
-        model_cls = Sokoban_DPLPPO
+    # if "Pacman" in env_name:
+    #     model_cls = Pacman_DPLPPO
+    if "Sokoban" in env_name:
+        model_cls = Sokoban_DPLA2C
 
     path = os.path.join(folder, "model")
     model = model_cls.load(path, env)
