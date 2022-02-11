@@ -13,9 +13,9 @@ from os.path import abspath, join
 import cherry as ch
 import cherry.envs as envs
 
-from dpl_policy.pacman.util import create_loggers, myformat
+from dpl_policies.pacman.util import create_loggers, myformat
 
-from dpl_policy.pacman.pacman_pg import DPLSafePolicy, Encoder, PolicyNet
+from dpl_policies.pacman.pacman_pg import DPLSafePolicy, Encoder, PolicyNet
 
 
 class Logger(envs.Logger):

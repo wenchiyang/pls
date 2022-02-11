@@ -1,0 +1,52 @@
+
+    {
+      "workflow_name": "ppo",
+      "raw_logger": "ppo_raw",
+      "info_logger": "ppo_info",
+      "env_type": "Sokoban-v0",
+    
+      "env_features": {
+        "num_boxes": 1,
+        "max_steps": 20,
+        "dim_room": [6, 6],
+        "penalty_for_step": -1,
+        "penalty_box_off_target": -1,
+        "reward_box_on_target": 1,
+        "reward_finished": 10,
+        "reward_last": 0,
+        "render": false,
+        "render_mode": "tiny_rgb_array",
+        "action_size": 5
+      },
+    
+      "model_features": {
+        "name": "soft_shielding",
+        "params": {
+          "log_interval": 1,
+          "batch_size": 128,
+          "n_epochs": 40,
+          "n_steps": 1024,
+          "learning_rate": 0.001,
+          "seed": 567,
+          "clip_range": 0.2,
+          "gamma": 0.99,
+          "step_limit": 1000000,
+          "program_type": "sokoban_corner2",
+          "shield": true,
+          "detect_boxes": true,
+          "detect_corners": true,
+          "box_layer_num_output": 4,
+          "corner_layer_num_output": 4,
+          "net_arch_shared": [],
+          "net_arch_pi": [128],
+          "net_arch_vf": [128]
+        }
+      },
+    
+      "visualize_settings": {
+        "window_size": 2000,
+        "window_speed": 1000
+      }
+    
+    }
+    

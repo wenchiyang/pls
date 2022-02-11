@@ -2,7 +2,7 @@ from workflows.pg_dpl import main as pg_dpl
 from workflows.predict_states import main as predict
 from workflows.ppo_dpl import main as ppo_dpl
 from workflows.a2c_dpl import main as a2c_dpl
-from workflows.dqn_dpl import main as dqn_dpl
+# from workflows.dqn_dpl import main as dqn_dpl
 from workflows.ppo_dpl import load_model_and_env as ppo_load_model_and_env
 # from workflows.a2c_dpl import main as a2c_dpl
 from stable_baselines3.common.evaluation import evaluate_policy
@@ -22,8 +22,8 @@ def train(folder):
         ppo_dpl(folder, config)
     elif "a2c" in learner:
         a2c_dpl(folder, config)
-    elif "dqn" in learner:
-        dqn_dpl(folder, config)
+    # elif "dqn" in learner:
+    #     dqn_dpl(folder, config)
 
 
 def evaluate(folder):

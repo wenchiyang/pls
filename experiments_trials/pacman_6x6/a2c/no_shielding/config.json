@@ -1,0 +1,45 @@
+{
+  "workflow_name": "a2c",
+  "raw_logger": "a2c_raw",
+  "info_logger": "a2c_info",
+  "env_type": "Pacman-v0",
+
+  "env_features": {
+    "layout": "grid6x6",
+    "reward_goal": 10,
+    "reward_crash": -10,
+    "reward_food": 0,
+    "reward_time": -1,
+    "render": false,
+    "seed": 567
+  },
+
+  "model_features": {
+    "name": "no_shielding",
+    "params": {
+      "log_interval": 1,
+      "n_steps": 64,
+      "learning_rate": 0.01,
+      "seed": 567,
+      "gamma": 0.99,
+      "step_limit": 2000000,
+      "program_type": "relative_loc",
+      "shield": false,
+      "detect_ghosts": false,
+      "detect_walls": false,
+      "ghost_layer_num_output": null,
+      "wall_layer_num_output": null,
+      "net_arch_shared": [],
+      "net_arch_pi": [128],
+      "net_arch_vf": [128]
+    }
+  },
+
+  "visualize_settings": {
+    "window_size": 2000,
+    "window_speed": 1000
+  }
+
+}
+
+
