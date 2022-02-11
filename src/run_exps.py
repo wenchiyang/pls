@@ -55,7 +55,7 @@ def run_train():
 
 def main_cluster():
     cluster = LocalCluster(
-        n_workers=4,
+        n_workers=32,
         processes=True,
         threads_per_worker=1,
         dashboard_address=":8787"
