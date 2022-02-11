@@ -1,6 +1,6 @@
 from dask.distributed import Client, LocalCluster, performance_report, SSHCluster
 import os
-from src.workflows.execute_workflow import train, evaluate
+from workflows.execute_workflow import train
 import itertools
 
 
@@ -26,35 +26,36 @@ combinations = list(itertools.product(*lists_of_indices))
 exps = []
 for combination in combinations:
     hyper = dict.fromkeys(hyper_parameters.keys())
-    hyper["domains"] = hyper_parameters["domains"][combination[0]]
+    hyper["domain"] = hyper_parameters["domains"][combination[0]]
     hyper["workflow_name"] = hyper_parameters["workflow_names"][combination[1]]
     hyper["shield_type"] =  hyper_parameters["shield_types"][combination[2]]
     # hyper["batch_size"] = hyper_parameters["batch_sizes"][combination[2]]
     # hyper["n_epoch"] = hyper_parameters["n_epochs"][combination[3]]
     # hyper["learning_rate"] = hyper_parameters["learning_rates"][combination[4]]
     # hyper["clip_range"] = hyper_parameters["clip_ranges"][combination[5]]
-    folder = os.path.join(cwd, "experiments_trials/sokoban",
+    folder = os.path.join(cwd, "experiments_trials",
+                          hyper["domain"],
                           hyper["workflow_name"],
                           hyper["shield_type"],
-                          f'batch_size_{hyper["batch_size"]}',
-                          f'n_epoch_{hyper["n_epoch"]}',
-                          f'learning_rate_{hyper["learning_rate"]}',
-                          f'clip_range_{hyper["clip_range"]}'
+                          # f'batch_size_{hyper["batch_size"]}',
+                          # f'n_epoch_{hyper["n_epoch"]}',
+                          # f'learning_rate_{hyper["learning_rate"]}',
+                          # f'clip_range_{hyper["clip_range"]}'
                           )
 
     exps.append(folder)
 
-def run_train(exps):
+def run_train():
     for exp in exps:
         train(exp)
 
-def run_evaluate(exps):
-    for exp in exps:
-        evaluate(exp)
+# def run_evaluate():
+#     for exp in exps:
+#         evaluate(exp)
 
 def main_cluster():
     cluster = LocalCluster(
-        n_workers=24,
+        n_workers=4,
         processes=True,
         threads_per_worker=1,
         dashboard_address=":8787"
@@ -71,6 +72,6 @@ def main_cluster():
 
 
 if __name__ == "__main__":
-    # main_cluster()
-    run_train()
+    main_cluster()
+    # run_train()
     # run_evaluate()
