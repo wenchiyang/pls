@@ -5,20 +5,20 @@ import gym_sokoban
 import torch as th
 from torch import nn
 from os.path import join, abspath
-from dpl_policies.pacman.dpl_policy import (
+from src.dpl_policies.pacman.dpl_policy import (
     Pacman_Encoder,
     Pacman_Monitor,
     Pacman_DPLActorCriticPolicy,
     Pacman_Callback,
 )
-from dpl_policies.sokoban.dpl_policy import (
+from src.dpl_policies.sokoban.dpl_policy import (
     Sokoban_Encoder,
     Sokoban_Monitor,
     Sokoban_DPLActorCriticPolicy,
     Sokoban_Callback
 )
-from dpl_policies.sokoban.sokoban_a2c import Sokoban_DPLA2C
-from dpl_policies.pacman.pacman_a2c import Pacman_DPLA2C
+from src.dpl_policies.sokoban.sokoban_a2c import Sokoban_DPLA2C
+from src.dpl_policies.pacman.pacman_a2c import Pacman_DPLA2C
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import CheckpointCallback
 import os
@@ -152,22 +152,22 @@ def main(folder, config):
 
 
 
-def load_model_and_env(folder, config):
-    program_path = abspath(
-        join("src", "data", f'{config["model_features"]["params"]["program_type"]}.pl')
-    )
-    env, image_encoder_cls, shielding_settings, custom_callback = setup_env(
-        folder, config, program_path
-    )
-    env_name = config["env_type"]
-    # if "Pacman" in env_name:
-    #     model_cls = Pacman_DPLPPO
-    if "Sokoban" in env_name:
-        model_cls = Sokoban_DPLA2C
-
-    path = os.path.join(folder, "model")
-    model = model_cls.load(path, env)
-
-    return model, env
+# def load_model_and_env(folder, config):
+#     program_path = abspath(
+#         join("src", "data", f'{config["model_features"]["params"]["program_type"]}.pl')
+#     )
+#     env, image_encoder_cls, shielding_settings, custom_callback = setup_env(
+#         folder, config, program_path
+#     )
+#     env_name = config["env_type"]
+#     # if "Pacman" in env_name:
+#     #     model_cls = Pacman_DPLPPO
+#     if "Sokoban" in env_name:
+#         model_cls = Sokoban_DPLA2C
+#
+#     path = os.path.join(folder, "model")
+#     model = model_cls.load(path, env)
+#
+#     return model, env
 
 

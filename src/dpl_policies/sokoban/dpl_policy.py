@@ -1,9 +1,8 @@
 import gym
 import torch as th
-from stable_baselines3.common.noise import ActionNoise
 from torch import nn
 import numpy as np
-from typing import Union, Tuple, Optional
+from typing import Union, Tuple
 from torch.distributions import Categorical
 import time
 from stable_baselines3.common.callbacks import ConvertCallback
@@ -16,7 +15,7 @@ from stable_baselines3.common.type_aliases import (
 )
 
 from deepproblog.light import DeepProbLogLayer
-from dpl_policies.sokoban.util import get_ground_truth_of_box, get_ground_truth_of_corners
+from src.dpl_policies.sokoban.util import get_ground_truth_of_box, get_ground_truth_of_corners
 
 
 

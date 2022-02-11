@@ -1,16 +1,21 @@
 from dask.distributed import Client, LocalCluster, performance_report, SSHCluster
 import os
-from workflows.execute_workflow import train, evaluate
+from src.workflows.execute_workflow import train, evaluate
 import itertools
 
 
 hyper_parameters= {
-    "workflow_names": ["ppo"],
+    "domains": [
+        "pacman_5x5", "pacman_6x6", "pacman_6x6_2",
+        "pacman_smallGrid", "pacman_smallGrid2", "pacman_mediumGrid",
+        "sokoban_5x5", "sokoban_6x6"
+    ],
+    "workflow_names": ["ppo", "a2c"],
     "shield_types": ["no_shielding", "hard_shielding", "soft_shielding"],
-    "batch_sizes": [32, 64, 128, 256, 512],
-    "n_epochs": [10, 20, 40, 60],
-    "learning_rates": [1e-4, 1e-3, 1e-2],
-    "clip_ranges": [0.1, 0.2, 0.3]
+    # "batch_sizes": [32, 64, 128, 256, 512],
+    # "n_epochs": [10, 20, 40, 60],
+    # "learning_rates": [1e-4, 1e-3, 1e-2],
+    # "clip_ranges": [0.1, 0.2, 0.3]
 }
 cwd = os.getcwd()
 
@@ -21,12 +26,13 @@ combinations = list(itertools.product(*lists_of_indices))
 exps = []
 for combination in combinations:
     hyper = dict.fromkeys(hyper_parameters.keys())
-    hyper["workflow_name"] = hyper_parameters["workflow_names"][combination[0]]
-    hyper["shield_type"] =  hyper_parameters["shield_types"][combination[1]]
-    hyper["batch_size"] = hyper_parameters["batch_sizes"][combination[2]]
-    hyper["n_epoch"] = hyper_parameters["n_epochs"][combination[3]]
-    hyper["learning_rate"] = hyper_parameters["learning_rates"][combination[4]]
-    hyper["clip_range"] = hyper_parameters["clip_ranges"][combination[5]]
+    hyper["domains"] = hyper_parameters["domains"][combination[0]]
+    hyper["workflow_name"] = hyper_parameters["workflow_names"][combination[1]]
+    hyper["shield_type"] =  hyper_parameters["shield_types"][combination[2]]
+    # hyper["batch_size"] = hyper_parameters["batch_sizes"][combination[2]]
+    # hyper["n_epoch"] = hyper_parameters["n_epochs"][combination[3]]
+    # hyper["learning_rate"] = hyper_parameters["learning_rates"][combination[4]]
+    # hyper["clip_range"] = hyper_parameters["clip_ranges"][combination[5]]
     folder = os.path.join(cwd, "experiments_trials/sokoban",
                           hyper["workflow_name"],
                           hyper["shield_type"],
@@ -38,42 +44,13 @@ for combination in combinations:
 
     exps.append(folder)
 
-def run_train():
-    folder = os.path.join(
-        cwd,
-        "experiments_trials",
-        "sokoban_6x6",
-        # "dqn",
-        # "ppo",
-        "a2c",
-        "no_shielding",
-        # "batch_size_128",
-        # "n_epoch_40",
-        # "learning_rate_0.001",
-        # "clip_range_0.2",
-        # "max_steps_20"
+def run_train(exps):
+    for exp in exps:
+        train(exp)
 
-    )
-    train(folder)
-    # for exp in exps:
-    #     train(exp)
-
-def run_evaluate():
-    folder = os.path.join(
-        cwd,
-        "experiments_trials",
-        "sokoban_6x6",
-        "ppo",
-        "hard_shielding",
-        f'batch_size_128',
-        f'n_epoch_40',
-        f'learning_rate_0.001',
-        f'clip_range_0.2',
-        # 'max_steps_200'
-    )
-    evaluate(folder)
-    # for exp in exps:
-    #     evaluate(exp)
+def run_evaluate(exps):
+    for exp in exps:
+        evaluate(exp)
 
 def main_cluster():
     cluster = LocalCluster(

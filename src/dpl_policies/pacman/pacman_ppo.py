@@ -1,21 +1,10 @@
 from torch import nn
 from deepproblog.light import DeepProbLogLayer
 import torch as th
-from dpl_policies.pacman.util import get_ground_wall
-from typing import Any, Dict, Optional, Type, Union, List, Tuple, Generator, NamedTuple
-from stable_baselines3.common.policies import ActorCriticPolicy, BasePolicy
+from typing import Optional
 import gym
-from stable_baselines3.common.torch_layers import (
-    BaseFeaturesExtractor,
-    NatureCNN,
-    FlattenExtractor,
-)
-from stable_baselines3.common.distributions import make_proba_distribution
-from torch.distributions import Categorical
-from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.type_aliases import (
     GymEnv,
-    Schedule,
     MaybeCallback,
 )
 from stable_baselines3 import PPO
@@ -25,10 +14,6 @@ from stable_baselines3.common.utils import obs_as_tensor, safe_mean
 from stable_baselines3.common.vec_env import VecEnv
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.buffers import RolloutBuffer
-from stable_baselines3.common.utils import explained_variance
-from gym import spaces
-from torch.nn import functional as F
-from stable_baselines3.common.vec_env import VecNormalize
 
 WALL_COLOR = 0.25
 GHOST_COLOR = 0.5
