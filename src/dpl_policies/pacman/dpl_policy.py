@@ -16,7 +16,7 @@ from stable_baselines3.common.type_aliases import (
 )
 
 
-from deepproblog.light import DeepProbLogLayer
+from src.deepproblog.light import DeepProbLogLayer
 from .util import get_ground_wall
 
 WALL_COLOR = 0.25

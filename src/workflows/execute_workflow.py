@@ -1,6 +1,6 @@
-from workflows.pg_dpl import main as pg_dpl
-from workflows.ppo_dpl import main as ppo_dpl
-from workflows.a2c_dpl import main as a2c_dpl
+from src.workflows.pg_dpl import main as pg_dpl
+from src.workflows.ppo_dpl import main as ppo_dpl
+from src.workflows.a2c_dpl import main as a2c_dpl
 # from workflows.ppo_dpl import load_model_and_env as ppo_load_model_and_env
 import json
 import os

@@ -1,12 +1,9 @@
 from torch import nn
-from deepproblog.light import DeepProbLogLayer
 import torch as th
 from typing import Optional
 import gym
-from stable_baselines3.common.type_aliases import (
-    GymEnv,
-    MaybeCallback,
-)
+from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback
+
 from stable_baselines3 import PPO
 import time
 import numpy as np

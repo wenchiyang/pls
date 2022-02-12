@@ -14,8 +14,8 @@ from stable_baselines3.common.type_aliases import (
     Schedule,
 )
 
-from deepproblog.light import DeepProbLogLayer
-from dpl_policies.sokoban.util import get_ground_truth_of_box, get_ground_truth_of_corners
+from src.deepproblog.light import DeepProbLogLayer
+from src.dpl_policies.sokoban.util import get_ground_truth_of_box, get_ground_truth_of_corners
 
 
 

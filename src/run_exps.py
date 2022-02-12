@@ -1,6 +1,6 @@
 from dask.distributed import Client, LocalCluster, performance_report, SSHCluster
 import os
-from workflows.execute_workflow import train
+from src.workflows.execute_workflow import train
 import itertools
 
 
