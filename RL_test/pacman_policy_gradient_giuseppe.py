@@ -121,11 +121,11 @@ def update(replay, policy):
 if __name__ == '__main__':
     # Wrap environments
     env_name = 'Pacman-v0'
-    # Pick an layout from relenvs_pip/relenvs/envs/pacman/layouts
+    # Pick an layout from pacman_gym/pacman_gym/envs/pacman/layouts
     layout = 'testGrid'
     sampling_episodes = 1
 
-    from relenvs.envs.pacmanInterface import readCommand
+    from pacman_gym.envs.pacmanInterface import readCommand
 
     SIMPLE_ENV_ARGS = readCommand([
         '--layout', layout,

@@ -15,7 +15,7 @@ from sampling_traces import unpickle_from_file, coord_to_node_id, node_id_to_coo
 from problog.logic import Term, Constant
 import dgl.nn.pytorch as dglnn
 
-LAYOUT = "TestGrid" # We can change the layout by changing relenvs_pip/relvens/envs/pacman/layouts/testGrid.lay
+LAYOUT = "TestGrid" # We can change the layout by changing pacman_gym/pacman_gym/envs/pacman/layouts/testGrid.lay
 NUM_SAMPLE_TRACES = 20
 trace_file = LAYOUT+"_traces_"+str(NUM_SAMPLE_TRACES)+".p"
 MAX_ARITY = 2 # FIXME: do not hard code this. This is the max arity of state predicates

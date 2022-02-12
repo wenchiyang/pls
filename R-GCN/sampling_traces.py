@@ -1,6 +1,6 @@
 import gym
-import relenvs
-from relenvs.envs.pacmanInterface import readCommand
+import pacman_gym
+from pacman_gym.envs.pacmanInterface import readCommand
 import random
 import numpy as np
 from problog.logic import Term, Constant

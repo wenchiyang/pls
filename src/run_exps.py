@@ -7,7 +7,7 @@ import itertools
 hyper_parameters= {
     "domains": [
         "pacman_5x5", "pacman_6x6", "pacman_6x6_2",
-        "pacman_smallGrid", "pacman_smallGrid2", "pacman_mediumGrid",
+        "pacman_smallGrid", "pacman_smallGrid2", "pacman_mediumGrid2",
         "sokoban_5x5", "sokoban_6x6"
     ],
     "workflow_names": ["ppo", "a2c"],
