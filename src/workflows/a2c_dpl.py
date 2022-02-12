@@ -5,23 +5,22 @@ import gym_sokoban
 import torch as th
 from torch import nn
 from os.path import join, abspath
-from dpl_policies.pacman.dpl_policy import (
+from src.dpl_policies.pacman.dpl_policy import (
     Pacman_Encoder,
     Pacman_Monitor,
     Pacman_DPLActorCriticPolicy,
     Pacman_Callback,
 )
-from dpl_policies.sokoban.dpl_policy import (
+from src.dpl_policies.sokoban.dpl_policy import (
     Sokoban_Encoder,
     Sokoban_Monitor,
     Sokoban_DPLActorCriticPolicy,
     Sokoban_Callback
 )
-from dpl_policies.sokoban.sokoban_a2c import Sokoban_DPLA2C
-from dpl_policies.pacman.pacman_a2c import Pacman_DPLA2C
+from src.dpl_policies.sokoban.sokoban_a2c import Sokoban_DPLA2C
+from src.dpl_policies.pacman.pacman_a2c import Pacman_DPLA2C
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import CheckpointCallback
-import os
 
 
 
