@@ -47,7 +47,8 @@ for combination in combinations:
 
 def run_train():
     for exp in exps:
-        train(exp)
+        if os.path.isfile(exp):
+            train(exp)
 
 # def run_evaluate():
 #     for exp in exps:
