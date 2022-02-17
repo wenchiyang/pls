@@ -85,110 +85,110 @@ def get_ground_truth_of_corners(
     input,
     agent_colors,
     obsacle_colors,
-    floor_color,
-    neighbors_relative_locs,
-    out_of_boundary_value=False,
+    floor_color
 ):
-    # find agent's location: We assume there's only one agent
-    for agent_color in agent_colors:
-        agent_loc_r, agent_loc_c = (input == agent_color)[:, :, 0].nonzero(
-            as_tuple=True
-        )
-        if agent_loc_r.numel() == 0:
-            continue
-        else:
-            agent_loc_r = int(agent_loc_r)
-            agent_loc_c = int(agent_loc_c)
-            break
 
-    r_limit, c_limit = input.size()[:2]
+    input2 = input[:, :, :, 0]
+    agent_colors2 = agent_colors[:, 0]
+    floor_color2 = floor_color[0]
+    obsacle_colors2 = obsacle_colors[:, 0]
 
-    res = []
-    for rel_r, rel_c in neighbors_relative_locs:
-        neighbors_abs_loc_r, neighbors_abs_loc_c = (agent_loc_r + rel_r, agent_loc_c + rel_c)
-        if not in_bound((neighbors_abs_loc_r, neighbors_abs_loc_c), (r_limit, c_limit)):
-            res.append(out_of_boundary_value)
-        elif not (input[neighbors_abs_loc_r, neighbors_abs_loc_c] == floor_color)[0]:
-            res.append(False) # # if it is not a floor, it cannot be a corner
-        else:
-            abs_forward_loc, abs_side_locs = get_corresponding_corner_locs(agent_loc=(agent_loc_r, agent_loc_c), dir=(rel_r, rel_c))
-            res.append(is_corner(input, (r_limit, c_limit), abs_forward_loc, abs_side_locs, obsacle_colors))
+    centers1 = (input2 == agent_colors2[0]).nonzero()[:, 1:]
+    centers2 = (input2 == agent_colors2[1]).nonzero()[:, 1:]
+    centers = th.cat((centers1, centers2))
 
-    res = th.tensor(res).float().reshape(1, -1)
+    # r_limit2, c_limit2 = input2[0].size()[:2]
+    padded_input2 = th.nn.functional.pad(input2, (2,2,2,2), "constant", 0) # pad the grid with 1 dimension with "0" (WALL_COLOR)
+    padded_centers = centers + th.tensor([2,2]) # shift centers
+    neighbor_centers =  th.stack(
+        (
+            th.stack(
+                (
+                    padded_centers + th.tensor((-2,  0)), # neighbor
+                    padded_centers + th.tensor((-3,  0)), # forward
+                    padded_centers + th.tensor((-2,  1)), # side
+                    padded_centers + th.tensor((-2, -1))  # side
+                 ),dim=1
+            ),
+            th.stack(
+                (
+                    padded_centers + th.tensor((0, -2)),  # neighbor
+                    padded_centers + th.tensor((0, -3)),  # forward
+                    padded_centers + th.tensor((1, -2)),  # side
+                    padded_centers + th.tensor((-1, -2))  # side
+                ), dim=1
+            ),
+            th.stack(
+                (
+                    padded_centers + th.tensor((0, 2)),  # neighbor
+                    padded_centers + th.tensor((0, 3)),  # forward
+                    padded_centers + th.tensor((1, 2)),  # side
+                    padded_centers + th.tensor((-1, 2))  # side
+                ),dim=1
+            ),
+            th.stack(
+                (
+                    padded_centers + th.tensor((2, 0)),  # neighbor
+                    padded_centers + th.tensor((3, 0)),  # forward
+                    padded_centers + th.tensor((2, 1)),  # side
+                    padded_centers + th.tensor((2, -1))  # side
+                ), dim=1
+            ),
+        ), dim=1)
+
+    neighbor_values = padded_input2[
+        th.arange(input2.size(0))[:,None,None],
+        neighbor_centers[:, :, :, 0],
+        neighbor_centers[:, :, :, 1]]
+
+    neighbor_values[:, :, 0] = neighbor_values[:, :, 0] == floor_color2
+    neighbor_values[:, :, 1:] = th.any(
+        th.stack(
+            (neighbor_values[:, :, 1:] == obsacle_colors2[0],
+            neighbor_values[:, :, 1:] == obsacle_colors2[1],
+            neighbor_values[:, :, 1:] == obsacle_colors2[2],
+             neighbor_values[:, :, 1:] == obsacle_colors2[3]
+            ), dim=0
+        ), dim=0
+    )
+
+    neighbor_sides = th.any(
+        neighbor_values[:,:,2:3], dim=2, keepdim=True
+    )
+    neighbor_center_forward_side = th.cat(
+        (neighbor_values[:, :, :2], neighbor_sides)
+        , dim=2
+    )
+    res = th.all(neighbor_center_forward_side,dim=2).float()
     return res
-
-def in_bound(loc, bound):
-    loc_r, loc_c = loc
-    r_limit, c_limit = bound
-    in_bound = 0 <= loc_r < r_limit and 0 <= loc_c < c_limit
-    return in_bound
-
-def get_corresponding_corner_locs(agent_loc, dir):
-    d = {
-        (0, 2): {"forward": (0, 3), "side": [(1, 2), (-1, 2)]},
-        (-2, 0): {"forward": (-3, 0), "side": [(-2, 1), (-2, -1)]},
-        (2, 0): {"forward": (3, 0), "side": [(2, 1), (2, -1)]},
-        (0, -2): {"forward": (0, -3), "side": [(-1, -2), (1, -2)]},
-    }
-    rel_forward_loc = d[dir]["forward"]
-    rel_side_locs = d[dir]["side"]
-    abs_forward_loc = (agent_loc[0]+rel_forward_loc[0], agent_loc[1]+rel_forward_loc[1])
-    abs_side_locs = [(agent_loc[0]+rel_side_loc[0], agent_loc[1]+rel_side_loc[1]) for rel_side_loc in rel_side_locs]
-    return abs_forward_loc, abs_side_locs
-
-
-def is_corner(input, bound, forward_loc, side_locs, obsacle_colors):
-    forward_loc_r, forward_loc_c = forward_loc
-
-    if in_bound(forward_loc, bound) and not any(
-            (input[forward_loc_r, forward_loc_c] == obsacle_color)[0]
-            for obsacle_color in obsacle_colors
-        ):
-        return False
-    for side_loc_r, side_loc_c in side_locs:
-        if any(
-                (input[side_loc_r, side_loc_c] == obsacle_color)[0]
-                for obsacle_color in obsacle_colors
-        ):
-            return True
-    return False
-
 
 def get_ground_truth_of_box(
     input,
     agent_colors,
-    box_colors,
-    neighbors_relative_locs,
-    out_of_boundary_value=False,
+    box_colors
 ):
-    # find agent's location: We assume there's only one agent
-    for agent_color in agent_colors:
-        agent_loc_r, agent_loc_c = (input == agent_color)[:, :, 0].nonzero(
-            as_tuple=True
-        )
-        if agent_loc_r.numel() == 0:
-            continue
-        else:
-            agent_loc_r = int(agent_loc_r)
-            agent_loc_c = int(agent_loc_c)
-            break
+    input2 = input[:,:,:,0]
+    agent_colors2 = agent_colors[:, 0]
+    box_colors2 = box_colors[:, 0]
+    centers1 = (input2 == agent_colors2[0]).nonzero()[:, 1:]
+    centers2 = (input2 == agent_colors2[1]).nonzero()[:, 1:]
+    centers = th.cat((centers1, centers2))
 
-    r_limit, c_limit = input.size()[:2]
-    neighbors_abs_locs = [
-        (agent_loc_r + rel_r, agent_loc_c + rel_c)
-        for rel_r, rel_c in neighbors_relative_locs
-    ]
+    neighbors = th.stack(
+        (
+            input2[th.arange(input2.size(0)), centers[:, 0] - 1, centers[:, 1]],
+            input2[th.arange(input2.size(0)), centers[:, 0], centers[:, 1] - 1],
+            input2[th.arange(input2.size(0)), centers[:, 0], centers[:, 1] + 1],
+            input2[th.arange(input2.size(0)), centers[:, 0] + 1, centers[:, 1]]
+        ), dim=1)
+    res2 = th.any(
+        th.stack((
+            (neighbors == box_colors2[0]).float(),
+            (neighbors == box_colors2[1]).float(),
+            (neighbors == box_colors2[2]).float()
+            ), dim=2)
+        , dim=2).float()
 
-    res = []
-    for neighbors_abs_loc_r, neighbors_abs_loc_c in neighbors_abs_locs:
-        if not in_bound((neighbors_abs_loc_r, neighbors_abs_loc_c), (r_limit, c_limit)):
-            res.append(out_of_boundary_value)
-        elif any(
-            (input[neighbors_abs_loc_r, neighbors_abs_loc_c] == box_color)[0]
-            for box_color in box_colors
-        ):
-            res.append(True)
-        else:
-            res.append(False)
-    res = th.tensor(res).float().reshape(1, -1)
-    return res
+
+    return res2
+

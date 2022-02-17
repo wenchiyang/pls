@@ -37,8 +37,8 @@ def setup_env(folder, config, program_path):
             "shield": config["model_features"]["params"]["shield"],
             "detect_ghosts": config["model_features"]["params"]["detect_ghosts"],
             "detect_walls": config["model_features"]["params"]["detect_walls"],
-            "ghost_layer_num_output": config["model_features"]["params"]["ghost_layer_num_output"],
-            "wall_layer_num_output": config["model_features"]["params"]["wall_layer_num_output"]
+            "n_ghost_locs": config["model_features"]["params"]["n_ghost_locs"],
+            "n_wall_locs": config["model_features"]["params"]["n_wall_locs"]
         }
         env = Pacman_Monitor(
             env,
@@ -53,9 +53,9 @@ def setup_env(folder, config, program_path):
             "shield": config["model_features"]["params"]["shield"],
             "detect_boxes": config["model_features"]["params"]["detect_boxes"],
             "detect_corners": config["model_features"]["params"]["detect_corners"],
-            "box_layer_num_output": config["model_features"]["params"]["box_layer_num_output"],
-            "corner_layer_num_output": config["model_features"]["params"][
-                "corner_layer_num_output"
+            "n_box_locs": config["model_features"]["params"]["n_box_locs"],
+            "n_corner_locs": config["model_features"]["params"][
+                "n_corner_locs"
             ],
         }
 
@@ -147,7 +147,7 @@ def main(folder, config):
 
 
     intermediate_model_path = join(folder, "model_checkpoints")
-    checkpoint_callback = CheckpointCallback(save_freq=5e3, save_path=intermediate_model_path)
+    checkpoint_callback = CheckpointCallback(save_freq=1e4, save_path=intermediate_model_path)
 
 
     model.learn(

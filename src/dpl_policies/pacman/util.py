@@ -90,29 +90,35 @@ def initial_log(name, args):
     logger.info(f"Render:           {args['render']}")
 
 
-def get_ground_ghost(input, center_color, detect_color):
-    # find center coord
-    r, c = (input == center_color).nonzero(as_tuple=True)
-    neighbors = [
-        input[r - 1, c],  # up
-        input[r + 1, c],  # down
-        input[r, c - 1],  # left
-        input[r, c + 1],  # right
-    ]
-    neigh = (th.stack(neighbors) == detect_color).float().view(-1)
-    no_ghost = (1 - neigh.sum()).view(-1)
-    res = th.cat((no_ghost, neigh)).view(1, -1)
-    return res
-
-
 def get_ground_wall(input, center_color, detect_color):
     # find center coord
-    r, c = (input == center_color).nonzero(as_tuple=True)
-    neighbors = [
-        input[r - 1, c],  # up
-        input[r + 1, c],  # down
-        input[r, c - 1],  # left
-        input[r, c + 1],  # right
-    ]
-    res = (th.stack(neighbors) == detect_color).float().view(1, -1)
-    return res
+    # r, c = (input == center_color).nonzero(as_tuple=True)
+    #
+    # neighbors = [
+    #     input[r - 1, c],  # up
+    #     input[r + 1, c],  # down
+    #     input[r, c - 1],  # left
+    #     input[r, c + 1],  # right
+    # ]
+    # res = (th.stack(neighbors) == detect_color).float().view(1, -1)
+    # r, c = (input[0] == center_color).nonzero(as_tuple=True)
+    # neighbors = [
+    #     input[0][r - 1, c],  # up
+    #     input[0][r + 1, c],  # down
+    #     input[0][r, c - 1],  # left
+    #     input[0][r, c + 1],  # right
+    # ]
+    # res = (th.stack(neighbors) == detect_color).float().view(1, -1)
+
+    centers = (input == center_color).nonzero()[:, 1:]
+
+    neighbors = th.stack(
+        (
+            input[th.arange(input.size(0)), centers[:, 0] - 1 , centers[:, 1]],
+            input[th.arange(input.size(0)), centers[:, 0] + 1, centers[:, 1]],
+            input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] - 1],
+            input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] - 1]
+        ), dim=1)
+
+    res2 = (neighbors == detect_color).float()
+    return res2

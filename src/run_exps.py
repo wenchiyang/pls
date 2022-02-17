@@ -6,16 +6,12 @@ import itertools
 
 hyper_parameters= {
     "domains": [
-        "pacman_5x5", "pacman_6x6", "pacman_6x6_2",
-        "pacman_smallGrid", "pacman_smallGrid2", "pacman_mediumGrid2",
-        "sokoban_5x5", "sokoban_6x6"
+        "pacman_5x5_new", "pacman_6x6_new", "pacman_6x6_2_new",
+        "pacman_smallGrid_new", "pacman_smallGrid2_new",
+        "sokoban_5x5_new", "sokoban_6x6_new", "sokoban_7x7_new"
     ],
-    "workflow_names": ["ppo", "a2c"],
+    "workflow_names": ["ppo"],
     "shield_types": ["no_shielding", "hard_shielding", "soft_shielding"],
-    # "batch_sizes": [32, 64, 128, 256, 512],
-    # "n_epochs": [10, 20, 40, 60],
-    # "learning_rates": [1e-4, 1e-3, 1e-2],
-    # "clip_ranges": [0.1, 0.2, 0.3]
 }
 cwd = os.getcwd()
 
@@ -29,18 +25,10 @@ for combination in combinations:
     hyper["domain"] = hyper_parameters["domains"][combination[0]]
     hyper["workflow_name"] = hyper_parameters["workflow_names"][combination[1]]
     hyper["shield_type"] =  hyper_parameters["shield_types"][combination[2]]
-    # hyper["batch_size"] = hyper_parameters["batch_sizes"][combination[2]]
-    # hyper["n_epoch"] = hyper_parameters["n_epochs"][combination[3]]
-    # hyper["learning_rate"] = hyper_parameters["learning_rates"][combination[4]]
-    # hyper["clip_range"] = hyper_parameters["clip_ranges"][combination[5]]
     folder = os.path.join(cwd, "experiments_trials",
                           hyper["domain"],
                           hyper["workflow_name"],
                           hyper["shield_type"],
-                          # f'batch_size_{hyper["batch_size"]}',
-                          # f'n_epoch_{hyper["n_epoch"]}',
-                          # f'learning_rate_{hyper["learning_rate"]}',
-                          # f'clip_range_{hyper["clip_range"]}'
                           )
 
     exps.append(folder)

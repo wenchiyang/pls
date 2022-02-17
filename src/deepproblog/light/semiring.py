@@ -1,4 +1,5 @@
 from problog.evaluator import Semiring
+from problog.evaluator import SemiringProbability
 
 class GraphSemiring(Semiring):
     def __init__(self):
@@ -36,6 +37,21 @@ class GraphSemiring(Semiring):
 
     def normalize(self, a, z):
         return a / z
+
+    def value(self, a):
+        """Transform the given external value into an internal value."""
+        i = int(a.args[0])
+        v = self.weights[a.functor][:, i : i + 1]
+        return v
+
+class SemiringProbability_custom(SemiringProbability):
+    def __init__(self):
+        SemiringProbability.__init__(self)
+        self.eps = 1e-12
+
+
+    def set_weights(self, weights):
+        self.weights = weights
 
     def value(self, a):
         """Transform the given external value into an internal value."""

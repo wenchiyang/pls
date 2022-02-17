@@ -1,9 +1,8 @@
 import gym
 import torch as th
-from stable_baselines3.common.noise import ActionNoise
 from torch import nn
 import numpy as np
-from typing import Union, Tuple, Optional
+from typing import Union, Tuple
 from torch.distributions import Categorical
 import time
 from stable_baselines3.common.callbacks import ConvertCallback
@@ -16,7 +15,7 @@ from stable_baselines3.common.type_aliases import (
 )
 
 
-from src.deepproblog.light import DeepProbLogLayer
+from src.deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
 from .util import get_ground_wall
 
 WALL_COLOR = 0.25
@@ -32,8 +31,8 @@ class Pacman_Encoder(nn.Module):
         self.shield = shielding_settings["shield"]
         self.detect_ghosts = shielding_settings["detect_ghosts"]
         self.detect_walls = shielding_settings["detect_walls"]
-        self.ghost_layer_num_output = shielding_settings["ghost_layer_num_output"]
-        self.wall_layer_num_output = shielding_settings["wall_layer_num_output"]
+        self.n_ghost_locs = shielding_settings["n_ghost_locs"]
+        self.n_wall_locs = shielding_settings["n_wall_locs"]
         self.n_actions = n_actions
         self.program_path = program_path
 
@@ -103,8 +102,8 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         self.detect_ghosts = self.image_encoder.detect_ghosts
         self.detect_walls = self.image_encoder.detect_walls
 
-        self.ghost_layer_num_output = self.image_encoder.ghost_layer_num_output
-        self.wall_layer_num_output = self.image_encoder.wall_layer_num_output
+        self.n_ghost_locs = self.image_encoder.n_ghost_locs
+        self.n_wall_locs = self.image_encoder.n_wall_locs
 
         self.n_actions = self.image_encoder.n_actions
         self.program_path = self.image_encoder.program_path
@@ -116,7 +115,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             self.ghost_layer = nn.Sequential(
                 nn.Linear(self.input_size, 128),
                 nn.ReLU(),
-                nn.Linear(128, self.ghost_layer_num_output),
+                nn.Linear(128, self.n_ghost_locs),
                 nn.Sigmoid(),  # TODO : add a flag
             )
 
@@ -124,7 +123,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             self.wall_layer = nn.Sequential(
                 nn.Linear(self.input_size, 128),
                 nn.ReLU(),
-                nn.Linear(128, self.wall_layer_num_output),
+                nn.Linear(128, self.n_wall_locs),
                 nn.Sigmoid(),
             )
 
@@ -148,12 +147,40 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
                 "wall(left)",
                 "wall(right)"
             ]
-            self.dpl_layer = DeepProbLogLayer(
-                program=self.program, queries=self.queries, evidences=self.evidences
+            # self.dpl_layer = DeepProbLogLayer(
+            #     program=self.program, queries=self.queries, evidences=self.evidences
+            # )
+            input_struct = {
+                "ghost": [i for i in range(self.n_ghost_locs)],
+                "wall": [i for i in
+                         range(self.n_ghost_locs, self.n_ghost_locs + self.n_wall_locs)],
+                "action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
+                                            self.n_ghost_locs + self.n_wall_locs + self.n_actions)]}
+            query_struct = {
+                "ghost": [i for i in range(self.n_ghost_locs)],
+                "wall": [i for i in
+                           range(self.n_ghost_locs, self.n_ghost_locs + self.n_wall_locs)],
+                "safe_action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
+                                                 self.n_ghost_locs + self.n_wall_locs + self.n_actions)]}
+            self.dpl_layer = DeepProbLogLayer_Approx(
+                program=self.program, queries=self.queries, evidences=self.evidences,
+                input_struct=input_struct, query_struct=query_struct
             )
+
         debug_queries = ["safe_next"]
-        self.query_safety_layer = DeepProbLogLayer(
-            program=self.program, queries=debug_queries
+        # self.query_safety_layer = DeepProbLogLayer(
+        #     program=self.program, queries=debug_queries
+        # )
+        input_struct = {
+            "ghost": [i for i in range(self.n_ghost_locs)],
+            "wall": [i for i in
+                     range(self.n_ghost_locs, self.n_ghost_locs + self.n_wall_locs)],
+            "action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
+                                        self.n_ghost_locs + self.n_wall_locs + self.n_actions)]}
+        query_struct = {"safe_next": [i for i in range(1)]}
+        self.query_safety_layer = DeepProbLogLayer_Approx(
+            program=self.program, queries=debug_queries,
+            input_struct=input_struct, query_struct=query_struct
         )
         self._build(lr_schedule)
 
@@ -253,8 +280,8 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         actions = distribution.get_actions(deterministic=deterministic)
         log_prob = distribution.log_prob(actions)
         with th.no_grad():
-            ground_truth_ghost = get_ground_wall(x[0], PACMAN_COLOR, GHOST_COLOR)
-            ground_truth_wall = get_ground_wall(x[0], PACMAN_COLOR, WALL_COLOR)
+            ground_truth_ghost = get_ground_wall(x, PACMAN_COLOR, GHOST_COLOR)
+            ground_truth_wall = get_ground_wall(x, PACMAN_COLOR, WALL_COLOR)
 
             base_actions = distribution.distribution.probs
 
@@ -297,8 +324,8 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         log_prob = mass.log_prob(actions)
 
         with th.no_grad():
-            ground_truth_ghost = get_ground_wall(x[0], PACMAN_COLOR, GHOST_COLOR)
-            ground_truth_wall = get_ground_wall(x[0], PACMAN_COLOR, WALL_COLOR)
+            ground_truth_ghost = get_ground_wall(x, PACMAN_COLOR, GHOST_COLOR)
+            ground_truth_wall = get_ground_wall(x, PACMAN_COLOR, WALL_COLOR)
 
             object_detect_probs = {
                 "prob_ghost_prior": ghosts,
@@ -312,11 +339,12 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
     def hard_shielding(self, distribution, values, obs, x):
-        ground_truth_ghost = get_ground_wall(x[0], PACMAN_COLOR, GHOST_COLOR)
-        ground_truth_wall = get_ground_wall(x[0], PACMAN_COLOR, WALL_COLOR)
+        with th.no_grad():
+            ground_truth_ghost = get_ground_wall(x, PACMAN_COLOR, GHOST_COLOR)
+            ground_truth_wall = get_ground_wall(x, PACMAN_COLOR, WALL_COLOR)
 
-        ghosts = ground_truth_ghost
-        walls = ground_truth_wall
+            ghosts = ground_truth_ghost
+            walls = ground_truth_wall
 
         base_actions = distribution.distribution.probs
         results = self.dpl_layer(

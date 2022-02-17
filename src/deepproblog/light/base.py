@@ -5,7 +5,6 @@ from problog.sdd_formula import SDD
 from src.deepproblog.light.semiring import GraphSemiring
 from collections import defaultdict
 
-import numpy as np
 
 class DeepProbLogLayer(nn.Module):
     def __init__(self, program, queries=[], evidences=[], single_output=None):

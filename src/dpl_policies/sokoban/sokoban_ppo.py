@@ -1,8 +1,7 @@
 import torch as th
-from typing import Any, Dict, Optional, List
+from typing import Optional
 import gym
 
-from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.type_aliases import (
     GymEnv,
     MaybeCallback
@@ -14,9 +13,6 @@ from stable_baselines3.common.utils import obs_as_tensor, safe_mean
 from stable_baselines3.common.vec_env import VecEnv
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.buffers import RolloutBuffer
-from stable_baselines3.common.utils import explained_variance
-from gym import spaces
-from torch.nn import functional as F
 
 class Sokoban_DPLPPO(PPO):
     def __init__(self, *args, **kwargs):
@@ -178,6 +174,9 @@ class Sokoban_DPLPPO(PPO):
                 self.policy.reset_noise(env.num_envs)
 
             with th.no_grad():
+                for e in env.envs:
+                    if e.env.render_or_not:
+                        e.env.render()
                 # Convert to pytorch tensor or to TensorDict
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
                 (

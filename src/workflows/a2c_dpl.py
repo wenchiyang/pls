@@ -143,7 +143,7 @@ def main(folder, config):
 
 
     intermediate_model_path = join(folder, "model_checkpoints")
-    checkpoint_callback = CheckpointCallback(save_freq=5e3, save_path=intermediate_model_path)
+    checkpoint_callback = CheckpointCallback(save_freq=1e4, save_path=intermediate_model_path)
 
 
     model.learn(

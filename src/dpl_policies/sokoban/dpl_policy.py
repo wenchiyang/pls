@@ -14,7 +14,7 @@ from stable_baselines3.common.type_aliases import (
     Schedule,
 )
 
-from src.deepproblog.light import DeepProbLogLayer
+from src.deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
 from src.dpl_policies.sokoban.util import get_ground_truth_of_box, get_ground_truth_of_corners
 
 
@@ -24,8 +24,13 @@ FLOOR_COLOR = th.tensor([1 / 6] * 3, dtype=th.float32)
 BOX_TARGET_COLOR = th.tensor([2 / 6] * 3, dtype=th.float32)
 BOX_ON_TARGET_COLOR = th.tensor([3 / 6] * 3, dtype=th.float32)
 BOX_COLOR = th.tensor([4 / 6] * 3, dtype=th.float32)
+
 PLAYER_COLOR = th.tensor([5 / 6] * 3, dtype=th.float32)
 PLAYER_ON_TARGET_COLOR = th.tensor([1] * 3, dtype=th.float32)
+
+PLAYER_COLORS = th.tensor(([5 / 6] * 3, [1] * 3))
+BOX_COLORS = th.tensor(([2 / 6] * 3, [3 / 6] * 3, [4 / 6] * 3))
+OBSTABLE_COLORS = th.tensor(([0] * 3, [2 / 6] * 3, [3 / 6] * 3, [4 / 6] * 3))
 
 
 NEIGHBORS_RELATIVE_LOCS_BOX = [
@@ -48,8 +53,8 @@ class Sokoban_Encoder(nn.Module):
         self.shield = shielding_settings["shield"]
         self.detect_boxes = shielding_settings["detect_boxes"]
         self.detect_corners = shielding_settings["detect_corners"]
-        self.box_layer_num_output = shielding_settings["box_layer_num_output"]
-        self.corner_layer_num_output = shielding_settings["corner_layer_num_output"]
+        self.n_box_locs = shielding_settings["n_box_locs"]
+        self.n_corner_locs = shielding_settings["n_corner_locs"]
         self.n_actions = n_actions
         self.program_path = program_path
 
@@ -118,8 +123,8 @@ class Sokoban_Monitor(Monitor):
 #         self.detect_boxes = self.image_encoder.detect_boxes
 #         self.detect_corners = self.image_encoder.detect_corners
 #
-#         self.box_layer_num_output = self.image_encoder.box_layer_num_output
-#         self.corner_layer_num_output = self.image_encoder.corner_layer_num_output
+#         self.n_box_locs = self.image_encoder.n_box_locs
+#         self.n_corner_locs = self.image_encoder.n_corner_locs
 #
 #         self.n_actions = self.image_encoder.n_actions
 #         self.program_path = self.image_encoder.program_path
@@ -129,7 +134,7 @@ class Sokoban_Monitor(Monitor):
 #             self.box_layer = nn.Sequential(
 #                 nn.Linear(self.input_size, 128),
 #                 nn.ReLU(),
-#                 nn.Linear(128, self.box_layer_num_output),
+#                 nn.Linear(128, self.n_box_locs),
 #                 nn.Sigmoid(),  # TODO : add a flag
 #             )
 #
@@ -137,7 +142,7 @@ class Sokoban_Monitor(Monitor):
 #             self.corner_layer = nn.Sequential(
 #                 nn.Linear(self.input_size, 128),
 #                 nn.ReLU(),
-#                 nn.Linear(128, self.corner_layer_num_output),
+#                 nn.Linear(128, self.n_corner_locs),
 #                 nn.Sigmoid(),
 #             )
 #
@@ -303,8 +308,8 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         self.detect_boxes = self.image_encoder.detect_boxes
         self.detect_corners = self.image_encoder.detect_corners
 
-        self.box_layer_num_output = self.image_encoder.box_layer_num_output
-        self.corner_layer_num_output = self.image_encoder.corner_layer_num_output
+        self.n_box_locs = self.image_encoder.n_box_locs
+        self.n_corner_locs = self.image_encoder.n_corner_locs
 
         self.n_actions = self.image_encoder.n_actions
         self.program_path = self.image_encoder.program_path
@@ -316,7 +321,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             self.box_layer = nn.Sequential(
                 nn.Linear(self.input_size, 128),
                 nn.ReLU(),
-                nn.Linear(128, self.box_layer_num_output),
+                nn.Linear(128, self.n_box_locs),
                 nn.Sigmoid(),  # TODO : add a flag
             )
 
@@ -324,7 +329,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             self.corner_layer = nn.Sequential(
                 nn.Linear(self.input_size, 128),
                 nn.ReLU(),
-                nn.Linear(128, self.corner_layer_num_output),
+                nn.Linear(128, self.n_corner_locs),
                 nn.Sigmoid(),
             )
 
@@ -352,13 +357,45 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 "corner(2, 0)",
                 "corner(0, -2)",
             ]
-            self.dpl_layer = DeepProbLogLayer(
-                program=self.program, queries=self.queries, evidences=self.evidences
+
+
+            input_struct = {
+                "box": [i for i in range(self.n_box_locs)],
+                "corner": [i for i in range(self.n_box_locs,self.n_box_locs+self.n_corner_locs)],
+                "action": [i for i in range(self.n_box_locs+self.n_corner_locs,
+                                            self.n_box_locs+self.n_corner_locs+self.n_actions)]}
+            query_struct = {
+                "box": [i for i in range(self.n_box_locs)],
+                "corner": [i for i in
+                           range(self.n_box_locs, self.n_box_locs + self.n_corner_locs)],
+                "safe_action": [i for i in range(self.n_box_locs+self.n_corner_locs,
+                                            self.n_box_locs+self.n_corner_locs+self.n_actions)]}
+
+            self.dpl_layer = DeepProbLogLayer_Approx(
+                program=self.program, queries=self.queries, evidences=self.evidences,
+                input_struct=input_struct, query_struct=query_struct
             )
+            # self.dpl_layer = DeepProbLogLayer(
+            #     program=self.program, queries=self.queries, evidences=self.evidences
+            # )
+
+
 
         debug_queries = ["safe_next"]
-        self.query_safety_layer = DeepProbLogLayer(
-            program=self.program, queries=debug_queries
+
+        # self.query_safety_layer = DeepProbLogLayer(
+        #     program=self.program, queries=debug_queries
+        # )
+        input_struct = {
+            "box": [i for i in range(self.n_box_locs)],
+            "corner": [i for i in
+                       range(self.n_box_locs, self.n_box_locs + self.n_corner_locs)],
+            "action": [i for i in range(self.n_box_locs + self.n_corner_locs,
+                                        self.n_box_locs + self.n_corner_locs + self.n_actions)]}
+        query_struct = {"safe_next": [i for i in range(1)]}
+        self.query_safety_layer = DeepProbLogLayer_Approx(
+            program=self.program, queries=debug_queries,
+            input_struct=input_struct, query_struct=query_struct
         )
         self._build(lr_schedule)
 
@@ -460,20 +497,16 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         log_prob = distribution.log_prob(actions)
         with th.no_grad():
             ground_truth_box = get_ground_truth_of_box(
-                input=x[0],
-                agent_colors=[PLAYER_COLOR, PLAYER_ON_TARGET_COLOR],
-                box_colors=[BOX_ON_TARGET_COLOR, BOX_COLOR],
-                neighbors_relative_locs=NEIGHBORS_RELATIVE_LOCS_BOX,
-                out_of_boundary_value=False,
+                input=x,
+                agent_colors=PLAYER_COLORS,
+                box_colors=BOX_COLORS,
             )
 
             ground_truth_corner = get_ground_truth_of_corners(
-                input=x[0],
-                agent_colors=[PLAYER_COLOR, PLAYER_ON_TARGET_COLOR],
-                obsacle_colors=[WALL_COLOR, BOX_ON_TARGET_COLOR, BOX_COLOR],
+                input=x,
+                agent_colors=PLAYER_COLORS,
+                obsacle_colors=OBSTABLE_COLORS,
                 floor_color=FLOOR_COLOR,
-                neighbors_relative_locs=NEIGHBORS_RELATIVE_LOCS_CORNER,
-                out_of_boundary_value=False,
             )
 
             base_actions = distribution.distribution.probs
@@ -513,25 +546,22 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         actions = results["safe_action"]
 
         mass = Categorical(probs=actions)
+
         actions = mass.sample()
         log_prob = mass.log_prob(actions)
 
         with th.no_grad():
             ground_truth_box = get_ground_truth_of_box(
-                input=x[0],
-                agent_colors=[PLAYER_COLOR, PLAYER_ON_TARGET_COLOR],
-                box_colors=[BOX_ON_TARGET_COLOR, BOX_COLOR],
-                neighbors_relative_locs=NEIGHBORS_RELATIVE_LOCS_BOX,
-                out_of_boundary_value=False,
+                input=x,
+                agent_colors=PLAYER_COLORS,
+                box_colors=BOX_COLORS,
             )
 
             ground_truth_corner = get_ground_truth_of_corners(
-                input=x[0],
-                agent_colors=[PLAYER_COLOR, PLAYER_ON_TARGET_COLOR],
-                obsacle_colors=[WALL_COLOR, BOX_ON_TARGET_COLOR, BOX_COLOR],
+                input=x,
+                agent_colors=PLAYER_COLORS,
+                obsacle_colors=OBSTABLE_COLORS,
                 floor_color=FLOOR_COLOR,
-                neighbors_relative_locs=NEIGHBORS_RELATIVE_LOCS_CORNER,
-                out_of_boundary_value=False,
             )
 
             object_detect_probs = {
@@ -546,25 +576,21 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
     def hard_shielding(self, distribution, values, obs, x):
-        ground_truth_box = get_ground_truth_of_box(
-            input=x[0],
-            agent_colors=[PLAYER_COLOR, PLAYER_ON_TARGET_COLOR],
-            box_colors=[BOX_ON_TARGET_COLOR, BOX_COLOR],
-            neighbors_relative_locs=NEIGHBORS_RELATIVE_LOCS_BOX,
-            out_of_boundary_value=False,
-        )
+        with th.no_grad():
+            ground_truth_box = get_ground_truth_of_box(
+                input=x,
+                agent_colors=PLAYER_COLORS,
+                box_colors=BOX_COLORS,
+            )
 
-        ground_truth_corner = get_ground_truth_of_corners(
-            input=x[0],
-            agent_colors=[PLAYER_COLOR, PLAYER_ON_TARGET_COLOR],
-            obsacle_colors=[WALL_COLOR, BOX_ON_TARGET_COLOR, BOX_COLOR],
-            floor_color=FLOOR_COLOR,
-            neighbors_relative_locs=NEIGHBORS_RELATIVE_LOCS_CORNER,
-            out_of_boundary_value=False,
-        )
-
-        boxes = ground_truth_box
-        corners = ground_truth_corner
+            ground_truth_corner = get_ground_truth_of_corners(
+                input=x,
+                agent_colors=PLAYER_COLORS,
+                obsacle_colors=OBSTABLE_COLORS,
+                floor_color=FLOOR_COLOR,
+            )
+            boxes = ground_truth_box
+            corners = ground_truth_corner
 
         base_actions = distribution.distribution.probs
         results = self.dpl_layer(
@@ -574,22 +600,13 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 "action": base_actions,
             }
         )
-        # For when we set safe_next as a query
-        # safe_next = results["safe_next"]
-        # safe_actions = results["safe_action"] / safe_next
-        # # When safe_next is zero (meaning there are no safe actions), use base_actions
-        # actions = th.where(abs(safe_next) < 1e-6, base_actions, safe_actions)
 
         # For when we set safe_action=true as evidence
         actions = results["safe_action"]
 
         mass = Categorical(probs=actions)
-        # if random.random() < 0.5:
         actions = mass.sample()
         log_prob = mass.log_prob(actions)
-        # else:
-        #     actions = distribution.distribution.sample()
-        #     log_prob = distribution.distribution.log_prob(actions)
         with th.no_grad():
             object_detect_probs = {
                 "prob_box_prior": boxes,
