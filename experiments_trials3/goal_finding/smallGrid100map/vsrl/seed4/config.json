@@ -38,13 +38,7 @@
       "net_arch_vf": [128],
       "sensor_noise": 0
     }
-  },
-
-  "visualize_settings": {
-    "window_size": 2000,
-    "window_speed": 1000
   }
-
 }
 
 
