@@ -1,2 +1,2 @@
-from src.deepproblog.light.base import DeepProbLogLayer
-from src.deepproblog.light.wmc import DeepProbLogLayer_Approx
+from deepproblog.light.base import DeepProbLogLayer
+from deepproblog.light.wmc import DeepProbLogLayer_Approx

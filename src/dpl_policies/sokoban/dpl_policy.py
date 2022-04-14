@@ -14,8 +14,8 @@ from stable_baselines3.common.type_aliases import (
     Schedule,
 )
 
-from src.deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
-from src.dpl_policies.sokoban.util import get_ground_truth_of_box, get_ground_truth_of_corners, stuck
+from deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
+from dpl_policies.sokoban.util import get_ground_truth_of_box, get_ground_truth_of_corners, stuck
 from os import path
 import pickle
 

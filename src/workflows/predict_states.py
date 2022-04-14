@@ -1,5 +1,5 @@
 import torch as th
-from src.dpl_policies.goal_finding.goal_finding_pg import Encoder, DPLSafePolicy, PolicyNet
+from dpl_policies.goal_finding.goal_finding_pg import Encoder, DPLSafePolicy, PolicyNet
 import os
 import random
 import numpy as np

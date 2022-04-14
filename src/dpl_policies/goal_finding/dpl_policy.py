@@ -16,7 +16,7 @@ from stable_baselines3.common.type_aliases import (
 from os import path
 import pickle
 
-from src.deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
+from deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
 from .util import get_ground_wall
 
 WALL_COLOR = 0.25

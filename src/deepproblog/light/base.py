@@ -2,7 +2,7 @@ from torch import nn
 import torch
 from problog.formula import LogicFormula, LogicDAG
 from problog.sdd_formula import SDD
-from src.deepproblog.light.semiring import GraphSemiring
+from deepproblog.light.semiring import GraphSemiring
 from collections import defaultdict
 
 

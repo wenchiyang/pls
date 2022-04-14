@@ -5,27 +5,27 @@ import gym_sokoban
 import torch as th
 from torch import nn
 from os.path import join, abspath
-from src.dpl_policies.goal_finding.dpl_policy import (
+from dpl_policies.goal_finding.dpl_policy import (
     GoalFinding_Encoder,
     GoalFinding_Monitor,
     GoalFinding_DPLActorCriticPolicy,
     GoalFinding_Callback,
 )
-from src.dpl_policies.pacman.dpl_policy import (
+from dpl_policies.pacman.dpl_policy import (
     Pacman_Encoder,
     Pacman_Monitor,
     Pacman_DPLActorCriticPolicy,
     Pacman_Callback,
 )
-from src.dpl_policies.sokoban.dpl_policy import (
+from dpl_policies.sokoban.dpl_policy import (
     Sokoban_Encoder,
     Sokoban_Monitor,
     Sokoban_DPLActorCriticPolicy,
     Sokoban_Callback
 )
-from src.dpl_policies.sokoban.sokoban_ppo import Sokoban_DPLPPO
-from src.dpl_policies.goal_finding.goal_finding_ppo import GoalFinding_DPLPPO
-from src.dpl_policies.pacman.pacman_ppo import Pacman_DPLPPO
+from dpl_policies.sokoban.sokoban_ppo import Sokoban_DPLPPO
+from dpl_policies.goal_finding.goal_finding_ppo import GoalFinding_DPLPPO
+from dpl_policies.pacman.pacman_ppo import Pacman_DPLPPO
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import CheckpointCallback
 

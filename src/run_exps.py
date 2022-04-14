@@ -1,6 +1,6 @@
 from dask.distributed import Client, LocalCluster, performance_report, SSHCluster
 import os
-from src.workflows.execute_workflow import train, evaluate, test
+from workflows.execute_workflow import train, evaluate, test
 import itertools
 
 hyper_parameters= {

@@ -1,7 +1,7 @@
 from torch import nn
-from src.deepproblog.light import DeepProbLogLayer
+from deepproblog.light import DeepProbLogLayer
 import torch as th
-from src.dpl_policies.goal_finding.util import myformat, get_ground_wall
+from dpl_policies.goal_finding.util import myformat, get_ground_wall
 import torch.nn.functional as F
 
 
