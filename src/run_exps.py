@@ -56,7 +56,7 @@ if __name__ == "__main__":
     hyper_parameters = {
         "exp_folders": ["experiments_trials3"],
         "domains": [
-            # "sokoban/2box10map",
+            "sokoban/2box10map",
             "goal_finding/smallGrid100map"
             # "test"
         ],
@@ -70,8 +70,8 @@ if __name__ == "__main__":
                 #  "alpha_0.7", "alpha_0.9",
                 "vsrl"],
         "seeds":
-        # ["seed1", "seed2", "seed3", "seed4", "seed5"]
-            ["seed1"]
+            ["seed1", "seed2", "seed3", "seed4", "seed5"]
+            # ["seed1"]
     }
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
