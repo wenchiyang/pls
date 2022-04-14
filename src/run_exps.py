@@ -1,6 +1,6 @@
 from dask.distributed import Client, LocalCluster, performance_report, SSHCluster
 import os
-from workflows.execute_workflow import train, evaluate, test
+from workflows.execute_workflow import train, test
 import itertools
 
 
@@ -14,34 +14,34 @@ def run_test():
         test(exp)
 
 
-def run_evaluate():
-    folder = os.path.join(dir_path, "experiments_trials",
-                          # "pacman_test",
-                          # "pacman_scosGridTraps2",
-                          # "pacman_smallGrid3",
-                          # "pacman_smallGrid_new",
-                          # "sokoban_6x6_new",
-                          "pacman_5x5_full",
-                          "ppo",
-
-                          )
-    no = os.path.join(folder, "no_shielding")
-    soft1 = os.path.join(folder, "soft_shielding")
-    hard = os.path.join(folder, "hard_shielding")
-    soft2 = os.path.join(folder, "soft_shielding2")
-
-    model_at_step = 100000
-    mean_reward, n_deaths = evaluate(no, model_at_step=model_at_step, n_test_episodes=500)
-    print("no:", mean_reward, n_deaths)
-    # mean_reward, n_deaths = evaluate(soft1, model_at_step=model_at_step, n_test_episodes=500)
-    # print("soft:", mean_reward, n_deaths)
-    # mean_reward, n_deaths = evaluate(hard, model_at_step=model_at_step, n_test_episodes=500)
-    # print("hard:", mean_reward, n_deaths)
-    # mean_reward, n_deaths = evaluate(soft2, model_at_step=model_at_step, n_test_episodes=500)
-    # print("soft2:", mean_reward, n_deaths)
-
-    # for exp in exps:
-    #     evaluate(exp)th.argmax(mass.probs,dim=1)
+# def run_evaluate():
+#     folder = os.path.join(dir_path, "experiments_trials",
+#                           # "pacman_test",
+#                           # "pacman_scosGridTraps2",
+#                           # "pacman_smallGrid3",
+#                           # "pacman_smallGrid_new",
+#                           # "sokoban_6x6_new",
+#                           "pacman_5x5_full",
+#                           "ppo",
+#
+#                           )
+#     no = os.path.join(folder, "no_shielding")
+#     soft1 = os.path.join(folder, "soft_shielding")
+#     hard = os.path.join(folder, "hard_shielding")
+#     soft2 = os.path.join(folder, "soft_shielding2")
+#
+#     model_at_step = 100000
+#     mean_reward, n_deaths = evaluate(no, model_at_step=model_at_step, n_test_episodes=500)
+#     print("no:", mean_reward, n_deaths)
+#     # mean_reward, n_deaths = evaluate(soft1, model_at_step=model_at_step, n_test_episodes=500)
+#     # print("soft:", mean_reward, n_deaths)
+#     # mean_reward, n_deaths = evaluate(hard, model_at_step=model_at_step, n_test_episodes=500)
+#     # print("hard:", mean_reward, n_deaths)
+#     # mean_reward, n_deaths = evaluate(soft2, model_at_step=model_at_step, n_test_episodes=500)
+#     # print("soft2:", mean_reward, n_deaths)
+#
+#     # for exp in exps:
+#     #     evaluate(exp)th.argmax(mass.probs,dim=1)
 
 def main_cluster():
     client = Client("134.58.41.100:8786")
