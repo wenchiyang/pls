@@ -296,13 +296,21 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         :param deterministic: Whether to sample or use deterministic actions
         :return: action, value and log probability of the action
         """
-
+        # Preprocess the observation if needed
         obs = self.image_encoder(x)
-        latent_pi, latent_vf, latent_sde = self._get_latent(obs)
+        features = self.extract_features(obs)
+        latent_pi, latent_vf = self.mlp_extractor(features)
         # Evaluate the values for the given observations
         values = self.value_net(latent_vf)
-        distribution = self._get_action_dist_from_latent(latent_pi, latent_sde=latent_sde)
+        distribution = self._get_action_dist_from_latent(latent_pi)
         base_actions = distribution.distribution.probs
+
+        # obs = self.image_encoder(x)
+        # latent_pi, latent_vf, latent_sde = self._get_latent(obs)
+        # # Evaluate the values for the given observations
+        # values = self.value_net(latent_vf)
+        # distribution = self._get_action_dist_from_latent(latent_pi, latent_sde=latent_sde)
+        # base_actions = distribution.distribution.probs
 
         with th.no_grad():
             ground_truth_box = get_ground_truth_of_box(
@@ -445,10 +453,13 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         """
 
         if not self.differentiable_shield and self.alpha == 1:
-            latent_pi, latent_vf, latent_sde = self._get_latent(obs)
-            distribution = self._get_action_dist_from_latent(latent_pi, latent_sde)
+            obs = self.image_encoder(obs)
+            features = self.extract_features(obs)
+            latent_pi, latent_vf = self.mlp_extractor(features)
+            distribution = self._get_action_dist_from_latent(latent_pi)
             log_prob = distribution.log_prob(actions)
             values = self.value_net(latent_vf)
+
             return values, log_prob, distribution.entropy()
 
         _, values, log_prob, mass, _ = self.forward(obs)
