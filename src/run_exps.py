@@ -7,7 +7,7 @@ hyper_parameters= {
     "exp_folders": ["experiments_trials3"],
     "domains": [
         "sokoban/2box10map",
-        "goal_finding/smallGrid100map"
+        # "goal_finding/smallGrid100map"
         # "test"
     ],
     "exps":
@@ -20,8 +20,8 @@ hyper_parameters= {
         #  "alpha_0.7", "alpha_0.9",
          "vsrl"],
     "seeds":
-        ["seed1", "seed2", "seed3", "seed4", "seed5"]
-        # ["seed1"]
+        # ["seed1", "seed2", "seed3", "seed4", "seed5"]
+        ["seed1"]
 }
 
 cwd = os.getcwd()
