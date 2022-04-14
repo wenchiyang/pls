@@ -95,4 +95,4 @@ def main_cluster():
 
 
 if __name__ == "__main__":
-    main_cluster()
+    run_train()
