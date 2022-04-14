@@ -3,47 +3,6 @@ import os
 from workflows.execute_workflow import train, evaluate, test
 import itertools
 
-hyper_parameters= {
-    "exp_folders": ["experiments_trials3"],
-    "domains": [
-        "sokoban/2box10map",
-        "goal_finding/smallGrid100map"
-        # "test"
-    ],
-    "exps":
-        # ["test1", "test2"],
-        # ["no_shielding"],
-        [
-        # "no_shielding", "hard_shielding",
-        #  "alpha_0.1", "alpha_0.3",
-        #  "alpha_0.5",
-        #  "alpha_0.7", "alpha_0.9",
-         "vsrl"],
-    "seeds":
-        # ["seed1", "seed2", "seed3", "seed4", "seed5"]
-        ["seed1"]
-}
-
-cwd = os.getcwd()
-
-lengths = list(map(len, list(hyper_parameters.values())))
-lists_of_indices = list(map(lambda l: list(range(l)), lengths))
-combinations = list(itertools.product(*lists_of_indices))
-
-exps = []
-for combination in combinations:
-    hyper = dict.fromkeys(hyper_parameters.keys())
-    hyper["exp_folders"] = hyper_parameters["exp_folders"][combination[0]]
-    hyper["domains"] = hyper_parameters["domains"][combination[1]]
-    hyper["exps"] = hyper_parameters["exps"][combination[2]]
-    hyper["seeds"] = hyper_parameters["seeds"][combination[3]]
-    folder = os.path.join(cwd,
-                          hyper["exp_folders"],
-                          hyper["domains"],
-                          hyper["exps"],
-                          hyper["seeds"],
-                          )
-    exps.append(folder)
 
 
 def run_train():
@@ -93,6 +52,47 @@ def main_cluster():
     results = client.gather(futures)
 
 
-
 if __name__ == "__main__":
+    hyper_parameters = {
+        "exp_folders": ["/Users/wenchi/PycharmProjects/NeSysourse/experiments_trials3"],
+        "domains": [
+            "sokoban/2box10map",
+            "goal_finding/smallGrid100map"
+            # "test"
+        ],
+        "exps":
+        # ["test1", "test2"],
+        # ["no_shielding"],
+            [
+                # "no_shielding", "hard_shielding",
+                #  "alpha_0.1", "alpha_0.3",
+                #  "alpha_0.5",
+                #  "alpha_0.7", "alpha_0.9",
+                "vsrl"],
+        "seeds":
+        # ["seed1", "seed2", "seed3", "seed4", "seed5"]
+            ["seed1"]
+    }
+
+    cwd = os.getcwd()
+
+    lengths = list(map(len, list(hyper_parameters.values())))
+    lists_of_indices = list(map(lambda l: list(range(l)), lengths))
+    combinations = list(itertools.product(*lists_of_indices))
+
+    exps = []
+    for combination in combinations:
+        hyper = dict.fromkeys(hyper_parameters.keys())
+        hyper["exp_folders"] = hyper_parameters["exp_folders"][combination[0]]
+        hyper["domains"] = hyper_parameters["domains"][combination[1]]
+        hyper["exps"] = hyper_parameters["exps"][combination[2]]
+        hyper["seeds"] = hyper_parameters["seeds"][combination[3]]
+        folder = os.path.join(cwd,
+                              hyper["exp_folders"],
+                              hyper["domains"],
+                              hyper["exps"],
+                              hyper["seeds"],
+                              )
+        exps.append(folder)
+    print(exps)
     main_cluster()

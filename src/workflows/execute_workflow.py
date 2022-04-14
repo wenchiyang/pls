@@ -1,6 +1,4 @@
-from workflows.pg_dpl import main as pg_dpl
 from workflows.ppo_dpl import main as ppo_dpl
-from workflows.a2c_dpl import main as a2c_dpl
 from workflows.ppo_dpl import load_model_and_env as ppo_load_model_and_env
 import json
 import os
@@ -18,14 +16,8 @@ def train(folder):
         config = json.load(json_data_file)
 
     learner = config["workflow_name"]
-    if "pg" in learner:
-        pg_dpl(folder, config)
-    elif "ppo" in learner:
+    if "ppo" in learner:
         ppo_dpl(folder, config)
-    elif "a2c" in learner:
-        a2c_dpl(folder, config)
-    # elif "dqn" in learner:
-    #     dqn_dpl(folder, config)
 
 
 def evaluate(folder, model_at_step, n_test_episodes):

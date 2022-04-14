@@ -1,11 +1,10 @@
-import os
 import gym
 import pacman_gym
 import gym_sokoban
 
 import torch as th
 from torch import nn
-from os.path import join, abspath
+import os
 from dpl_policies.goal_finding.dpl_policy import (
     GoalFinding_Encoder,
     GoalFinding_Monitor,
@@ -104,9 +103,9 @@ def main(folder, config):
         )
     ]
 
-    #####   Initialize env   #############sokoban_corner2.pl
-    program_path = join(folder, "../../../data", f'{config["model_features"]["params"]["program_type"]}.pl')
-    debug_program_path = join(folder, "../../../data", f'{config["model_features"]["params"]["debug_program_type"]}.pl')
+    #####   Initialize env   #############
+    program_path = os.path.join(folder, "../../../data", f'{config["model_features"]["params"]["program_type"]}.pl')
+    debug_program_path = os.path.join(folder, "../../../data", f'{config["model_features"]["params"]["debug_program_type"]}.pl')
 
     env, image_encoder_cls, shielding_settings, custom_callback = setup_env(
         folder, config
@@ -176,7 +175,7 @@ def main(folder, config):
 
 
 def load_model_and_env(folder, config, model_at_step, eval=True):
-    program_path = join(folder, "../../../data", f'{config["model_features"]["params"]["program_type"]}.pl')
+    program_path = os.path.join(folder, "../../../data", f'{config["model_features"]["params"]["program_type"]}.pl')
     env, image_encoder_cls, shielding_settings, custom_callback = setup_env(
         folder, config, program_path, eval=eval
     )
