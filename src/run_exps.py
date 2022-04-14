@@ -96,4 +96,4 @@ if __name__ == "__main__":
                               )
         exps.append(folder)
     # print(exps)
-    run_train()
+    main_cluster()
