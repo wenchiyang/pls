@@ -15,7 +15,7 @@ def run_test():
 
 
 def run_evaluate():
-    folder = os.path.join(cwd, "experiments_trials",
+    folder = os.path.join(dir_path, "experiments_trials",
                           # "pacman_test",
                           # "pacman_scosGridTraps2",
                           # "pacman_smallGrid3",
@@ -54,7 +54,7 @@ def main_cluster():
 
 if __name__ == "__main__":
     hyper_parameters = {
-        "exp_folders": ["/Users/wenchi/PycharmProjects/NeSysourse/experiments_trials3"],
+        "exp_folders": ["experiments_trials3"],
         "domains": [
             "sokoban/2box10map",
             "goal_finding/smallGrid100map"
@@ -74,7 +74,7 @@ if __name__ == "__main__":
             ["seed1"]
     }
 
-    cwd = os.getcwd()
+    dir_path = os.path.dirname(os.path.realpath(__file__))
 
     lengths = list(map(len, list(hyper_parameters.values())))
     lists_of_indices = list(map(lambda l: list(range(l)), lengths))
@@ -87,7 +87,7 @@ if __name__ == "__main__":
         hyper["domains"] = hyper_parameters["domains"][combination[1]]
         hyper["exps"] = hyper_parameters["exps"][combination[2]]
         hyper["seeds"] = hyper_parameters["seeds"][combination[3]]
-        folder = os.path.join(cwd,
+        folder = os.path.join(dir_path,
                               hyper["exp_folders"],
                               hyper["domains"],
                               hyper["exps"],
