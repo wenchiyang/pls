@@ -13,10 +13,32 @@ from stable_baselines3.common.utils import obs_as_tensor, safe_mean
 from stable_baselines3.common.vec_env import VecEnv
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.buffers import RolloutBuffer
+from .util import safe_max, safe_min
+
+class DPL_RolloutBuffer(RolloutBuffer):
+    def __init__(self, *args, **kwargs):
+        self.distribution = None
+        super(DPL_RolloutBuffer, self).__init__(*args, **kwargs)
+
+    def reset(self):
+        self.distribution = np.zeros((self.buffer_size, self.n_envs, self.action_space.n), dtype=np.float32)
+        super(DPL_RolloutBuffer, self).reset()
 
 class Sokoban_DPLPPO(PPO):
     def __init__(self, *args, **kwargs):
         super(Sokoban_DPLPPO, self).__init__(*args, **kwargs)
+
+    # def _setup_model(self): # TODO1
+    #     super(Sokoban_DPLPPO, self)._setup_model()
+    #     self.rollout_buffer = DPL_RolloutBuffer(
+    #         self.n_steps,
+    #         self.observation_space,
+    #         self.action_space,
+    #         self.device,
+    #         gamma=self.gamma,
+    #         gae_lambda=self.gae_lambda,
+    #         n_envs=self.n_envs,
+    #     )
 
     def learn(
         self,
@@ -31,7 +53,7 @@ class Sokoban_DPLPPO(PPO):
         reset_num_timesteps: bool = True,
     ) -> "PPO":
         iteration = 0
-
+        self.n_deaths = 0
         total_timesteps, callback = self._setup_learn(
             total_timesteps,
             eval_env,
@@ -59,6 +81,7 @@ class Sokoban_DPLPPO(PPO):
 
             # Display training infos # TODO: put the following in a callback
             if log_interval is not None and iteration % log_interval == 0:
+                self.logger.record("safety/n_deaths", self.n_deaths)
                 fps = int(self.num_timesteps / (time.time() - self.start_time))
                 self.logger.record("time/iterations", iteration, exclude="tensorboard")
                 if len(self.ep_info_buffer) > 0 and len(self.ep_info_buffer[0]) > 0:
@@ -74,6 +97,18 @@ class Sokoban_DPLPPO(PPO):
                         "rollout/ep_last_r_mean",
                         safe_mean(
                             [ep_info["last_r"] for ep_info in self.ep_info_buffer]
+                        ),
+                    )
+                    self.logger.record(
+                        "rollout/success_rate",
+                        safe_mean(
+                            [ep_info["is_success"] for ep_info in self.ep_info_buffer]
+                        ),
+                    )
+                    self.logger.record(
+                        "rollout/#violations",
+                        safe_mean(
+                            [ep_info["violate_constraint"] for ep_info in self.ep_info_buffer]
                         ),
                     )
                     self.logger.record(
@@ -94,7 +129,53 @@ class Sokoban_DPLPPO(PPO):
                             ]
                         ),
                     )
-
+                    self.logger.record(
+                        "safety/ep_abs_safety_impr",
+                        safe_mean(
+                            [
+                                ep_info["abs_safety_shielded"] - ep_info["abs_safety_base"]
+                                for ep_info in self.ep_info_buffer
+                            ]
+                        ),
+                    )
+                    self.logger.record(
+                        "safety/n_risky_states",
+                        safe_mean(
+                            [
+                                ep_info["n_risky_states"]
+                                for ep_info in self.ep_info_buffer
+                            ]
+                        ),
+                    )
+                    if self.ep_info_buffer[0].get("alpha_min") is not None:
+                        self.logger.record(
+                            "safety/alpha_min",
+                            safe_min(
+                                [
+                                    ep_info["alpha_min"]
+                                    for ep_info in self.ep_info_buffer
+                                ]
+                            ),
+                        )
+                        self.logger.record(
+                            "safety/alpha_max",
+                            safe_max(
+                                [
+                                    ep_info["alpha_max"]
+                                    for ep_info in self.ep_info_buffer
+                                ]
+                            ),
+                        )
+                    if self.ep_info_buffer[0].get("num_rejected_samples_max") is not None:
+                        self.logger.record(
+                            "safety/num_rejected_samples_max",
+                            safe_max(
+                                [
+                                    ep_info["num_rejected_samples_max"]
+                                    for ep_info in self.ep_info_buffer
+                                ]
+                            ),
+                        )
                     if self.ep_info_buffer[0].get("rel_safety_shielded") is not None:
                         self.logger.record(
                             "safety/ep_rel_safety_shielded",
@@ -159,10 +240,11 @@ class Sokoban_DPLPPO(PPO):
             self.policy.reset_noise(env.num_envs)
 
         callback.on_rollout_start()
-        self.abs_safeties_shielded = [] # TODO: can be put in call back
-        self.abs_safeties_base = []
-        self.rel_safeties_shielded = []
-        self.rel_safeties_base = []
+        alphas = []
+        nums_rejected_samples = []
+        abs_safeties_shielded = [] # TODO: can be put in call back
+        abs_safeties_base = []
+        n_risky_states = 0
 
         while n_steps < n_rollout_steps:
             if (
@@ -179,6 +261,7 @@ class Sokoban_DPLPPO(PPO):
                         e.env.render()
                 # Convert to pytorch tensor or to TensorDict
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
+
                 (
                     actions,
                     values,
@@ -186,53 +269,34 @@ class Sokoban_DPLPPO(PPO):
                     mass,
                     (object_detect_probs, base_policy),
                 ) = self.policy.forward(obs_tensor)
+
+                ##### LOG #####
                 action_lookup = env.envs[0].get_action_lookup()
 
-                self.policy.logging(
+                self.policy.logging_per_step(
                     mass, object_detect_probs, base_policy, action_lookup, self.logger
                 )
-                abs_safe_next_shielded = self.policy.get_step_safety(
-                    mass.probs,
-                    object_detect_probs["ground_truth_box"],
-                    object_detect_probs["ground_truth_corner"],
+                abs_safe_next_shielded, abs_safe_next_base = self.policy.logging_per_episode(
+                    mass, object_detect_probs, base_policy, action_lookup
                 )
-                abs_safe_next_base = self.policy.get_step_safety(
-                    base_policy,
-                    object_detect_probs["ground_truth_box"],
-                    object_detect_probs["ground_truth_corner"],
-                )
-                self.abs_safeties_shielded.append(abs_safe_next_shielded)
-                self.abs_safeties_base.append(abs_safe_next_base)
+                if object_detect_probs.get("alpha") is not None:
+                    alphas.append(object_detect_probs["alpha"])
+                if object_detect_probs.get("num_rejected_samples") is not None:
+                    nums_rejected_samples.append(object_detect_probs["num_rejected_samples"])
 
-                rel_safe_next_shielded = None
-                rel_safe_next_base = None
-                if object_detect_probs.get("prob_box_prior") is not None:
-                    rel_safe_next_shielded = self.policy.get_step_safety(
-                        mass.probs,
-                        object_detect_probs["prob_box_prior"],
-                        object_detect_probs["prob_corner_prior"],
-                    )
-                    rel_safe_next_base = self.policy.get_step_safety(
-                        base_policy,
-                        object_detect_probs["prob_box_prior"],
-                        object_detect_probs["prob_corner_prior"],
-                    )
-                    self.rel_safeties_shielded.append(rel_safe_next_shielded)
-                    self.rel_safeties_base.append(rel_safe_next_base)
+                # if in a risky situation
+                if th.any(th.logical_and(object_detect_probs["ground_truth_box"], object_detect_probs["ground_truth_corner"])):
+                    n_risky_states += 1
+                    risky_action = 1 + th.logical_and(object_detect_probs["ground_truth_box"], object_detect_probs["ground_truth_corner"]).squeeze().nonzero()
+                    if th.any(actions == risky_action):
+                        self.n_deaths += 1
 
-                    error_box_posterior = (
-                        object_detect_probs["ground_truth_box"]
-                        - object_detect_probs["prob_box_posterior"]
-                    ).abs()
-                    avg_error_box_posterior = float(sum(error_box_posterior[0]))/len(error_box_posterior[0])
-                    self.logger.record(f"error/avg_error_box_posterior", avg_error_box_posterior)
+                abs_safeties_shielded.append(abs_safe_next_shielded)
+                abs_safeties_base.append(abs_safe_next_base)
 
-                    error_corner_posterior = (
-                            object_detect_probs["ground_truth_corner"]
-                            - object_detect_probs["prob_corner_posterior"]
-                    ).abs()
-                    avg_error_corner_posterior = float(sum(error_corner_posterior[0]))/len(error_corner_posterior[0])
-                    self.logger.record(f"error/avg_error_corner_posterior", avg_error_corner_posterior)
+                # if object_detect_probs["too_many_rejected_samples"]:
+
+
 
             actions = actions.cpu().numpy()
 
@@ -259,19 +323,34 @@ class Sokoban_DPLPPO(PPO):
 
             if dones:
                 ep_len = infos[0]["episode"]["l"]
-                ep_abs_safety_shielded = float(min(self.abs_safeties_shielded))
-                ep_abs_safety_base = float(min(self.abs_safeties_base))
+                ep_abs_safety_shielded = float(min(abs_safeties_shielded))
+                ep_abs_safety_base = float(min(abs_safeties_base))
                 infos[0]["episode"]["abs_safety_shielded"] = ep_abs_safety_shielded
                 infos[0]["episode"]["abs_safety_base"] = ep_abs_safety_base
-                if self.rel_safeties_shielded:
-                    ep_rel_safety_shielded = float(min(self.rel_safeties_shielded))
-                    ep_rel_safety_base = float(min(self.rel_safeties_base))
-                    infos[0]["episode"]["rel_safety_shielded"] = ep_rel_safety_shielded
-                    infos[0]["episode"]["rel_safety_base"] = ep_rel_safety_base
-                self.abs_safeties_shielded = []
-                self.abs_safeties_base = []
-                self.rel_safeties_shielded = []
-                self.rel_safeties_base = []
+                infos[0]["episode"]["n_risky_states"] = n_risky_states
+
+                if object_detect_probs.get("alpha") is not None:
+                    alpha_min = float(min(alphas))
+                    alpha_max = float(max(alphas))
+                    infos[0]["episode"]["alpha_min"] = alpha_min
+                    infos[0]["episode"]["alpha_max"] = alpha_max
+                    alphas = []
+                if object_detect_probs.get("num_rejected_samples") is not None:
+                    num_rejected_samples_max = float(max(nums_rejected_samples))
+                    infos[0]["episode"]["num_rejected_samples_max"] = num_rejected_samples_max
+                    nums_rejected_samples = []
+                # if rel_safeties_shielded:
+                #     ep_rel_safety_shielded = float(min(rel_safeties_shielded))
+                #     ep_rel_safety_base = float(min(rel_safeties_base))
+                #     infos[0]["episode"]["rel_safety_shielded"] = ep_rel_safety_shielded
+                #     infos[0]["episode"]["rel_safety_base"] = ep_rel_safety_base
+
+                abs_safeties_shielded = []
+                abs_safeties_base = []
+                n_risky_states = 0
+                # rel_safeties_shielded = []
+                # rel_safeties_base = []
+
 
             self._update_info_buffer(infos)
             n_steps += 1
@@ -285,7 +364,8 @@ class Sokoban_DPLPPO(PPO):
                 rewards,
                 self._last_episode_starts,
                 values,
-                log_probs
+                log_probs,
+                # mass # TODO1
             )
             self._last_obs = new_obs
             self._last_episode_starts = dones

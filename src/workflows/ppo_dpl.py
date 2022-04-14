@@ -5,6 +5,12 @@ import gym_sokoban
 import torch as th
 from torch import nn
 from os.path import join, abspath
+from src.dpl_policies.goal_finding.dpl_policy import (
+    GoalFinding_Encoder,
+    GoalFinding_Monitor,
+    GoalFinding_DPLActorCriticPolicy,
+    GoalFinding_Callback,
+)
 from src.dpl_policies.pacman.dpl_policy import (
     Pacman_Encoder,
     Pacman_Monitor,
@@ -18,6 +24,7 @@ from src.dpl_policies.sokoban.dpl_policy import (
     Sokoban_Callback
 )
 from src.dpl_policies.sokoban.sokoban_ppo import Sokoban_DPLPPO
+from src.dpl_policies.goal_finding.goal_finding_ppo import GoalFinding_DPLPPO
 from src.dpl_policies.pacman.pacman_ppo import Pacman_DPLPPO
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import CheckpointCallback
@@ -25,44 +32,50 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 
 
 
-def setup_env(folder, config, program_path):
+def setup_env(folder, config, eval=False):
     #####   Initialize env   #############
     env_name = config["env_type"]
-    env_args = config["env_features"]
-    env = gym.make(env_name, **env_args)
+    if eval:
+        env_args = config["eval_env_features"]
+    else:
+        env_args = config["env_features"]
 
-    if "Pacman" in env_name:
+    env = gym.make(env_name, **env_args)
+    # env = gym.make(env_name)
+
+    if "GoalFinding" in env_name:
+        image_encoder_cls = GoalFinding_Encoder
+        shielding_settings = {
+            "n_ghost_locs": config["model_features"]["params"]["n_ghost_locs"],
+            "sensor_noise": config["model_features"]["params"]["sensor_noise"]
+        }
+        env = GoalFinding_Monitor(
+            env,
+            allow_early_resets=False
+        )
+        custom_callback = None
+        custom_callback = GoalFinding_Callback(custom_callback)
+    elif "Pacman" in env_name:
         image_encoder_cls = Pacman_Encoder
         shielding_settings = {
-            "shield": config["model_features"]["params"]["shield"],
-            "detect_ghosts": config["model_features"]["params"]["detect_ghosts"],
-            "detect_walls": config["model_features"]["params"]["detect_walls"],
-            "n_ghost_locs": config["model_features"]["params"]["n_ghost_locs"],
-            "n_wall_locs": config["model_features"]["params"]["n_wall_locs"]
+            "n_ghost_locs": config["model_features"]["params"]["n_ghost_locs"]
         }
         env = Pacman_Monitor(
             env,
-            allow_early_resets=False,
-            program_path=program_path
+            allow_early_resets=False
         )
         custom_callback = None
         custom_callback = Pacman_Callback(custom_callback)
-    elif "Sokoban" in env_name:
+    elif "Sokoban" in env_name or "Boxoban" in env_name:
         image_encoder_cls = Sokoban_Encoder
         shielding_settings = {
-            "shield": config["model_features"]["params"]["shield"],
-            "detect_boxes": config["model_features"]["params"]["detect_boxes"],
-            "detect_corners": config["model_features"]["params"]["detect_corners"],
             "n_box_locs": config["model_features"]["params"]["n_box_locs"],
-            "n_corner_locs": config["model_features"]["params"][
-                "n_corner_locs"
-            ],
+            "n_corner_locs": config["model_features"]["params"]["n_corner_locs"],
         }
 
         env = Sokoban_Monitor(
             env,
-            allow_early_resets=False,
-            program_path=program_path
+            allow_early_resets=False
         )
         custom_callback = None
         custom_callback = Sokoban_Callback(custom_callback)
@@ -94,9 +107,12 @@ def main(folder, config):
     program_path = abspath(
         join("src", "data", f'{config["model_features"]["params"]["program_type"]}.pl')
     )
+    debug_program_path = abspath(
+        join("src", "data", f'{config["model_features"]["params"]["debug_program_type"]}.pl')
+    )
 
     env, image_encoder_cls, shielding_settings, custom_callback = setup_env(
-        folder, config, program_path
+        folder, config
     )
 
     grid_size = env.grid_size
@@ -107,17 +123,20 @@ def main(folder, config):
     n_actions = env.action_size
 
     env_name = config["env_type"]
-    if "Pacman" in env_name:
+    if "GoalFinding" in env_name:
+        model_cls = GoalFinding_DPLPPO
+        policy_cls = GoalFinding_DPLActorCriticPolicy
+    elif "Pacman" in env_name:
         model_cls = Pacman_DPLPPO
         policy_cls = Pacman_DPLActorCriticPolicy
-    elif "Sokoban" in env_name:
+    elif "Sokoban" in env_name or "Boxoban" in env_name:
         model_cls = Sokoban_DPLPPO
         policy_cls = Sokoban_DPLActorCriticPolicy
 
 
 
     image_encoder = image_encoder_cls(
-        n_pixels, n_actions, shielding_settings, program_path
+        n_pixels, n_actions, shielding_settings, program_path, debug_program_path, folder
     )
 
     model = model_cls(
@@ -133,6 +152,8 @@ def main(folder, config):
         tensorboard_log=folder,
         policy_kwargs={
             "image_encoder": image_encoder,
+            "alpha": config["model_features"]["params"]["alpha"],
+            "differentiable_shield": config["model_features"]["params"]["differentiable_shield"],
             "net_arch": net_arch,
             "activation_fn": nn.ReLU,
             "optimizer_class": th.optim.Adam,
@@ -157,22 +178,24 @@ def main(folder, config):
 
 
 
-# def load_model_and_env(folder, config):
-#     program_path = abspath(
-#         join("src", "data", f'{config["model_features"]["params"]["program_type"]}.pl')
-#     )
-#     env, image_encoder_cls, shielding_settings, custom_callback = setup_env(
-#         folder, config, program_path
-#     )
-#     env_name = config["env_type"]
-#     if "Pacman" in env_name:
-#         model_cls = Pacman_DPLPPO
-#     elif "Sokoban" in env_name:
-#         model_cls = Sokoban_DPLPPO
-#
-#     path = os.path.join(folder, "model")
-#     model = model_cls.load(path, env)
-#
-#     return model, env
+def load_model_and_env(folder, config, model_at_step, eval=True):
+    program_path = abspath(
+        join("src", "data", f'{config["model_features"]["params"]["program_type"]}.pl')
+    )
+    env, image_encoder_cls, shielding_settings, custom_callback = setup_env(
+        folder, config, program_path, eval=eval
+    )
+    env_name = config["env_type"]
+    if "GoalFinding" in env_name:
+        model_cls = GoalFinding_DPLPPO
+    elif "Sokoban" in env_name:
+        model_cls = Sokoban_DPLPPO
+
+    path = join(folder, "model_checkpoints", f"rl_model_{model_at_step}_steps.zip")
+    model = model_cls.load(path, env)
+    if eval:
+        model.set_random_seed(config["eval_env_features"]["seed"])
+
+    return model, env
 
 

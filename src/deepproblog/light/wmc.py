@@ -19,8 +19,9 @@ class DeepProbLogLayer_Approx(nn.Module):
         self.single_output = single_output
 
         self.input_struct = input_struct
-        self.n_facts = sum(len(input_struct[entry]) for entry in input_struct if entry != "action")
+        self.n_facts = sum(len(input_struct[entry]) for entry in input_struct if "action" not in entry)
         self.n_actions = len(input_struct["action"])
+        self.n_ads = len([entry for entry in input_struct if "action" in entry])
         self.n_queries = len(queries)
         self.query_struct = query_struct
         self._init()
@@ -34,15 +35,19 @@ class DeepProbLogLayer_Approx(nn.Module):
             bin_i = f"{bin(i)[2:]}".zfill(nf)
             for j in range(nf):
                 w_facts[i][j] = float(bin_i[j])
-        w_facts = w_facts.repeat_interleave(self.n_actions, dim=0)
+        w_facts = w_facts.repeat_interleave(self.n_actions ** self.n_ads, dim=0)
 
         # initialize ad part of w
-        w_actions = th.eye(self.n_actions)
-        w_actions = w_actions.repeat(2 ** nf, 1)
+        if self.n_ads == 1:
+            w_actions = th.eye(self.n_actions)
+            w_actions = w_actions.repeat(2 ** nf, 1)
+        else:
+            w_actions = th.cat((th.eye(self.n_actions).repeat_interleave(self.n_actions, dim=0), th.eye(self.n_actions).repeat(self.n_actions, 1)),dim=1)
+            w_actions = w_actions.repeat(2 ** nf, 1)
 
         w = th.cat((w_facts, w_actions), dim=1)
 
-        n_worlds = 2 ** nf  * self.n_actions
+        n_worlds = 2 ** nf  * self.n_actions **self.n_ads
 
         valid_w = []
         # query (need problog)

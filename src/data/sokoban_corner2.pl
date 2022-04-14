@@ -1,18 +1,21 @@
-action(0):: action(no_op);      % 0
-action(1):: action(push_up);    % 1
-action(2):: action(push_down);  % 2
-action(3):: action(push_left);  % 3
-action(4):: action(push_right). % 4
+action(0):: action(no_op);
+action(1):: action(push_up);
+action(2):: action(push_down);
+action(3):: action(push_left);
+action(4):: action(push_right).
 
-box(0):: box( 0, 1). % 5
-box(1):: box(-1, 0). % 9
-box(2):: box( 1, 0). % 10
-box(3):: box( 0,-1). % 14
 
-corner(0):: corner( 0, 2). % 2
-corner(1):: corner(-2, 0). % 8
-corner(2):: corner( 2, 0). % 11
-corner(3):: corner( 0,-2). % 17
+box(0):: box( 0, 1).
+box(1):: box( 0,-1).
+box(2):: box(-1, 0).
+box(3):: box( 1, 0).
+
+
+corner(0):: corner( 0, 2).
+corner(1):: corner( 0,-2).
+corner(2):: corner(-2, 0).
+corner(3):: corner( 2, 0).
+
 
 box_transition( X,  Y, no_op,       X,  Y).
 box_transition(-1,  0, push_left,  -2,  0).
@@ -33,4 +36,4 @@ unsafe_next :-
 
 
 safe_next:- \+unsafe_next.
-safe_action(A):- action(A), safe_next.
+safe_action(A):- action(A).

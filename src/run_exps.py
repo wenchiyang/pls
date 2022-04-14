@@ -1,18 +1,26 @@
 from dask.distributed import Client, LocalCluster, performance_report, SSHCluster
 import os
-from src.workflows.execute_workflow import train
+from src.workflows.execute_workflow import train, evaluate, test
 import itertools
 
-
 hyper_parameters= {
+    "exp_folders": ["experiments_trials3"],
     "domains": [
-        "pacman_5x5_new", "pacman_6x6_new", "pacman_6x6_2_new",
-        "pacman_smallGrid_new", "pacman_smallGrid2_new",
-        "sokoban_5x5_new", "sokoban_6x6_new", "sokoban_7x7_new"
+        # "sokoban/2box10map", "goal_finding/smallGrid100map"
+        "test"
     ],
-    "workflow_names": ["ppo"],
-    "shield_types": ["no_shielding", "hard_shielding", "soft_shielding"],
+    "exps":
+        ["test1", "test2"],
+        # ["no_shielding", "hard_shielding",
+        #  "alpha_0.1", "alpha_0.3",
+        #  "alpha_0.5",
+        #  "alpha_0.7", "alpha_0.9",
+        #  "vsrl"],
+    "seeds":
+        # ["seed1", "seed2", "seed3"]
+        ["seed1"]
 }
+
 cwd = os.getcwd()
 
 lengths = list(map(len, list(hyper_parameters.values())))
@@ -22,29 +30,60 @@ combinations = list(itertools.product(*lists_of_indices))
 exps = []
 for combination in combinations:
     hyper = dict.fromkeys(hyper_parameters.keys())
-    hyper["domain"] = hyper_parameters["domains"][combination[0]]
-    hyper["workflow_name"] = hyper_parameters["workflow_names"][combination[1]]
-    hyper["shield_type"] =  hyper_parameters["shield_types"][combination[2]]
-    folder = os.path.join(cwd, "experiments_trials",
-                          hyper["domain"],
-                          hyper["workflow_name"],
-                          hyper["shield_type"],
+    hyper["exp_folders"] = hyper_parameters["exp_folders"][combination[0]]
+    hyper["domains"] = hyper_parameters["domains"][combination[1]]
+    hyper["exps"] = hyper_parameters["exps"][combination[2]]
+    hyper["seeds"] = hyper_parameters["seeds"][combination[3]]
+    folder = os.path.join(cwd,
+                          hyper["exp_folders"],
+                          hyper["domains"],
+                          hyper["exps"],
+                          hyper["seeds"],
                           )
-
     exps.append(folder)
+
 
 def run_train():
     for exp in exps:
-        if os.path.isfile(exp):
-            train(exp)
+        train(exp)
 
-# def run_evaluate():
-#     for exp in exps:
-#         evaluate(exp)
+def run_test():
+    for exp in exps:
+        test(exp)
+
+
+def run_evaluate():
+    folder = os.path.join(cwd, "experiments_trials",
+                          # "pacman_test",
+                          # "pacman_scosGridTraps2",
+                          # "pacman_smallGrid3",
+                          # "pacman_smallGrid_new",
+                          # "sokoban_6x6_new",
+                          "pacman_5x5_full",
+                          "ppo",
+
+                          )
+    no = os.path.join(folder, "no_shielding")
+    soft1 = os.path.join(folder, "soft_shielding")
+    hard = os.path.join(folder, "hard_shielding")
+    soft2 = os.path.join(folder, "soft_shielding2")
+
+    model_at_step = 100000
+    mean_reward, n_deaths = evaluate(no, model_at_step=model_at_step, n_test_episodes=500)
+    print("no:", mean_reward, n_deaths)
+    # mean_reward, n_deaths = evaluate(soft1, model_at_step=model_at_step, n_test_episodes=500)
+    # print("soft:", mean_reward, n_deaths)
+    # mean_reward, n_deaths = evaluate(hard, model_at_step=model_at_step, n_test_episodes=500)
+    # print("hard:", mean_reward, n_deaths)
+    # mean_reward, n_deaths = evaluate(soft2, model_at_step=model_at_step, n_test_episodes=500)
+    # print("soft2:", mean_reward, n_deaths)
+
+    # for exp in exps:
+    #     evaluate(exp)th.argmax(mass.probs,dim=1)
 
 def main_cluster():
     cluster = LocalCluster(
-        n_workers=32,
+        n_workers=8,
         processes=True,
         threads_per_worker=1,
         dashboard_address=":8787"
@@ -61,6 +100,4 @@ def main_cluster():
 
 
 if __name__ == "__main__":
-    main_cluster()
-    # run_train()
-    # run_evaluate()
+    run_test()

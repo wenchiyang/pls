@@ -1,10 +1,16 @@
 from src.workflows.pg_dpl import main as pg_dpl
 from src.workflows.ppo_dpl import main as ppo_dpl
 from src.workflows.a2c_dpl import main as a2c_dpl
-# from workflows.ppo_dpl import load_model_and_env as ppo_load_model_and_env
+from workflows.ppo_dpl import load_model_and_env as ppo_load_model_and_env
 import json
 import os
 from stable_baselines3.common.utils import obs_as_tensor
+
+def test(folder):
+    path = os.path.join(folder, "config.json")
+    with open(path) as json_data_file:
+        config = json.load(json_data_file)
+        print(config["arg"])
 
 def train(folder):
     path = os.path.join(folder, "config.json")
@@ -22,26 +28,24 @@ def train(folder):
     #     dqn_dpl(folder, config)
 
 
-# def evaluate(folder):
-#     path = os.path.join(folder, "config.json")
-#     with open(path) as json_data_file:
-#         config = json.load(json_data_file)
-#     learner = config["workflow_name"]
-#     if "ppo" in learner:
-#         model, env = ppo_load_model_and_env(folder, config)
-#
-#     ep_rewards, ep_lengths, ep_safeties = my_evaluate_policy(
-#         model=model,
-#         env=env,
-#         n_eval_episodes=10,
-#         deterministic=False,
-#         return_episode_rewards=True,
-#         # If True, a list of rewards and episode lengths per episode will be returned instead of the mean.
-#         render=True
-#     )
-#     print(ep_rewards, ep_lengths, ep_safeties)
-#     print([(ep_rewards[i]/ep_lengths[i], ep_safeties[i]/ep_lengths[i]) for i in range(10)])
-#     # TODO: Store ep_rewards, ep_lengths somewhere
+def evaluate(folder, model_at_step, n_test_episodes):
+    path = os.path.join(folder, "config.json")
+    with open(path) as json_data_file:
+        config = json.load(json_data_file)
+    learner = config["workflow_name"]
+    if "ppo" in learner:
+        model, env = ppo_load_model_and_env(folder, config, model_at_step)
+
+    mean_reward, n_deaths  = my_evaluate_policy(
+        model=model,
+        env=env,
+        n_eval_episodes=n_test_episodes,
+        deterministic=True,
+        return_episode_rewards=False,
+        # If True, a list of rewards and episode lengths per episode will be returned instead of the mean.
+        render=True
+    )
+    return mean_reward, n_deaths
 
 
 # def predict_states(folder):
@@ -134,19 +138,22 @@ def my_evaluate_policy(
     current_lengths = np.zeros(n_envs, dtype="int")
     current_abs_safeties = np.ones(n_envs)
     observations = env.reset()
+    n_deaths = 0
     states = None
     while (episode_counts < episode_count_targets).any():
         if render:
-            env.render()
+            for e in env.envs:
+                e.env.render()
         actions, states = model.predict(observations, state=states, deterministic=deterministic)
         obs_tensor = obs_as_tensor(observations, model.device)
-        abs_safeties = model.policy.evaluate_safety_shielded(obs_tensor)
+        # abs_safeties = model.policy.evaluate_safety_shielded(obs_tensor)
         observations, rewards, dones, infos = env.step(actions)
         if render:
-            env.render()
+            for e in env.envs:
+                e.env.render()
         current_rewards += rewards
-        s = np.array(abs_safeties[0])
-        current_abs_safeties = s if s < current_abs_safeties else current_abs_safeties
+        # s = np.array(abs_safeties[0])
+        # current_abs_safeties = s if s < current_abs_safeties else current_abs_safeties
         current_lengths += 1
         for i in range(n_envs):
             if episode_counts[i] < episode_count_targets[i]:
@@ -171,6 +178,8 @@ def my_evaluate_policy(
                             episode_rewards.append(info["episode"]["r"])
                             episode_lengths.append(info["episode"]["l"])
                             episode_last_rs.append(info["episode"]["last_r"])
+                            if info["episode"]["violate_constraint"]:
+                                n_deaths += 1
                             # Only increment at the real end of an episode
                             episode_counts[i] += 1
                     else:
@@ -195,9 +204,10 @@ def my_evaluate_policy(
 
     mean_reward = np.mean(episode_rewards)
     std_reward = np.std(episode_rewards)
+    # n_deaths = episode_last_rs.count(-11)
     if reward_threshold is not None:
         assert mean_reward > reward_threshold, "Mean reward below threshold: " f"{mean_reward:.2f} < {reward_threshold:.2f}"
     if return_episode_rewards:
         return episode_rewards, episode_lengths, episode_safeties
 
-    return mean_reward, std_reward
+    return mean_reward, n_deaths

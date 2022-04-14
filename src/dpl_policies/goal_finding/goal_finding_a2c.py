@@ -13,9 +13,9 @@ from stable_baselines3.common.vec_env import VecEnv
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.buffers import RolloutBuffer
 
-class Pacman_DPLA2C(A2C):
+class GoalFinding_DPLA2C(A2C):
     def __init__(self, *args, **kwargs):
-        super(Pacman_DPLA2C, self).__init__(*args, **kwargs)
+        super(GoalFinding_DPLA2C, self).__init__(*args, **kwargs)
 
     def learn(
         self,

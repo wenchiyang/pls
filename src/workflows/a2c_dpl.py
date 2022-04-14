@@ -5,11 +5,11 @@ import gym_sokoban
 import torch as th
 from torch import nn
 from os.path import join, abspath
-from src.dpl_policies.pacman.dpl_policy import (
-    Pacman_Encoder,
-    Pacman_Monitor,
-    Pacman_DPLActorCriticPolicy,
-    Pacman_Callback,
+from src.dpl_policies.goal_finding.dpl_policy import (
+    GoalFinding_Encoder,
+    GoalFinding_Monitor,
+    GoalFinding_DPLActorCriticPolicy,
+    GoalFinding_Callback,
 )
 from src.dpl_policies.sokoban.dpl_policy import (
     Sokoban_Encoder,
@@ -18,7 +18,7 @@ from src.dpl_policies.sokoban.dpl_policy import (
     Sokoban_Callback
 )
 from src.dpl_policies.sokoban.sokoban_a2c import Sokoban_DPLA2C
-from src.dpl_policies.pacman.pacman_a2c import Pacman_DPLA2C
+from src.dpl_policies.goal_finding.goal_finding_a2c import GoalFinding_DPLA2C
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import CheckpointCallback
 
@@ -31,8 +31,8 @@ def setup_env(folder, config, program_path):
     env_args = config["env_features"]
     env = gym.make(env_name, **env_args)
 
-    if "Pacman" in env_name:
-        image_encoder_cls = Pacman_Encoder
+    if "GoalFinding" in env_name:
+        image_encoder_cls = GoalFinding_Encoder
         shielding_settings = {
             "shield": config["model_features"]["params"]["shield"],
             "detect_ghosts": config["model_features"]["params"]["detect_ghosts"],
@@ -40,13 +40,13 @@ def setup_env(folder, config, program_path):
             "ghost_layer_num_output": config["model_features"]["params"]["ghost_layer_num_output"],
             "wall_layer_num_output": config["model_features"]["params"]["wall_layer_num_output"]
         }
-        env = Pacman_Monitor(
+        env = GoalFinding_Monitor(
             env,
             allow_early_resets=False,
             program_path=program_path
         )
         custom_callback = None
-        custom_callback = Pacman_Callback(custom_callback)
+        custom_callback = GoalFinding_Callback(custom_callback)
     elif "Sokoban" in env_name:
         image_encoder_cls = Sokoban_Encoder
         shielding_settings = {
@@ -107,9 +107,9 @@ def main(folder, config):
     n_actions = env.action_size
 
     env_name = config["env_type"]
-    if "Pacman" in env_name:
-        model_cls = Pacman_DPLA2C
-        policy_cls = Pacman_DPLActorCriticPolicy
+    if "GoalFinding" in env_name:
+        model_cls = GoalFinding_DPLA2C
+        policy_cls = GoalFinding_DPLActorCriticPolicy
     elif "Sokoban" in env_name:
         model_cls = Sokoban_DPLA2C
         policy_cls = Sokoban_DPLActorCriticPolicy
