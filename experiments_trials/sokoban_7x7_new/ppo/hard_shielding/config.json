@@ -7,7 +7,7 @@
     
       "env_features": {
         "num_boxes": 1,
-        "max_steps": 20,
+        "max_steps": 30,
         "dim_room": [7, 7],
         "penalty_for_step": -1,
         "penalty_box_off_target": -1,
@@ -35,6 +35,7 @@
           "shield": true,
           "detect_boxes": false,
           "detect_corners": false,
+          "free_actions": false,
           "n_box_locs": 4,
           "n_corner_locs": 4,
           "net_arch_shared": [],

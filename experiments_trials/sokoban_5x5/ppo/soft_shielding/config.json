@@ -35,8 +35,8 @@
           "shield": true,
           "detect_boxes": true,
           "detect_corners": true,
-          "box_layer_num_output": 4,
-          "corner_layer_num_output": 4,
+          "n_box_locs": 4,
+          "n_corner_locs": 4,
           "net_arch_shared": [],
           "net_arch_pi": [128],
           "net_arch_vf": [128]

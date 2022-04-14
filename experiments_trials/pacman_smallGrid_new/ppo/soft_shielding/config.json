@@ -15,6 +15,17 @@
     "seed": 567
   },
 
+  "eval_env_features": {
+    "layout": "smallGrid",
+    "reward_goal": 10,
+    "reward_crash": -10,
+    "reward_food": 0,
+    "reward_time": -1,
+    "render": false,
+    "max_steps": 50,
+    "seed": 111
+  },
+
   "model_features": {
     "name": "soft_shielding",
     "params": {
@@ -27,12 +38,13 @@
       "clip_range": 0.2,
       "gamma": 0.99,
       "step_limit": 3000000,
-      "program_type": "relative_loc",
+      "program_type": "relative_loc_simple",
       "shield": true,
       "detect_ghosts": true,
-      "detect_walls": true,
+      "detect_walls": false,
+      "free_actions": false,
       "n_ghost_locs": 4,
-      "n_wall_locs": 4,
+      "n_wall_locs": 0,
       "net_arch_shared": [],
       "net_arch_pi": [128],
       "net_arch_vf": [128]
