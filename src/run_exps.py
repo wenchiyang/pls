@@ -3,8 +3,6 @@ import os
 from workflows.execute_workflow import train, test
 import itertools
 
-
-
 def run_train():
     for exp in exps:
         train(exp)
@@ -13,6 +11,13 @@ def run_test():
     for exp in exps:
         test(exp)
 
+def write_to_file(folder):
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    path = os.path.join("text.txt")
+    with open(path, "w") as f:
+        f.write(str(folder))
+        f.write(str(dir_path))
+        f.write(str(exps))
 
 # def run_evaluate():
 #     folder = os.path.join(dir_path, "experiments_trials",
@@ -70,8 +75,8 @@ if __name__ == "__main__":
                 #  "alpha_0.7", "alpha_0.9",
                 "vsrl"],
         "seeds":
-            # ["seed1", "seed2", "seed3", "seed4", "seed5"]
-            ["seed1"]
+            ["seed1", "seed2", "seed3", "seed4", "seed5"]
+            # ["seed1"]
     }
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -96,5 +101,5 @@ if __name__ == "__main__":
                               )
         exps.append(folder)
     # print(exps)
-    # main_cluster()
-    run_train()
+    main_cluster()
+    # run_train()
