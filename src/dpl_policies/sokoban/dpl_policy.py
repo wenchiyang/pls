@@ -359,22 +359,6 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             "safe_action(move_right)"
         ][: self.n_actions]
 
-        # if "sokoban_corner2_.pl" in self.program_path:
-        #     # SOFT shielding
-        #     input_struct = {
-        #         "box": [i for i in range(self.n_box_locs)],
-        #         "corner": [i for i in range(self.n_box_locs,
-        #                                     self.n_box_locs + self.n_corner_locs)],
-        #         "action": [i for i in range(self.n_box_locs + self.n_corner_locs,
-        #                                     self.n_box_locs + self.n_corner_locs + self.n_actions)],
-        #     }
-        #     query_struct = {"safe_action": [i for i in range(self.n_actions)]}
-        #     cache_path = path.join(self.folder, "dpl_layer.p")
-        #     self.dpl_layer = self.get_layer(
-        #         cache_path,
-        #         program=self.program, queries=self.queries, evidences=[],
-        #         input_struct=input_struct, query_struct=query_struct
-        #     )
 
         if self.alpha == 0:
             # NO shielding
@@ -390,7 +374,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             }
             query_struct = {"safe_action": [i for i in range(self.n_actions)]}
 
-            cache_path = path.join(self.folder, "dpl_layer.p")
+            cache_path = path.join(self.folder, "../../../.cache", "dpl_layer.p")
             self.dpl_layer = self.get_layer(
                 cache_path,
                 program=self.program, queries=self.queries, evidences=["safe_next"],
@@ -415,7 +399,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             "action": [i for i in range(self.n_box_locs + self.n_corner_locs,
                                         self.n_box_locs + self.n_corner_locs + self.n_actions)]
         }
-        cache_path = path.join(self.folder, "query_safety_layer.p")
+        cache_path = path.join(self.folder, "../../../.cache", "query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
             cache_path,
             program=self.program,
@@ -458,53 +442,11 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 f"policy/shielded {action_lookup[act]}",
                 float(mass.probs[0][act]),
             )
-        # if object_detect_probs.get("num_rejected_samples") is not None:
-        #     logger.record(
-        #         f"rollout/num_rejected_samples",
-        #         float(object_detect_probs.get("num_rejected_samples")),
-        #     )
         if object_detect_probs.get("alpha") is not None:
             logger.record(
                 f"safety/alpha",
                 float(object_detect_probs.get("alpha")),
             )
-        # for direction in [0, 1, 2, 3]:  # TODO: order matters: use a map
-        #     if "prob_box_prior" in object_detect_probs:
-        #         logger.record(
-        #             f"prob/prob_box_prior_{direction}",
-        #             float(object_detect_probs["prob_box_prior"][0][direction]),
-        #         )
-        #     if "prob_corner_prior" in object_detect_probs:
-        #         logger.record(
-        #             f"prob/prob_corner_prior_{direction}",
-        #             float(object_detect_probs["prob_corner_prior"][0][direction]),
-        #         )
-        #     if "prob_box_posterior" in object_detect_probs:
-        #         logger.record(
-        #             f"prob/prob_box_posterior_{direction}",
-        #             float(object_detect_probs["prob_box_posterior"][0][direction]),
-        #         )
-        #         error_box_posterior = (
-        #             object_detect_probs["ground_truth_box"]
-        #             - object_detect_probs["prob_box_posterior"]
-        #         ).abs()
-        #         logger.record(
-        #             f"error/error_box_posterior_{direction}",
-        #             float(error_box_posterior[0][direction]),
-        #         )
-        #     if "prob_corner_posterior" in object_detect_probs:
-        #         logger.record(
-        #             f"prob/prob_corner_posterior_{direction}",
-        #             float(object_detect_probs["prob_corner_posterior"][0][direction]),
-        #         )
-        #         error_corner_posterior = (
-        #             object_detect_probs["ground_truth_corner"]
-        #             - object_detect_probs["prob_corner_posterior"]
-        #         ).abs()
-        #         logger.record(
-        #             f"error/error_corner_posterior_{direction}",
-        #             float(error_corner_posterior[0][direction]),
-        #         )
 
     def get_step_safety(self, policy_distribution, box_probs, corner_probs):
         with th.no_grad():
@@ -578,14 +520,13 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                         }
                     )
                 safe_next = results["safe_next"]
-                if not th.any(safe_next.isclose(th.zeros(actions.shape))):
+                if not th.any(safe_next.isclose(th.zeros(actions.shape))) or num_rejected_samples > 100000:
                     break
                 else:
                     num_rejected_samples += 1
             log_prob = distribution.log_prob(actions)
             object_detect_probs["num_rejected_samples"] = num_rejected_samples
             object_detect_probs["alpha"] = 1
-            # object_detect_probs["too_many_rejected_samples"] = num_rejected_samples > 10000
             return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
 
         if self.differentiable_shield:
@@ -596,7 +537,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                     "action": base_actions,
                 }
             )
-            # Combine safest policy and base_policy
+
             if self.alpha == "one_minus_safety":
                 safety = self.get_step_safety(base_actions, boxes, corners)
                 alpha = (1 - safety)
@@ -637,17 +578,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
 
 
         return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
-        # # NO Shielding
-        # if not self.shield:
-        #     return self.no_shielding(distribution, values, x, deterministic)
-        # # SOFT Shielding
-        # elif self.shield and "sokoban_corner2_.pl" in self.program_path:
-        #     return self.soft_shielding(distribution, values, obs, x, deterministic)
-        # elif "alpha" in self.program_path:
-        #     return self.soft_shielding_alpha(distribution, values, obs, x, deterministic)
-        # # HARD Shielding
-        # else:
-        #     return self.hard_shielding(distribution, values, obs, x, deterministic)
+
 
     def no_shielding(self, distribution, values, x, deterministic):
         actions = distribution.get_actions(deterministic=deterministic)
@@ -680,162 +611,6 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             [object_detect_probs, base_actions],
         )
 
-
-    def soft_shielding_alpha(self, distribution, values, obs, x, deterministic):
-        with th.no_grad():
-            ground_truth_box = get_ground_truth_of_box(
-                input=x,
-                agent_colors=PLAYER_COLORS,
-                box_colors=BOX_COLORS,
-            )
-
-            ground_truth_corner = get_ground_truth_of_corners(
-                input=x,
-                agent_colors=PLAYER_COLORS,
-                obsacle_colors=OBSTABLE_COLORS,
-                floor_color=FLOOR_COLOR,
-            )
-            # boxes = self.box_layer(obs)
-            # corners = self.corner_layer(obs)
-            boxes = ground_truth_box
-            corners = ground_truth_corner
-
-        base_actions = distribution.distribution.probs
-        results = self.dpl_layer(
-            x={
-                "box": boxes,
-                "corner": corners,
-                "action": base_actions,
-            }
-        )
-        actions = results["safe_action"]
-
-        actions = self.alpha * base_actions + (1 - self.alpha) * actions
-
-        mass = Categorical(probs=actions)
-        if not deterministic:
-            actions = mass.sample()
-        else:
-            actions = th.argmax(mass.probs,dim=1)
-
-        log_prob = mass.log_prob(actions)
-
-        with th.no_grad():
-            object_detect_probs = {
-                "prob_box_prior": boxes,
-                "prob_corner_prior": corners,
-                "prob_box_posterior": ground_truth_box,
-                "prob_corner_posterior": ground_truth_corner,
-                "ground_truth_box": ground_truth_box,
-                "ground_truth_corner": ground_truth_corner,
-            }
-
-        return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
-
-    def soft_shielding(self, distribution, values, obs, x, deterministic):
-        with th.no_grad():
-            ground_truth_box = get_ground_truth_of_box(
-                input=x,
-                agent_colors=PLAYER_COLORS,
-                box_colors=BOX_COLORS,
-            )
-
-            ground_truth_corner = get_ground_truth_of_corners(
-                input=x,
-                agent_colors=PLAYER_COLORS,
-                obsacle_colors=OBSTABLE_COLORS,
-                floor_color=FLOOR_COLOR,
-            )
-            # boxes = self.box_layer(obs)
-            # corners = self.corner_layer(obs)
-            boxes = ground_truth_box
-            corners = ground_truth_corner
-
-        base_actions = distribution.distribution.probs
-        results = self.dpl_layer(
-            x={
-                "box": boxes,
-                "corner": corners,
-                "action": base_actions,
-                "free_action": base_actions
-            }
-        )
-        actions = results["safe_action"]
-
-        mass = Categorical(probs=actions)
-        if not deterministic:
-            actions = mass.sample()
-        else:
-            actions = th.argmax(mass.probs,dim=1)
-
-        log_prob = mass.log_prob(actions)
-
-        with th.no_grad():
-            object_detect_probs = {
-                "prob_box_prior": boxes,
-                "prob_corner_prior": corners,
-                "prob_box_posterior": ground_truth_box,
-                "prob_corner_posterior": ground_truth_corner,
-                "ground_truth_box": ground_truth_box,
-                "ground_truth_corner": ground_truth_corner,
-            }
-
-        return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
-
-    def hard_shielding(self, distribution, values, obs, x, deterministic):
-        with th.no_grad():
-            ground_truth_box = get_ground_truth_of_box(
-                input=x,
-                agent_colors=PLAYER_COLORS,
-                box_colors=BOX_COLORS,
-            )
-
-            ground_truth_corner = get_ground_truth_of_corners(
-                input=x,
-                agent_colors=PLAYER_COLORS,
-                obsacle_colors=OBSTABLE_COLORS,
-                floor_color=FLOOR_COLOR,
-            )
-            boxes = ground_truth_box
-            corners = ground_truth_corner
-
-        base_actions = distribution.distribution.probs
-        results = self.dpl_layer(
-            x={
-                "box": boxes,
-                "corner": corners,
-                "action": base_actions,
-            }
-        )
-
-        # For when we set safe_action=true as evidence
-        actions = results["safe_action"]
-
-        mass = Categorical(probs=actions)
-        if not deterministic:
-            actions = mass.sample()
-        else:
-            actions = th.argmax(mass.probs,dim=1)
-
-        log_prob = mass.log_prob(actions)
-        with th.no_grad():
-            object_detect_probs = {
-                "prob_box_prior": boxes,
-                "prob_corner_prior": corners,
-                "prob_box_posterior": boxes,
-                "prob_corner_posterior": corners,
-                "ground_truth_box": ground_truth_box,
-                "ground_truth_corner": ground_truth_corner,
-            }
-
-        return (
-            actions,
-            values,
-            log_prob,
-            mass,
-            [object_detect_probs, base_actions]
-        )
-
     def evaluate_actions(
         self, obs: th.Tensor, actions: th.Tensor
     ) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
@@ -856,8 +631,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             values = self.value_net(latent_vf)
             return values, log_prob, distribution.entropy()
 
-        _, values, _, mass, _ = self.forward(obs)
-        log_prob = mass.log_prob(actions)
+        _, values, log_prob, mass, _ = self.forward(obs)
         return values, log_prob, mass.entropy()
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:

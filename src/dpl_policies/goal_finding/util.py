@@ -5,7 +5,26 @@ import matplotlib.pyplot as plt
 import os
 import torch as th
 from pathlib import Path
+import numpy as np
 
+def safe_max(arr) :
+    """
+    Compute the mean of an array if there is at least one element.
+    For empty array, return NaN. It is used for logging only.
+
+    :param arr:
+    :return:
+    """
+    return np.nan if len(arr) == 0 else np.max(arr)
+def safe_min(arr) :
+    """
+    Compute the mean of an array if there is at least one element.
+    For empty array, return NaN. It is used for logging only.
+
+    :param arr:
+    :return:
+    """
+    return np.nan if len(arr) == 0 else np.min(arr)
 
 def myformat(tensor):
     s = str(tensor)

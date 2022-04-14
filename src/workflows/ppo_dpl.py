@@ -93,7 +93,7 @@ def main(folder, config):
 
 
     #####   Initialize loggers   #############
-    new_logger = configure(folder, ["stdout", "tensorboard"])
+    new_logger = configure(folder, ["log", "tensorboard"])
 
     #####   Configure network   #############
     net_arch = config["model_features"]["params"]["net_arch_shared"] + [

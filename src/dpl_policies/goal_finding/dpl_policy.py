@@ -305,77 +305,29 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                                             self.n_ghost_locs + self.n_actions)]
             }
             query_struct = {"safe_action": [i for i in range(self.n_actions)]}
-            cache_path = path.join(self.folder, "dpl_layer.p")
+            cache_path = path.join(self.folder, "../../../.cache", "dpl_layer.p")
             self.dpl_layer = self.get_layer(
                 cache_path,
                 program=self.debug_program, queries=self.queries, evidences=["safe_next"],
                 input_struct=input_struct, query_struct=query_struct
             )
-        # if self.shield:
-        #     if "relative_loc_simple_.pl" in self.program_path:
-        #         # SOFT
-        #         input_struct = {
-        #             "ghost": [i for i in range(self.n_ghost_locs)],
-        #             "action": [i for i in range(self.n_ghost_locs,
-        #                                         self.n_ghost_locs + self.n_actions)],
-        #             "free_action": [i for i in range(self.n_ghost_locs + self.n_actions,
-        #                                              self.n_ghost_locs + 2 * self.n_actions)],
-        #         }
-        #         query_struct = {"safe_action": [i for i in range(self.n_actions)]}
-        #         cache_path = path.join(self.folder, "dpl_layer.p")
-        #         self.dpl_layer = self.get_layer(
-        #             cache_path,
-        #             program=self.program, queries=self.queries, evidences=[],
-        #             input_struct=input_struct, query_struct=query_struct
-        #         )
-        #     elif "alpha" in self.program_path:
-        #         input_struct = {
-        #                     "ghost": [i for i in range(self.n_ghost_locs)],
-        #                     "alpha": [i for i in range(self.n_ghost_locs, self.n_ghost_locs + 1)],
-        #                     "action": [i for i in range(self.n_ghost_locs + 1,
-        #                                                 self.n_ghost_locs + self.n_actions + 1)],
-        #                     "free_action": [i for i in range(self.n_ghost_locs + self.n_actions + 1,
-        #                                                      self.n_ghost_locs + 2 * self.n_actions + 1)],
-        #         }
-        #         query_struct = {"safe_action": [i for i in range(self.n_actions)]}
-        #         cache_path = path.join(self.folder, "dpl_layer.p")
-        #         self.dpl_layer = self.get_layer(
-        #             cache_path,
-        #             program=self.program, queries=self.queries, evidences=[],
-        #             input_struct=input_struct, query_struct=query_struct
-        #         )
-        #
-        #         # self.dpl_layer = DeepProbLogLayer_Approx(
-        #         #     program=self.program, queries=self.queries,
-        #         #     input_struct=input_struct, query_struct=query_struct
-        #         # )
-        #     else:
-        #         # HARD shielding
-        #         input_struct = {
-        #             "ghost": [i for i in range(self.n_ghost_locs)],
-        #             "action": [i for i in range(self.n_ghost_locs,
-        #                                         self.n_ghost_locs + self.n_actions)]
-        #         }
-        #         query_struct = {"safe_action": [i for i in range(self.n_actions)]}
-        #         cache_path = path.join(self.folder, "dpl_layer.p")
-        #         self.dpl_layer = self.get_layer(
-        #             cache_path,
-        #             program=self.debug_program, queries=self.queries, evidences=["safe_next"],
-        #             input_struct=input_struct, query_struct=query_struct
-        #         )
-        #         #
-        #         # self.dpl_layer = DeepProbLogLayer_Approx(
-        #         #     program=self.program, queries=self.queries, evidences=["safe_next"],
-        #         #     input_struct=input_struct, query_struct=query_struct
-        #         # )
 
+        if self.alpha == "learned":
+            self.alpha_net = nn.Sequential(
+                    nn.Linear(self.input_size, 128),
+                    nn.ReLU(),
+                    nn.Linear(128, 1),
+                    nn.Sigmoid(),
+                )
+
+        debug_queries = ["safe_next"]
+        query_struct = {"safe_next": [i for i in range(1)]}
         debug_input_struct = {
             "ghost": [i for i in range(self.n_ghost_locs)],
             "action": [i for i in range(self.n_ghost_locs,
                                         self.n_ghost_locs + self.n_actions)]}
-        debug_queries = ["safe_next"]
-        query_struct = {"safe_next": [i for i in range(1)]}
-        cache_path = path.join(self.folder, "query_safety_layer.p")
+
+        cache_path = path.join(self.folder, "../../../.cache", "query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
             cache_path,
             program=self.debug_program, queries=debug_queries, evidences=[],
@@ -396,62 +348,31 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         pickle.dump(layer, open(cache_path, "wb"))
         return layer
 
-    def logging(self, mass, object_detect_probs, base_policy, action_lookup, logger):
+    def logging_per_step(self, mass, object_detect_probs, base_policy, action_lookup, logger):
         for act in range(self.action_space.n):
             logger.record(
                 f"policy/shielded {action_lookup[act]}",
                 float(mass.probs[0][act]),
             )
-        # for direction in [0, 1, 2, 3]:  # TODO: order matters: use a map
-        #     if object_detect_probs.get("prob_ghost_prior") is not None:
-        #         logger.record(
-        #             f"prob/prob_ghost_prior_{direction}",
-        #             float(object_detect_probs["prob_ghost_prior"][0][direction]),
-        #         )
-        #     if object_detect_probs.get("prob_wall_prior") is not None:
-        #         logger.record(
-        #             f"prob/prob_wall_prior_{direction}",
-        #             float(object_detect_probs["prob_wall_prior"][0][direction]),
-        #         )
-        #     if object_detect_probs.get("prob_ghost_posterior") is not None:
-        #         logger.record(
-        #             f"prob/prob_ghost_posterior_{direction}",
-        #             float(object_detect_probs["prob_ghost_posterior"][0][direction]),
-        #         )
-        #         error_ghost_posterior = (
-        #             object_detect_probs["ground_truth_ghost"]
-        #             - object_detect_probs["prob_ghost_posterior"]
-        #         ).abs()
-        #         logger.record(
-        #             f"error/error_ghost_posterior_{direction}",
-        #             float(error_ghost_posterior[0][direction]),
-        #         )
-        #     if object_detect_probs.get("prob_wall_posterior") is not None:
-        #         logger.record(
-        #             f"prob/prob_wall_posterior_{direction}",
-        #             float(object_detect_probs["prob_wall_posterior"][0][direction]),
-        #         )
-        #         error_wall_posterior = (
-        #             object_detect_probs["ground_truth_wall"]
-        #             - object_detect_probs["prob_wall_posterior"]
-        #         ).abs()
-        #         logger.record(
-        #             f"error/error_wall_posterior_{direction}",
-        #             float(error_wall_posterior[0][direction]),
-        #         )
+        if object_detect_probs.get("alpha") is not None:
+            logger.record(
+                f"safety/alpha",
+                float(object_detect_probs.get("alpha")),
+            )
+
+    def logging_per_episode(self, mass, object_detect_probs, base_policy, action_lookup):
+        abs_safe_next_shielded = self.get_step_safety(
+            mass.probs,
+            object_detect_probs["ground_truth_ghost"],
+        )
+        abs_safe_next_base = self.get_step_safety(
+            base_policy,
+            object_detect_probs["ground_truth_ghost"],
+        )
+        return abs_safe_next_shielded, abs_safe_next_base
 
     def get_step_safety(self, policy_distribution, ghost_probs):
         with th.no_grad():
-            # if self.shield and not self.detect_walls:
-            #     abs_safe_next = self.query_safety_layer(
-            #         x={
-            #             "ghost": ghost_probs,
-            #             # "wall": wall_probs,
-            #             "action": policy_distribution,
-            #             "free_action": policy_distribution
-            #         }
-            #     )
-            # else:
             abs_safe_next = self.query_safety_layer(
                 x={
                     "ghost": ghost_probs,
@@ -504,15 +425,14 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         if self.alpha == 0:
             actions = distribution.get_actions(deterministic=deterministic)
             log_prob = distribution.log_prob(actions)
+            object_detect_probs["alpha"] = 0
             return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
 
-
         if not self.differentiable_shield and self.alpha == 1:
+            num_rejected_samples = 0
             while True:
                 actions = distribution.get_actions(deterministic=deterministic)
                 with th.no_grad():
-                    # TODO: check this gives an exception
-                    # Using problog to model check
                     results = self.query_safety_layer(
                         x={
                             "ghost": ghosts,
@@ -520,9 +440,13 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                         }
                     )
                 safe_next = results["safe_next"]
-                if not th.any(safe_next.isclose(th.zeros(actions.shape))):
+                if not th.any(safe_next.isclose(th.zeros(actions.shape))) or num_rejected_samples > 100000:
                     break
+                else:
+                    num_rejected_samples += 1
             log_prob = distribution.log_prob(actions)
+            object_detect_probs["num_rejected_samples"] = num_rejected_samples
+            object_detect_probs["alpha"] = 1
             return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
 
         if self.differentiable_shield:
@@ -532,6 +456,15 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                     "action": base_actions,
                 }
             )
+
+            if self.alpha == "one_minus_safety":
+                safety = self.get_step_safety(base_actions, ghosts)
+                alpha = (1 - safety)
+            elif self.alpha == "learned":
+                alpha = self.alpha_net(obs)
+                object_detect_probs["alpha"] = alpha
+            else:
+                alpha = self.alpha
         else:
             with th.no_grad():
                 results = self.dpl_layer(
@@ -540,10 +473,18 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                         "action": base_actions,
                     }
                 )
+            # Combine safest policy and base_policy
+            if self.alpha == "one_minus_safety":
+                safety = self.get_step_safety(base_actions, boxes, corners)
+                alpha = (1 - safety)
+            elif self.alpha == "learned":
+                raise NotImplemented
+            else:
+                alpha = self.alpha
 
+        object_detect_probs["alpha"] = alpha
         safeast_actions = results["safe_action"]
-        # Combine safest policy and base_policy
-        actions = self.alpha * safeast_actions + (1 - self.alpha) * base_actions
+        actions = alpha * safeast_actions + (1 - alpha) * base_actions
 
 
         mass = Categorical(probs=actions)
@@ -555,21 +496,6 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
 
         return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
-
-
-        # # NO Shielding
-        # if not self.shield:
-        #     return self.no_shielding(distribution, values, x, deterministic)
-        #
-        # # SOFT Shielding
-        # elif self.shield and "relative_loc_simple_.pl" in self.program_path:
-        #     return self.soft_shielding(distribution, values, obs, x, deterministic)
-        # elif "alpha" in self.program_path:
-        #     return self.soft_shielding_alpha(distribution, values, obs, x, deterministic)
-        #
-        # # HARD Shielding
-        # else:
-        #     return self.hard_shielding(distribution, values, obs, x, deterministic)
 
     def no_shielding(self, distribution, values, x, deterministic):
         actions = distribution.get_actions(deterministic=deterministic)
@@ -625,102 +551,6 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                     "prob_wall_prior": None, #walls,
                     "prob_ghost_posterior": ghosts,
                     "prob_wall_posterior": None, #results["wall"],
-                    "ground_truth_ghost": ground_truth_ghost,
-                    "ground_truth_wall": None, #ground_truth_wall,
-                }
-            else:
-                object_detect_probs = {
-                    "prob_ghost_prior": ghosts,
-                    "prob_wall_prior": None,
-                    "prob_ghost_posterior": ghosts,
-                    "prob_wall_posterior": None,
-                    "ground_truth_ghost": ground_truth_ghost,
-                    "ground_truth_wall": None,
-                }
-
-        return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
-
-    def soft_shielding_alpha(self, distribution, values, obs, x, deterministic):
-        with th.no_grad():
-            ground_truth_ghost = get_ground_wall(x, PACMAN_COLOR, GHOST_COLOR)
-            # ground_truth_wall = get_ground_wall(x, PACMAN_COLOR, WALL_COLOR)
-
-        ghosts = self.ghost_layer(obs) if self.detect_ghosts else ground_truth_ghost
-        # walls = self.wall_layer(obs) if self.detect_walls else ground_truth_wall
-
-        base_actions = distribution.distribution.probs
-
-        results = self.dpl_layer(
-            x={
-                "ghost": ghosts,
-                "action": base_actions,
-                "free_action": base_actions,
-                "alpha": th.full((ghosts.size()[0], 1), self.alpha)
-            }
-        )
-
-        actions = results["safe_action"]
-
-        mass = Categorical(probs=actions)
-        if not deterministic:
-            actions = mass.sample()
-        else:
-            actions = th.argmax(mass.probs,dim=1)
-        log_prob = mass.log_prob(actions)
-
-        with th.no_grad():
-            if self.detect_walls:
-                object_detect_probs = {
-                    "prob_ghost_prior": ghosts,
-                    "prob_wall_prior": None, #walls,
-                    "prob_ghost_posterior": ghosts,
-                    "prob_wall_posterior": None, #results["wall"],
-                    "ground_truth_ghost": ground_truth_ghost,
-                    "ground_truth_wall": None, #ground_truth_wall,
-                }
-            else:
-                object_detect_probs = {
-                    "prob_ghost_prior": ghosts,
-                    "prob_wall_prior": None,
-                    "prob_ghost_posterior": ghosts,
-                    "prob_wall_posterior": None,
-                    "ground_truth_ghost": ground_truth_ghost,
-                    "ground_truth_wall": None,
-                }
-
-        return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
-
-    def hard_shielding(self, distribution, values, obs, x, deterministic):
-        with th.no_grad():
-            ground_truth_ghost = get_ground_wall(x, PACMAN_COLOR, GHOST_COLOR)
-            # ground_truth_wall = get_ground_wall(x, PACMAN_COLOR, WALL_COLOR)
-            ghosts = ground_truth_ghost
-            # walls = ground_truth_wall
-
-        base_actions = distribution.distribution.probs
-        results = self.dpl_layer(
-            x={
-                "ghost": ghosts,
-                "action": base_actions,
-            }
-        )
-
-        actions = results["safe_action"]
-
-        mass = Categorical(probs=actions)
-        if not deterministic:
-            actions = mass.sample()
-        else:
-            actions = th.argmax(mass.probs,dim=1)
-        log_prob = mass.log_prob(actions)
-
-        with th.no_grad():
-            if self.detect_walls:
-                object_detect_probs = {
-                    "prob_ghost_prior": ghosts,
-                    "prob_wall_prior": None, #walls,
-                    "prob_ghost_posterior": ghosts,
-                    "prob_wall_posterior": None, #walls,
                     "ground_truth_ghost": ground_truth_ghost,
                     "ground_truth_wall": None, #ground_truth_wall,
                 }

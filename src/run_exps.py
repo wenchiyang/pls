@@ -6,19 +6,22 @@ import itertools
 hyper_parameters= {
     "exp_folders": ["experiments_trials3"],
     "domains": [
-        # "sokoban/2box10map", "goal_finding/smallGrid100map"
-        "test"
+        "sokoban/2box10map",
+        "goal_finding/smallGrid100map"
+        # "test"
     ],
     "exps":
-        ["test1", "test2"],
-        # ["no_shielding", "hard_shielding",
+        # ["test1", "test2"],
+        # ["no_shielding"],
+        [
+        # "no_shielding", "hard_shielding",
         #  "alpha_0.1", "alpha_0.3",
         #  "alpha_0.5",
         #  "alpha_0.7", "alpha_0.9",
-        #  "vsrl"],
+         "vsrl"],
     "seeds":
-        # ["seed1", "seed2", "seed3"]
-        ["seed1"]
+        ["seed1", "seed2", "seed3", "seed4", "seed5"]
+        # ["seed1"]
 }
 
 cwd = os.getcwd()
@@ -82,22 +85,14 @@ def run_evaluate():
     #     evaluate(exp)th.argmax(mass.probs,dim=1)
 
 def main_cluster():
-    cluster = LocalCluster(
-        n_workers=8,
-        processes=True,
-        threads_per_worker=1,
-        dashboard_address=":8787"
-    )
-
-    client = Client(cluster)
+    client = Client("134.58.41.100:8786")
 
     # with performance_report(filename="dask-report.html"):
     ## some dask computation
     futures = client.map(train, exps)
     results = client.gather(futures)
 
-    cluster.close()
 
 
 if __name__ == "__main__":
-    run_test()
+    main_cluster()
