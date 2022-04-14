@@ -1,7 +1,7 @@
 from torch import nn
 from collections import defaultdict
 from problog.formula import LogicFormula, LogicDAG
-from problog.sdd_formula import SDD
+from problog.ddnnf_formula import DDNNF
 from deepproblog.light.semiring import GraphSemiring
 import torch as th
 
@@ -14,7 +14,7 @@ class DeepProbLogLayer_Approx(nn.Module):
         self.program = "\n\n".join([program, evidence, query])
         self.lf = LogicFormula.create_from(self.program)
         self.dag = LogicDAG.create_from(self.lf)
-        self.sdd = SDD.create_from(self.dag)
+        self.ddnnf = DDNNF.create_from(self.dag)
         self.semiring = GraphSemiring()
         self.single_output = single_output
 
@@ -134,7 +134,7 @@ class DeepProbLogLayer_Approx(nn.Module):
             self.semiring.set_weights({self.single_output: x})
         else:
             self.semiring.set_weights(x)
-        out = self.sdd.evaluate(semiring=self.semiring)
+        out = self.ddnnf.evaluate(semiring=self.semiring)
         stacked = defaultdict(list)
         for k, v in out.items():
             stacked[k.functor].append((k, v))
