@@ -305,7 +305,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                                             self.n_ghost_locs + self.n_actions)]
             }
             query_struct = {"safe_action": [i for i in range(self.n_actions)]}
-            cache_path = path.join(self.folder, "../../../.cache", "dpl_layer.p")
+            cache_path = path.join(self.folder, "../../../data", "dpl_layer.p")
             self.dpl_layer = self.get_layer(
                 cache_path,
                 program=self.debug_program, queries=self.queries, evidences=["safe_next"],
@@ -327,7 +327,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             "action": [i for i in range(self.n_ghost_locs,
                                         self.n_ghost_locs + self.n_actions)]}
 
-        cache_path = path.join(self.folder, "../../../.cache", "query_safety_layer.p")
+        cache_path = path.join(self.folder, "../../../data", "query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
             cache_path,
             program=self.debug_program, queries=debug_queries, evidences=[],

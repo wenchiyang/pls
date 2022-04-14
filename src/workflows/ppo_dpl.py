@@ -104,14 +104,9 @@ def main(folder, config):
         )
     ]
 
-    #####   Initialize env   #############
-    cwd = os.getcwd()
-    program_path = abspath(
-        join(cwd, "src", "data", f'{config["model_features"]["params"]["program_type"]}.pl')
-    )
-    debug_program_path = abspath(
-        join(cwd, "src", "data", f'{config["model_features"]["params"]["debug_program_type"]}.pl')
-    )
+    #####   Initialize env   #############sokoban_corner2.pl
+    program_path = join(folder, "../../../data", f'{config["model_features"]["params"]["program_type"]}.pl')
+    debug_program_path = join(folder, "../../../data", f'{config["model_features"]["params"]["debug_program_type"]}.pl')
 
     env, image_encoder_cls, shielding_settings, custom_callback = setup_env(
         folder, config
@@ -181,9 +176,7 @@ def main(folder, config):
 
 
 def load_model_and_env(folder, config, model_at_step, eval=True):
-    program_path = abspath(
-        join("src", "data", f'{config["model_features"]["params"]["program_type"]}.pl')
-    )
+    program_path = join(folder, "../../../data", f'{config["model_features"]["params"]["program_type"]}.pl')
     env, image_encoder_cls, shielding_settings, custom_callback = setup_env(
         folder, config, program_path, eval=eval
     )

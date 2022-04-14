@@ -7,7 +7,7 @@ hyper_parameters= {
     "exp_folders": ["experiments_trials3"],
     "domains": [
         "sokoban/2box10map",
-        # "goal_finding/smallGrid100map"
+        "goal_finding/smallGrid100map"
         # "test"
     ],
     "exps":
@@ -95,4 +95,4 @@ def main_cluster():
 
 
 if __name__ == "__main__":
-    run_train()
+    main_cluster()
