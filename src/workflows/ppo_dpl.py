@@ -163,14 +163,14 @@ def main(folder, config):
     model.set_logger(new_logger)
 
 
-    intermediate_model_path = join(folder, "model_checkpoints")
+    intermediate_model_path = os.path.join(folder, "model_checkpoints")
     checkpoint_callback = CheckpointCallback(save_freq=1e4, save_path=intermediate_model_path)
 
 
     model.learn(
         total_timesteps=config["model_features"]["params"]["step_limit"],
         callback=[custom_callback, checkpoint_callback])
-    model.save(join(folder, "model"))
+    model.save(os.path.join(folder, "model"))
 
 
 
@@ -185,7 +185,7 @@ def load_model_and_env(folder, config, model_at_step, eval=True):
     elif "Sokoban" in env_name:
         model_cls = Sokoban_DPLPPO
 
-    path = join(folder, "model_checkpoints", f"rl_model_{model_at_step}_steps.zip")
+    path = os.path.join(folder, "model_checkpoints", f"rl_model_{model_at_step}_steps.zip")
     model = model_cls.load(path, env)
     if eval:
         model.set_random_seed(config["eval_env_features"]["seed"])

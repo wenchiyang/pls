@@ -56,7 +56,7 @@ if __name__ == "__main__":
     hyper_parameters = {
         "exp_folders": ["experiments_trials3"],
         "domains": [
-            "sokoban/2box10map",
+            # "sokoban/2box10map",
             "goal_finding/smallGrid100map"
             # "test"
         ],
@@ -75,6 +75,7 @@ if __name__ == "__main__":
     }
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.join(dir_path, "..")
 
     lengths = list(map(len, list(hyper_parameters.values())))
     lists_of_indices = list(map(lambda l: list(range(l)), lengths))
@@ -94,5 +95,5 @@ if __name__ == "__main__":
                               hyper["seeds"],
                               )
         exps.append(folder)
-    print(exps)
-    main_cluster()
+    # print(exps)
+    run_train()
