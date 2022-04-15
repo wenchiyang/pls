@@ -18,7 +18,7 @@
         "render_mode": "tiny_rgb_array",
         "action_size": 5,
         "difficulty": "medium",
-        "split": "train"
+        "split": "2box10map"
       },
 
     
