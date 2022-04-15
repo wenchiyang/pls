@@ -60,7 +60,8 @@ def setup_env(folder, config, eval=False):
     elif "Pacman" in env_name:
         image_encoder_cls = Pacman_Encoder
         shielding_settings = {
-            "n_ghost_locs": config["model_features"]["params"]["n_ghost_locs"]
+            "n_ghost_locs": config["model_features"]["params"]["n_ghost_locs"],
+            "sensor_noise": config["model_features"]["params"]["sensor_noise"]
         }
         env = Pacman_Monitor(
             env,
@@ -73,6 +74,7 @@ def setup_env(folder, config, eval=False):
         shielding_settings = {
             "n_box_locs": config["model_features"]["params"]["n_box_locs"],
             "n_corner_locs": config["model_features"]["params"]["n_corner_locs"],
+            "sensor_noise": config["model_features"]["params"]["sensor_noise"]
         }
 
         env = Sokoban_Monitor(

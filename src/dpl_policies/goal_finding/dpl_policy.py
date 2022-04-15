@@ -39,7 +39,6 @@ class GoalFinding_Encoder(nn.Module):
 
     def forward(self, x):
         xx = th.flatten(x, 1)
-        # xx = xx + (self.sensor_noise**0.5)*th.randn(xx.shape)
         return xx
 
 class GoalFinding_Callback(ConvertCallback):
@@ -340,7 +339,6 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         if path.exists(cache_path):
             return pickle.load(open(cache_path, "rb"))
 
-
         layer = DeepProbLogLayer_Approx(
             program=program, queries=queries, evidences=evidences,
             input_struct=input_struct, query_struct=query_struct
@@ -381,21 +379,21 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             )
             return abs_safe_next["safe_next"]
 
-    def evaluate_safety_shielded(self, obs: th.Tensor):
-        with th.no_grad():
-            _, _, _, mass, (object_detect_probs, base_policy) = self.forward(obs)
-            if self.shield and not self.detect_walls:
-                return self.get_step_safety(
-                    mass.probs,
-                    object_detect_probs["ground_truth_ghost"],
-                    # object_detect_probs["ground_truth_wall"],
-                )
-            else:
-                return self.get_step_safety(
-                    mass.probs,
-                    object_detect_probs["ground_truth_ghost"],
-                    object_detect_probs["ground_truth_wall"],
-                )
+    # def evaluate_safety_shielded(self, obs: th.Tensor):
+    #     with th.no_grad():
+    #         _, _, _, mass, (object_detect_probs, base_policy) = self.forward(obs)
+    #         if self.shield and not self.detect_walls:
+    #             return self.get_step_safety(
+    #                 mass.probs,
+    #                 object_detect_probs["ground_truth_ghost"],
+    #                 # object_detect_probs["ground_truth_wall"],
+    #             )
+    #         else:
+    #             return self.get_step_safety(
+    #                 mass.probs,
+    #                 object_detect_probs["ground_truth_ghost"],
+    #                 object_detect_probs["ground_truth_wall"],
+    #             )
     def forward(self, x, deterministic: bool = False):
         """
         Forward pass in all the networks (actor and critic)

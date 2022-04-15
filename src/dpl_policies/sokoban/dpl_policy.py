@@ -57,6 +57,7 @@ class Sokoban_Encoder(nn.Module):
         self.program_path = program_path
         self.debug_program_path = debug_program_path
         self.folder = folder
+        self.sensor_noise = shielding_settings["sensor_noise"]
 
     def forward(self, x):
         xx = th.flatten(x, 1)
@@ -140,6 +141,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         self.program_path = self.image_encoder.program_path
         self.debug_program_path = self.image_encoder.debug_program_path
         self.folder = self.image_encoder.folder
+        self.sensor_noise = self.image_encoder.sensor_noise
         self.alpha = alpha
         self.differentiable_shield = differentiable_shield
 
@@ -279,14 +281,14 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             )
             return abs_safe_next["safe_next"]
 
-    def evaluate_safety_shielded(self, obs: th.Tensor):
-        with th.no_grad():
-            _, _, _, mass, (object_detect_probs, base_policy) = self.forward(obs)
-            return self.get_step_safety(
-                mass.probs,
-                object_detect_probs["ground_truth_box"],
-                object_detect_probs["ground_truth_corner"],
-            )
+    # def evaluate_safety_shielded(self, obs: th.Tensor):
+    #     with th.no_grad():
+    #         _, _, _, mass, (object_detect_probs, base_policy) = self.forward(obs)
+    #         return self.get_step_safety(
+    #             mass.probs,
+    #             object_detect_probs["ground_truth_box"],
+    #             object_detect_probs["ground_truth_corner"],
+    #         )
 
     def forward(self, x, deterministic: bool = False):
         """
@@ -305,22 +307,21 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         distribution = self._get_action_dist_from_latent(latent_pi)
         base_actions = distribution.distribution.probs
 
-        # obs = self.image_encoder(x)
-        # latent_pi, latent_vf, latent_sde = self._get_latent(obs)
-        # # Evaluate the values for the given observations
-        # values = self.value_net(latent_vf)
-        # distribution = self._get_action_dist_from_latent(latent_pi, latent_sde=latent_sde)
-        # base_actions = distribution.distribution.probs
-
         with th.no_grad():
+
+
             ground_truth_box = get_ground_truth_of_box(
                 input=x, agent_colors=PLAYER_COLORS, box_colors=BOX_COLORS,
             )
             ground_truth_corner = get_ground_truth_of_corners(
                 input=x, agent_colors=PLAYER_COLORS, obsacle_colors=OBSTABLE_COLORS, floor_color=FLOOR_COLOR,
             )
-            boxes = ground_truth_box
-            corners = ground_truth_corner
+
+            boxes = ground_truth_box + (self.sensor_noise) * th.randn(ground_truth_box.shape)
+            boxes = th.clamp(boxes, min=0, max=1)
+            corners = ground_truth_box + (self.sensor_noise) * th.randn(ground_truth_corner.shape)
+            corners = th.clamp(corners, min=0, max=1)
+
             object_detect_probs = {
                 "ground_truth_box": ground_truth_box,
                 "ground_truth_corner": ground_truth_corner,
