@@ -587,7 +587,8 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             return values, log_prob, distribution.entropy()
 
 
-        _, values, log_prob, mass, _ = self.forward(obs)
+        _, values, _, mass, _ = self.forward(obs)
+        log_prob = mass.log_prob(actions)
         return values, log_prob, mass.entropy()
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:

@@ -68,12 +68,12 @@ if __name__ == "__main__":
         "exps":
         # ["test1", "test2"],
             [
-                "no_shielding",
-                "hard_shielding",
+                # "no_shielding",
+                # "hard_shielding",
                 #  "alpha_0.1", "alpha_0.3",
                 #  "alpha_0.5",
                 #  "alpha_0.7", "alpha_0.9",
-                # "vsrl"
+                "vsrl"
             ],
         "seeds":
             ["seed1", "seed2", "seed3", "seed4", "seed5"]

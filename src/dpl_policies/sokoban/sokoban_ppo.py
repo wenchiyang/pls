@@ -28,18 +28,6 @@ class Sokoban_DPLPPO(PPO):
     def __init__(self, *args, **kwargs):
         super(Sokoban_DPLPPO, self).__init__(*args, **kwargs)
 
-    # def _setup_model(self): # TODO1
-    #     super(Sokoban_DPLPPO, self)._setup_model()
-    #     self.rollout_buffer = DPL_RolloutBuffer(
-    #         self.n_steps,
-    #         self.observation_space,
-    #         self.action_space,
-    #         self.device,
-    #         gamma=self.gamma,
-    #         gae_lambda=self.gae_lambda,
-    #         n_envs=self.n_envs,
-    #     )
-
     def learn(
         self,
         total_timesteps: int,
@@ -48,7 +36,7 @@ class Sokoban_DPLPPO(PPO):
         eval_env: Optional[GymEnv] = None,
         eval_freq: int = -1,
         n_eval_episodes: int = 5,
-        tb_log_name: str = "OnPolicyAlgorithm",
+        tb_log_name: str = "PPO",
         eval_log_path: Optional[str] = None,
         reset_num_timesteps: bool = True,
     ) -> "PPO":
@@ -233,6 +221,9 @@ class Sokoban_DPLPPO(PPO):
             collected, False if callback terminated rollout prematurely.
         """
         assert self._last_obs is not None, "No previous observation was provided"
+        # Switch to eval mode (this affects batch norm / dropout)
+        self.policy.set_training_mode(False)
+
         n_steps = 0
         rollout_buffer.reset()
         # Sample new weights for the state dependent exploration
@@ -256,9 +247,6 @@ class Sokoban_DPLPPO(PPO):
                 self.policy.reset_noise(env.num_envs)
 
             with th.no_grad():
-                for e in env.envs:
-                    if e.env.render_or_not:
-                        e.env.render()
                 # Convert to pytorch tensor or to TensorDict
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
 
@@ -294,9 +282,6 @@ class Sokoban_DPLPPO(PPO):
                 abs_safeties_shielded.append(abs_safe_next_shielded)
                 abs_safeties_base.append(abs_safe_next_base)
 
-
-
-
             actions = actions.cpu().numpy()
 
             # Rescale and perform action
@@ -307,7 +292,7 @@ class Sokoban_DPLPPO(PPO):
                     actions, self.action_space.low, self.action_space.high
                 )
 
-            (new_obs, rewards, dones, infos) = env.step(clipped_actions)
+            new_obs, rewards, dones, infos = env.step(clipped_actions)
 
             for e in env.envs:
                 if e.env.render_or_not:
@@ -319,6 +304,7 @@ class Sokoban_DPLPPO(PPO):
             callback.update_locals(locals())
             if callback.on_step() is False:
                 return False
+
 
             if dones:
                 ep_len = infos[0]["episode"]["l"]
@@ -343,29 +329,37 @@ class Sokoban_DPLPPO(PPO):
                 abs_safeties_base = []
                 n_risky_states = 0
 
-
             self._update_info_buffer(infos)
             n_steps += 1
 
             if isinstance(self.action_space, gym.spaces.Discrete):
                 # Reshape in case of discrete action
                 actions = actions.reshape(-1, 1)
+            # Handle timeout by bootstraping with value function
+            # see GitHub issue #633
+            for idx, done in enumerate(dones):
+                if (
+                        done
+                        and infos[idx].get("terminal_observation") is not None
+                        and infos[idx].get("TimeLimit.truncated", False)
+                ):
+                    terminal_obs = self.policy.obs_to_tensor(infos[idx]["terminal_observation"])[0]
+                    with th.no_grad():
+                        terminal_value = self.policy.predict_values(terminal_obs)[0]
+                    rewards[idx] += self.gamma * terminal_value
             rollout_buffer.add(
                 self._last_obs,
                 actions,
                 rewards,
                 self._last_episode_starts,
                 values,
-                log_probs,
-                # mass # TODO1
+                log_probs
             )
             self._last_obs = new_obs
             self._last_episode_starts = dones
-
         with th.no_grad():
             # Compute value for the last timestep
-            obs_tensor = obs_as_tensor(new_obs, self.device)
-            _, values, _, _, _ = self.policy.forward(obs_tensor)
+            values = self.policy.predict_values(obs_as_tensor(new_obs, self.device))
 
         rollout_buffer.compute_returns_and_advantage(last_values=values, dones=dones)
 

@@ -185,6 +185,13 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         if self.alpha == 0:
             # NO shielding
             pass
+        elif self.alpha == "learned":
+            self.alpha_net = nn.Sequential(
+                    nn.Linear(self.input_size, 128),
+                    nn.ReLU(),
+                    nn.Linear(128, 1),
+                    nn.Sigmoid(),
+                )
         else:
             # HARD shielding and SOFT shielding
             input_struct = {
@@ -203,13 +210,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 input_struct=input_struct, query_struct=query_struct
             )
 
-        if self.alpha == "learned":
-            self.alpha_net = nn.Sequential(
-                    nn.Linear(self.input_size, 128),
-                    nn.ReLU(),
-                    nn.Linear(128, 1),
-                    nn.Sigmoid(),
-                )
+
 
         # For all settings, calculate "safe_next"
         debug_queries = ["safe_next"]
@@ -230,8 +231,6 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             input_struct=debug_input_struct,
             query_struct=debug_query_struct
         )
-
-
 
         self._build(lr_schedule)
 
@@ -281,15 +280,6 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             )
             return abs_safe_next["safe_next"]
 
-    # def evaluate_safety_shielded(self, obs: th.Tensor):
-    #     with th.no_grad():
-    #         _, _, _, mass, (object_detect_probs, base_policy) = self.forward(obs)
-    #         return self.get_step_safety(
-    #             mass.probs,
-    #             object_detect_probs["ground_truth_box"],
-    #             object_detect_probs["ground_truth_corner"],
-    #         )
-
     def forward(self, x, deterministic: bool = False):
         """
         Forward pass in all the networks (actor and critic)
@@ -308,8 +298,6 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         base_actions = distribution.distribution.probs
 
         with th.no_grad():
-
-
             ground_truth_box = get_ground_truth_of_box(
                 input=x, agent_colors=PLAYER_COLORS, box_colors=BOX_COLORS,
             )
@@ -409,36 +397,36 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
 
-    def no_shielding(self, distribution, values, x, deterministic):
-        actions = distribution.get_actions(deterministic=deterministic)
-        log_prob = distribution.log_prob(actions)
-        with th.no_grad():
-            ground_truth_box = get_ground_truth_of_box(
-                input=x,
-                agent_colors=PLAYER_COLORS,
-                box_colors=BOX_COLORS,
-            )
-            ground_truth_corner = get_ground_truth_of_corners(
-                input=x,
-                agent_colors=PLAYER_COLORS,
-                obsacle_colors=OBSTABLE_COLORS,
-                floor_color=FLOOR_COLOR,
-            )
-
-            base_actions = distribution.distribution.probs
-
-            object_detect_probs = {
-                "ground_truth_box": ground_truth_box,
-                "ground_truth_corner": ground_truth_corner,
-            }
-
-        return (
-            actions,
-            values,
-            log_prob,
-            distribution.distribution,
-            [object_detect_probs, base_actions],
-        )
+    # def no_shielding(self, distribution, values, x, deterministic):
+    #     actions = distribution.get_actions(deterministic=deterministic)
+    #     log_prob = distribution.log_prob(actions)
+    #     with th.no_grad():
+    #         ground_truth_box = get_ground_truth_of_box(
+    #             input=x,
+    #             agent_colors=PLAYER_COLORS,
+    #             box_colors=BOX_COLORS,
+    #         )
+    #         ground_truth_corner = get_ground_truth_of_corners(
+    #             input=x,
+    #             agent_colors=PLAYER_COLORS,
+    #             obsacle_colors=OBSTABLE_COLORS,
+    #             floor_color=FLOOR_COLOR,
+    #         )
+    #
+    #         base_actions = distribution.distribution.probs
+    #
+    #         object_detect_probs = {
+    #             "ground_truth_box": ground_truth_box,
+    #             "ground_truth_corner": ground_truth_corner,
+    #         }
+    #
+    #     return (
+    #         actions,
+    #         values,
+    #         log_prob,
+    #         distribution.distribution,
+    #         [object_detect_probs, base_actions],
+    #     )
 
     def evaluate_actions(
         self, obs: th.Tensor, actions: th.Tensor
@@ -463,7 +451,8 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
 
             return values, log_prob, distribution.entropy()
 
-        _, values, log_prob, mass, _ = self.forward(obs)
+        _, values, _, mass, _ = self.forward(obs)
+        log_prob = mass.log_prob(actions)
         return values, log_prob, mass.entropy()
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
