@@ -63,16 +63,15 @@ if __name__ == "__main__":
         "domains": [
             "sokoban/2box10map",
             "goal_finding/smallGrid100map"
-            # "test"
         ],
-        "exps":
-        # ["test1", "test2"],
-            [
-                "no_shielding",
-                "hard_shielding",
-                #  "alpha_0.1", "alpha_0.3",
-                #  "alpha_0.5",
-                #  "alpha_0.7", "alpha_0.9",
+        "exps": [
+                # "no_shielding",
+                # "hard_shielding",
+                 "alpha_0.1",
+                 "alpha_0.3",
+                 "alpha_0.5",
+                 "alpha_0.7",
+                 "alpha_0.9",
                 # "vsrl"
             ],
         "seeds":
