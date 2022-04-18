@@ -145,7 +145,7 @@ def learning_curves(name):
             else:
                 df_diff_seeds[seed] = df["value"]
         df_diff_seeds["value"] = df_diff_seeds[SEEDS].mean(axis=1)
-        avg_df = df_diff_seeds[["step", "value"]]
+        avg_df = df_diff_seeds[["step", "value"]].copy()
         avg_df["alpha"] = alpha_names[alpha]
         df_list.append(avg_df)
     df_main = pd.concat(df_list)
