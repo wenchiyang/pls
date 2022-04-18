@@ -45,10 +45,10 @@ def load_dataframe(folder, tag):
     for event_file in os.listdir(folder):
         if "event" not in event_file:
             continue
-    path = os.path.join(folder, event_file)
-    df = load_dataframe_from_file(path, tag)
-    df = smooth_dataframe(df, tsboard_smoothing=0.95)
-    return df
+        path = os.path.join(folder, event_file)
+        df = load_dataframe_from_file(path, tag)
+        df = smooth_dataframe(df, tsboard_smoothing=0.95)
+        return df
 
 def load_single_value(exp,  steps, norm):
     rews = []
