@@ -108,10 +108,10 @@ def mean(df_diff_seeds):
     for df in df_diff_seeds:
         df["value"]
 def learning_curves():
-    cwd = os.getcwd()
+    dir_path = os.path.dirname(os.path.realpath(__file__))
     domain = os.path.abspath(
             os.path.join(
-            cwd,
+            dir_path,
             "../..",
             "experiments_trials3",
             "goal_finding",
@@ -151,9 +151,9 @@ def learning_curves():
     c.save(fig_path)
 
 def many_alpha():
-    cwd = os.getcwd()
+    dir_path = os.path.dirname(os.path.realpath(__file__))
     domain = os.path.join(
-        cwd,
+        dir_path,
         "../..",
         "experiments_trials2",
         "goal_finding",
