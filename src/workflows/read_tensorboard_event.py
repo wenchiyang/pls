@@ -102,8 +102,8 @@ def draw(dd, fig_path, alphas):
         )
         charts.append(c)
     c = charts[0]|charts[1]
-    c.show()
-    # c.save(os.path.join(domain, fig_path))
+    # c.show()
+    c.save(fig_path)
 
 def mean(df_diff_seeds):
 
@@ -123,7 +123,7 @@ def learning_curves():
         )
     )
     norm = {"low": 0, "high":10}
-    alphas = ["no_shielding", "alpha_0.5", "hard_shielding"]
+    alphas = ["no_shielding"] # , "alpha_0.5", "hard_shielding"
 
     df_list = []
     for alpha in alphas:
@@ -140,7 +140,7 @@ def learning_curves():
         df_list.append(avg_df)
     df_main = pd.concat(df_list)
     df_main['step'] = range(1, len(df_main) + 1)
-    fig_path = os.path.join(domain, "exp.svg")
+    fig_path = os.path.join(domain, "learning_curves.svg")
 
 
     # data = make_df(dfs, x_title="alpha", x_keys=alphas, y_key=NEW_TAGS[i])
@@ -149,7 +149,8 @@ def learning_curves():
         y=alt.Y("value"),
         color="alpha"
     )
-    c.show()
+    # c.show()
+    c.save(fig_path)
 
 def many_alpha():
     cwd = os.getcwd()

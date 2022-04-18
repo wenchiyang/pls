@@ -21,6 +21,7 @@ setup(
         "tensorboard",
         "altair",
         "altair_saver",
+        "selenium",
         "matplotlib",
     ],  # And any other dependencies required
 )
