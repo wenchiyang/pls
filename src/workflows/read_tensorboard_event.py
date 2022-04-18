@@ -1,9 +1,7 @@
 import pandas
-import tensorflow as tf
 import pandas as pd
 import os
 from tensorboard.backend.event_processing import event_accumulator
-import matplotlib.pyplot as plt
 import altair as alt
 import numpy as np
 
