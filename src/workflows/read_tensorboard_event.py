@@ -5,7 +5,26 @@ from tensorboard.backend.event_processing import event_accumulator
 import altair as alt
 import numpy as np
 
-ALPHAS = ["no", "0.1", "0.3", "0.5", "0.7", "0.9", "hard"]
+dir_path = os.path.dirname(os.path.realpath(__file__))
+domain_goal_finidng = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "goal_finding", "smallGrid100map"))
+domain_sokoban = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "sokoban", "2box10map",))
+names = {
+    "sokoban": domain_sokoban,
+    "goal_finding": domain_goal_finidng
+}
+norms = {
+    "sokoban": {"low": -12, "high": 12},
+    "goal_finding": {"low": 0, "high": 10}
+}
+alpha_names = {
+    "no_shielding": "no shielding",
+    "hard_shielding": "hard shielding",
+    "alpha_0.1": "alpha=0.1",
+    "alpha_0.3": "alpha=0.3",
+    "alpha_0.5": "alpha=0.5",
+    "alpha_0.7": "alpha=0.7",
+    "alpha_0.9": "alpha=0.9",
+}
 NEW_TAGS = [
     "norm_reward",
     "constraint_satisfaction"
@@ -103,25 +122,16 @@ def draw(dd, fig_path, alphas):
     # c.show()
     c.save(fig_path)
 
-def mean(df_diff_seeds):
-
-    for df in df_diff_seeds:
-        df["value"]
-def learning_curves():
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    domain = os.path.abspath(
-            os.path.join(
-            dir_path,
-            "../..",
-            "experiments_trials3",
-            "goal_finding",
-            "smallGrid100map"
-            # "sokoban",
-            # "2box10map",
-        )
-    )
-    norm = {"low": 0, "high":10}
-    alphas = ["no_shielding"] # , "alpha_0.5", "hard_shielding"
+def learning_curves(name):
+    domain = names[name]
+    norm = norms[name]
+    alphas = ["no_shielding",
+              "alpha_0.1",
+              "alpha_0.3",
+              "alpha_0.5",
+              "alpha_0.7",
+              "alpha_0.9",
+              "hard_shielding"]
 
     df_list = []
     for alpha in alphas:
@@ -134,20 +144,17 @@ def learning_curves():
         df_diff_seeds = pandas.DataFrame(df_diff_seeds)
         avg_df = df_diff_seeds.mean().to_frame("value")
         avg_df["value"] = avg_df["value"].apply(lambda x: normalize_rew(x, norm=norm))
-        avg_df["alpha"] = alpha
+        avg_df["alpha"] = alpha_names[alpha]
         df_list.append(avg_df)
     df_main = pd.concat(df_list)
     df_main['step'] = range(1, len(df_main) + 1)
-    fig_path = os.path.join(domain, "learning_curves.svg")
+    fig_path = os.path.join(domain, f"{name}_learning_curves.svg")
 
-
-    # data = make_df(dfs, x_title="alpha", x_keys=alphas, y_key=NEW_TAGS[i])
     c = alt.Chart(df_main).mark_line().encode(
         x=alt.X("step"),
         y=alt.Y("value"),
         color="alpha"
     )
-    # c.show()
     c.save(fig_path)
 
 def many_alpha():
@@ -161,34 +168,20 @@ def many_alpha():
         # "sokoban",
         # "2box10map",
     )
-
+    alpha = []
     dd = load_single_values(
         domain = domain,
-        alphas = ALPHAS,
+        alphas = alpha,
         steps=1_000_000,
         norm={"low": -25, "high": 0}
     )
 
     fig_path = os.path.join(domain, "exp.svg")
-    draw(dd, fig_path, alphas=ALPHAS)
+    draw(dd, fig_path, alphas=alpha)
 
-def diff_non_diff():
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    domain = os.path.abspath(
-        os.path.join(
-            dir_path,
-            "../..",
-            "experiments_trials3",
-            "goal_finding",
-            "smallGrid100map"
-            # "sokoban",
-            # "2box10map",
-        )
-    )
-
-    # norm = [-12, 12]
-    norm = {"low": 0, "high": 10}
-    # alpha = ["0.5", "no_diff"]
+def diff_non_diff(name):
+    domain = names[name]
+    norm = norms[name]
     alpha = ["hard_shielding", "vsrl"]
     dd = load_single_values(
         domain=domain,
@@ -196,10 +189,11 @@ def diff_non_diff():
         steps=500_000,
         norm=norm
     )
-
-    fig_path = os.path.join(domain, "exp.svg")
+    fig_path = os.path.join(domain, f"{name}_diff_non_diff.svg")
     draw(dd, fig_path, alphas=alpha)
 
 
-learning_curves()
-# diff_non_diff()
+learning_curves("sokoban")
+learning_curves("goal_finding")
+diff_non_diff("sokoban")
+diff_non_diff("goal_finding")
