@@ -3,6 +3,7 @@
     "raw_logger": "ppo_raw",
     "info_logger": "ppo_info",
     "env_type": "Boxoban-Train-v0",
+
     "env_features": {
         "max_steps": 120,
         "penalty_for_step": -0.1,
@@ -12,7 +13,7 @@
         "reward_last": 0,
         "dim_room": [7, 7],
         "num_boxes": 2,
-        "render": false,
+        "render": true,
         "render_mode": "tiny_rgb_array",
         "action_size": 5,
         "difficulty": "medium",
@@ -38,7 +39,8 @@
             "net_arch_shared": [],
             "net_arch_pi": [128],
             "net_arch_vf": [128],
-            "sensor_noise": 0
+            "sensor_noise": 0,
+            "max_num_rejected_samples": 100000
         }
     }
 }

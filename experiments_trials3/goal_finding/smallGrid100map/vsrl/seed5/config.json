@@ -27,7 +27,7 @@
       "seed": 772,
       "clip_range": 0.2,
       "gamma": 0.99,
-      "step_limit": 100000,
+      "step_limit": 1000000,
       "program_type": "relative_loc_simple",
       "debug_program_type": "relative_loc_simple",
       "alpha": 1,
@@ -36,7 +36,8 @@
       "net_arch_shared": [],
       "net_arch_pi": [128],
       "net_arch_vf": [128],
-      "sensor_noise": 0
+      "sensor_noise": 0,
+      "max_num_rejected_samples": 100000
     }
   }
 }

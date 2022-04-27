@@ -47,7 +47,7 @@ class DeepProbLogLayer_Approx(nn.Module):
 
         w = th.cat((w_facts, w_actions), dim=1)
 
-        n_worlds = 2 ** nf  * self.n_actions **self.n_ads
+        n_worlds = 2 ** nf  * self.n_actions ** self.n_ads
 
         valid_w = []
         # query (need problog)
@@ -80,7 +80,15 @@ class DeepProbLogLayer_Approx(nn.Module):
         return t
 
     def tensor_to_dict(self, t):
-        x = {k: t[:, v[0]:v[0] + len(v)] for k, v in self.query_struct.items()}
+        x = dict()
+        count = 0
+        for k, v in self.query_struct.items():
+            if type(v) is dict:
+                x[k] = t[:, count:count + len(v)]
+                count += len(v)
+            else:
+                x[k] = t[:, count:count + 1]
+                count += 1
         return x
 
     def forward(self, x):
@@ -98,36 +106,6 @@ class DeepProbLogLayer_Approx(nn.Module):
 
         return results
 
-    # def forward(self, x):
-    #     """ p has to be a scalar of len(self.num_facts)+len(self.num_ads)
-    #     """
-    #     xx = self.dict_to_tensor(self.input_struct, x)
-    #     xx = xx[:, None, :]
-    #     w_facts = th.from_numpy(self.w_facts)
-    #
-    #     ones_facts = th.ones_like(w_facts)
-    #     ones_x = th.ones_like(xx)
-    #
-    #     p_w_facts = w_facts * xx[:, :, :self.n_facts] + \
-    #             (ones_facts - w_facts) * (ones_x[:, :,  :self.n_facts] - xx[:, :, :self.n_facts])
-    #     w_actions = th.from_numpy(self.w_actions)
-    #     p_w_actions = th.sum(w_actions * xx[:, :, self.n_facts:], axis=2)[:,:,None]
-    #     p_w = th.cat((p_w_facts, p_w_actions), axis=2)
-    #     p_w = th.prod(p_w, dim=2)
-    #     p_w = p_w[:,:,None]
-    #
-    #     # take all non-nans
-    #     w_queries = self.w_queries
-    #     norm_ingredients = th.where(~th.isnan(w_queries), p_w, 0.0)
-    #     norm = th.sum(norm_ingredients, axis=1)
-    #     poste = w_queries * norm_ingredients
-    #     gg = th.where(~th.isnan(poste), poste, 0.0)
-    #     poste = th.sum(th.where(~th.isnan(poste), gg, 0.0), axis=1) / norm
-    #
-    #     results = self.tensor_to_dict(poste)
-    #
-    #     return results
-
     def calculate_complete_w(self, x):
         """x is a dictionary <key,tensor>."""
         if self.single_output is not None:
@@ -135,13 +113,22 @@ class DeepProbLogLayer_Approx(nn.Module):
         else:
             self.semiring.set_weights(x)
         out = self.ddnnf.evaluate(semiring=self.semiring)
-        stacked = defaultdict(list)
+        # stacked = defaultdict(list)
+        ss = defaultdict(dict)
         for k, v in out.items():
-            stacked[k.functor].append((k, v))
+            # stacked[k.functor].append((k, v))
+            if k.arity > 0:
+                ss[k.functor][self.query_struct[k.functor][str(k.args[0])]] = v
+            else:
+                ss[k.functor][self.query_struct[k.functor]] = v
+        # tensorial = {}
+        # for k, v in stacked.items():
+        #     v = [b for a, b in v]
+        #     tensorial[k] = th.cat(v, dim=-1)
 
         tensorial = {}
-        for k, v in stacked.items():
-            v = [b for a, b in v]
+        for k, v in ss.items():
+            v = [b for a, b in sorted(ss[k].items())]
             tensorial[k] = th.cat(v, dim=-1)
 
         if self.single_output:
@@ -149,7 +136,7 @@ class DeepProbLogLayer_Approx(nn.Module):
         else:
             return tensorial
 
-def tt1():
+def test1():
     queries = [
         "safe_action(one)",
         "safe_action(two)",
@@ -184,7 +171,7 @@ safe_action(A):- action(A), safe_next.
     )
     print(results)
 
-def tt2():
+def test2():
     queries = [
         "safe_action(no_op)",
         "safe_action(push_up)",
@@ -259,5 +246,3 @@ safe_action(A):- action(A), safe_next.
         }
     )
     print(results)
-
-# tt2()

@@ -38,7 +38,8 @@
             "net_arch_shared": [],
             "net_arch_pi": [128],
             "net_arch_vf": [128],
-            "sensor_noise": 0
+            "sensor_noise": 0,
+            "max_num_rejected_samples": 100000
         }
     }
 }

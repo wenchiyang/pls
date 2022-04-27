@@ -14,7 +14,7 @@ setup(
         "problog",
         "pysdd",
         # experiments -- dask
-        "dask[distributed]",
+        "dask[complete]",
         "asyncssh",
         "bokeh",
         # visialization

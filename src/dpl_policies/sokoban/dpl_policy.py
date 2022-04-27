@@ -58,6 +58,7 @@ class Sokoban_Encoder(nn.Module):
         self.debug_program_path = debug_program_path
         self.folder = folder
         self.sensor_noise = shielding_settings["sensor_noise"]
+        self.max_num_rejected_samples = shielding_settings["max_num_rejected_samples"]
 
     def forward(self, x):
         xx = th.flatten(x, 1)
@@ -144,6 +145,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         self.sensor_noise = self.image_encoder.sensor_noise
         self.alpha = alpha
         self.differentiable_shield = differentiable_shield
+        self.max_num_rejected_samples = self.image_encoder.max_num_rejected_samples
 
         with open(self.program_path) as f:
             self.program = f.read()
@@ -182,6 +184,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         ][: self.n_actions]
 
 
+
         if self.alpha == 0:
             # NO shielding
             pass
@@ -201,7 +204,10 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 "action": [i for i in range(self.n_box_locs + self.n_corner_locs,
                                             self.n_box_locs + self.n_corner_locs + self.n_actions)],
             }
-            query_struct = {"safe_action": [i for i in range(self.n_actions)]}
+            action_lst = ['no_op', 'push_up', 'push_down', 'push_left', 'push_right', 'move_up', 'move_down',
+                          'move_left', 'move_right']
+
+            query_struct = {"safe_action": dict(zip(action_lst[:self.n_actions], range(self.n_actions)))}
 
             cache_path = path.join(self.folder, "../../../data", "dpl_layer.p")
             self.dpl_layer = self.get_layer(
@@ -214,7 +220,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
 
         # For all settings, calculate "safe_next"
         debug_queries = ["safe_next"]
-        debug_query_struct = {"safe_next": [i for i in range(1)]}
+        debug_query_struct = {"safe_next": 0}
         debug_input_struct = {
             "box": [i for i in range(self.n_box_locs)],
             "corner": [i for i in range(self.n_box_locs,
@@ -307,15 +313,13 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
 
             boxes = ground_truth_box + (self.sensor_noise) * th.randn(ground_truth_box.shape)
             boxes = th.clamp(boxes, min=0, max=1)
-            corners = ground_truth_box + (self.sensor_noise) * th.randn(ground_truth_corner.shape)
+            corners = ground_truth_corner + (self.sensor_noise) * th.randn(ground_truth_corner.shape)
             corners = th.clamp(corners, min=0, max=1)
 
             object_detect_probs = {
                 "ground_truth_box": ground_truth_box,
                 "ground_truth_corner": ground_truth_corner,
             }
-            # if not th.all(ground_truth_corner == 0):
-            #     k=1
 
         if self.alpha == 0:
             actions = distribution.get_actions(deterministic=deterministic)
@@ -337,7 +341,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                         }
                     )
                 safe_next = results["safe_next"]
-                if not th.any(safe_next.isclose(th.zeros(actions.shape))) or num_rejected_samples > 100000:
+                if not th.any(safe_next.isclose(th.zeros(actions.shape))) or num_rejected_samples > self.max_num_rejected_samples:
                     break
                 else:
                     num_rejected_samples += 1
@@ -355,10 +359,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 }
             )
 
-            if self.alpha == "one_minus_safety":
-                safety = self.get_step_safety(base_actions, boxes, corners)
-                alpha = (1 - safety)
-            elif self.alpha == "learned":
+            if self.alpha == "learned":
                 alpha = self.alpha_net(obs)
                 object_detect_probs["alpha"] = alpha
             else:
@@ -372,11 +373,8 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                         "action": base_actions,
                     }
                 )
-            # Combine safest policy and base_policy
-            if self.alpha == "one_minus_safety":
-                safety = self.get_step_safety(base_actions, boxes, corners)
-                alpha = (1 - safety)
-            elif self.alpha == "learned":
+
+            if self.alpha == "learned":
                 raise NotImplemented
             else:
                 alpha = self.alpha

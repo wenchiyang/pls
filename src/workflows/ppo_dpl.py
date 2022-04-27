@@ -49,7 +49,8 @@ def setup_env(folder, config, eval=False):
         image_encoder_cls = GoalFinding_Encoder
         shielding_settings = {
             "n_ghost_locs": config["model_features"]["params"]["n_ghost_locs"],
-            "sensor_noise": config["model_features"]["params"]["sensor_noise"]
+            "sensor_noise": config["model_features"]["params"]["sensor_noise"],
+            "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
         }
         env = GoalFinding_Monitor(
             env,
@@ -61,7 +62,8 @@ def setup_env(folder, config, eval=False):
         image_encoder_cls = Pacman_Encoder
         shielding_settings = {
             "n_ghost_locs": config["model_features"]["params"]["n_ghost_locs"],
-            "sensor_noise": config["model_features"]["params"]["sensor_noise"]
+            "sensor_noise": config["model_features"]["params"]["sensor_noise"],
+            "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
         }
         env = Pacman_Monitor(
             env,
@@ -74,7 +76,8 @@ def setup_env(folder, config, eval=False):
         shielding_settings = {
             "n_box_locs": config["model_features"]["params"]["n_box_locs"],
             "n_corner_locs": config["model_features"]["params"]["n_corner_locs"],
-            "sensor_noise": config["model_features"]["params"]["sensor_noise"]
+            "sensor_noise": config["model_features"]["params"]["sensor_noise"],
+            "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
         }
 
         env = Sokoban_Monitor(

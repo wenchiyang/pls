@@ -35,6 +35,7 @@ class GoalFinding_Encoder(nn.Module):
         self.debug_program_path = debug_program_path
         self.folder = folder
         self.sensor_noise = shielding_settings["sensor_noise"]
+        self.max_num_rejected_samples = shielding_settings["max_num_rejected_samples"]
 
 
     def forward(self, x):
@@ -110,179 +111,12 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         self.sensor_noise = self.image_encoder.sensor_noise
         self.alpha = alpha
         self.differentiable_shield = differentiable_shield
+        self.max_num_rejected_samples = self.image_encoder.max_num_rejected_samples
 
         with open(self.program_path) as f:
             self.program = f.read()
         with open(self.debug_program_path) as f:
             self.debug_program = f.read()
-
-        # if self.detect_ghosts:
-        #     self.ghost_layer = nn.Sequential(
-        #         nn.Linear(self.input_size, 128),
-        #         nn.ReLU(),
-        #         nn.Linear(128, self.n_ghost_locs),
-        #         nn.Sigmoid(),  # TODO : add a flag
-        #     )
-        #
-        # if self.detect_walls:
-        #     self.wall_layer = nn.Sequential(
-        #         nn.Linear(self.input_size, 128),
-        #         nn.ReLU(),
-        #         nn.Linear(128, self.n_wall_locs),
-        #         nn.Sigmoid(),
-        #     )
-
-        # if self.shield:
-        #     self.evidences = ["safe_next"]
-        #     # IMPORTANT: THE ORDER OF QUERIES IS THE ORDER OF THE OUTPUT
-        #     self.queries = [
-        #         "safe_action(stay)",
-        #         "safe_action(up)",
-        #         "safe_action(down)",
-        #         "safe_action(left)",
-        #         "safe_action(right)",
-        #     ][: self.n_actions]
-        #
-        #     if self.detect_ghosts and self.detect_walls:
-        #         self.queries += [
-        #             "ghost(up)",
-        #             "ghost(down)",
-        #             "ghost(left)",
-        #             "ghost(right)",
-        #             "wall(up)",
-        #             "wall(down)",
-        #             "wall(left)",
-        #             "wall(right)"
-        #         ]
-        #         input_struct = {
-        #             "ghost": [i for i in range(self.n_ghost_locs)],
-        #             "wall": [i for i in
-        #                      range(self.n_ghost_locs, self.n_ghost_locs + self.n_wall_locs)],
-        #             "action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
-        #                                         self.n_ghost_locs + self.n_wall_locs + self.n_actions)]}
-        #         query_struct = {
-        #             "ghost": [i for i in range(self.n_ghost_locs)],
-        #             "wall": [i for i in
-        #                      range(self.n_ghost_locs, self.n_ghost_locs + self.n_wall_locs)],
-        #             "safe_action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
-        #                                              self.n_ghost_locs + self.n_wall_locs + self.n_actions)]}
-        #         self.dpl_layer = DeepProbLogLayer_Approx(
-        #             program=self.program, queries=self.queries, evidences=self.evidences,
-        #             input_struct=input_struct, query_struct=query_struct
-        #         )
-        #     elif self.detect_ghosts:
-        #         self.queries += [
-        #             "ghost(up)",
-        #             "ghost(down)",
-        #             "ghost(left)",
-        #             "ghost(right)",
-        #         ]
-        #
-        #         input_struct = {
-        #             "ghost": [i for i in range(self.n_ghost_locs)],
-        #             "action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
-        #                                         self.n_ghost_locs + self.n_wall_locs + self.n_actions)]}
-        #         query_struct = {
-        #             "ghost": [i for i in range(self.n_ghost_locs)],
-        #             "safe_action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
-        #                                              self.n_ghost_locs + self.n_wall_locs + self.n_actions)]}
-        #         self.dpl_layer = DeepProbLogLayer_Approx(
-        #             program=self.program, queries=self.queries,  evidences=self.evidences,
-        #             input_struct=input_struct, query_struct=query_struct
-        #         )
-        #     else:
-        #         if hasattr(self, 'free_actions') and self.free_actions:
-        #             ## TODO more hard
-        #             input_struct = {
-        #                 "ghost": [i for i in range(self.n_ghost_locs)],
-        #                 "action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
-        #                                             self.n_ghost_locs + self.n_wall_locs + self.n_actions)],
-        #                 "free_action": [i for i in range(self.n_ghost_locs + self.n_wall_locs + self.n_actions,
-        #                                                  self.n_ghost_locs + self.n_wall_locs + 2 * self.n_actions)],
-        #             }
-        #             query_struct = {
-        #                 "safe_action": [i for i in range(self.n_actions)]}
-        #             self.dpl_layer = DeepProbLogLayer_Approx(
-        #                 program=self.program, queries=self.queries,  # evidences=self.evidences,
-        #                 input_struct=input_struct, query_struct=query_struct
-        #             )
-        #         else:
-        #             input_struct = {
-        #                 "ghost": [i for i in range(self.n_ghost_locs)],
-        #                 "action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
-        #                                             self.n_ghost_locs + self.n_wall_locs + self.n_actions)]
-        #             }
-        #             query_struct = {
-        #                 "safe_action": [i for i in range(self.n_actions)]}
-        #             self.dpl_layer = DeepProbLogLayer_Approx(
-        #                 program=self.program, queries=self.queries, evidences=self.evidences,
-        #                 input_struct=input_struct, query_struct=query_struct
-        #             )
-        #             # input_struct = {
-        #             #     "ghost": [i for i in range(self.n_ghost_locs)],
-        #             #     "action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
-        #             #                                 self.n_ghost_locs + self.n_wall_locs + self.n_actions)],
-        #             #     "free_action": [i for i in range(self.n_ghost_locs + self.n_wall_locs + self.n_actions,
-        #             #                                      self.n_ghost_locs + self.n_wall_locs + 2 * self.n_actions)],
-        #             # }
-        #             # query_struct = {
-        #             #     "safe_action": [i for i in range(self.n_actions)]}
-        #             # self.dpl_layer = DeepProbLogLayer_Approx(
-        #             #     program=self.program, queries=self.queries,  # evidences=self.evidences,
-        #             #     input_struct=input_struct, query_struct=query_struct
-        #             # )
-
-        # # DEBUG
-        # debug_queries = ["safe_next"]
-        # if self.shield:
-        #     if self.detect_ghosts and self.detect_walls:
-        #         input_struct = {
-        #             "ghost": [i for i in range(self.n_ghost_locs)],
-        #             "wall": [i for i in
-        #                      range(self.n_ghost_locs, self.n_ghost_locs + self.n_wall_locs)],
-        #             "action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
-        #                                         self.n_ghost_locs + self.n_wall_locs + self.n_actions)]}
-        #     elif self.detect_ghosts:
-        #         input_struct = {
-        #             "ghost": [i for i in range(self.n_ghost_locs)],
-        #             "action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
-        #                                         self.n_ghost_locs + self.n_wall_locs + self.n_actions)]}
-        #     else:
-        #         if hasattr(self, 'free_actions') and self.free_actions:
-        #             input_struct = {
-        #                 "ghost": [i for i in range(self.n_ghost_locs)],
-        #                 "action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
-        #                                             self.n_ghost_locs + self.n_wall_locs + self.n_actions)],
-        #                 "free_action": [i for i in range(self.n_ghost_locs + self.n_wall_locs + self.n_actions,
-        #                                             self.n_ghost_locs + self.n_wall_locs + 2*self.n_actions)],
-        #             }
-        #         else:
-        #             input_struct = {
-        #                 "ghost": [i for i in range(self.n_ghost_locs)],
-        #                 "action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
-        #                                             self.n_ghost_locs + self.n_wall_locs + self.n_actions)]
-        #             }
-        #             # input_struct = {
-        #             #     "ghost": [i for i in range(self.n_ghost_locs)],
-        #             #     "action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
-        #             #                                 self.n_ghost_locs + self.n_wall_locs + self.n_actions)],
-        #             #     "free_action": [i for i in range(self.n_ghost_locs + self.n_wall_locs + self.n_actions,
-        #             #                                      self.n_ghost_locs + self.n_wall_locs + 2 * self.n_actions)],
-        #             # }
-        #
-        # else:
-        #     input_struct = {
-        #         "ghost": [i for i in range(self.n_ghost_locs)],
-        #         "action": [i for i in range(self.n_ghost_locs + self.n_wall_locs,
-        #                                     self.n_ghost_locs + self.n_wall_locs + self.n_actions)]}
-        #
-        #
-        # query_struct = {"safe_next": [i for i in range(1)]}
-        # self.query_safety_layer = DeepProbLogLayer_Approx(
-        #     program=self.program, queries=debug_queries,
-        #     input_struct=input_struct, query_struct=query_struct
-        # )
-
 
         ##### SOFT SHILDENG WITH GROUND TRUTH ####
         self.queries = [
@@ -303,7 +137,14 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                 "action": [i for i in range(self.n_ghost_locs,
                                             self.n_ghost_locs + self.n_actions)]
             }
-            query_struct = {"safe_action": [i for i in range(self.n_actions)]}
+            query_struct = {
+                "safe_action": {
+                    "stay": 0,
+                    "up": 1,
+                    "down": 2,
+                    "left": 3,
+                    "right": 4
+                }}
             cache_path = path.join(self.folder, "../../../data", "dpl_layer.p")
             self.dpl_layer = self.get_layer(
                 cache_path,
@@ -320,7 +161,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                 )
 
         debug_queries = ["safe_next"]
-        query_struct = {"safe_next": [i for i in range(1)]}
+        debug_query_struct = {"safe_next": 0}
         debug_input_struct = {
             "ghost": [i for i in range(self.n_ghost_locs)],
             "action": [i for i in range(self.n_ghost_locs,
@@ -330,7 +171,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         self.query_safety_layer = self.get_layer(
             cache_path,
             program=self.debug_program, queries=debug_queries, evidences=[],
-            input_struct=debug_input_struct, query_struct=query_struct
+            input_struct=debug_input_struct, query_struct=debug_query_struct
         )
 
         self._build(lr_schedule)
@@ -418,8 +259,6 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             object_detect_probs = {
                 "ground_truth_ghost": ground_truth_ghost,
             }
-            # if not th.all(ground_truth_ghost == 0):
-            #     k=1
 
         if self.alpha == 0:
             actions = distribution.get_actions(deterministic=deterministic)
@@ -439,7 +278,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                         }
                     )
                 safe_next = results["safe_next"]
-                if not th.any(safe_next.isclose(th.zeros(actions.shape))) or num_rejected_samples > 100000:
+                if not th.any(safe_next.isclose(th.zeros(actions.shape))) or num_rejected_samples > self.max_num_rejected_samples:
                     break
                 else:
                     num_rejected_samples += 1
@@ -456,10 +295,8 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                 }
             )
 
-            if self.alpha == "one_minus_safety":
-                safety = self.get_step_safety(base_actions, ghosts)
-                alpha = (1 - safety)
-            elif self.alpha == "learned":
+
+            if self.alpha == "learned":
                 alpha = self.alpha_net(obs)
                 object_detect_probs["alpha"] = alpha
             else:
@@ -472,11 +309,8 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                         "action": base_actions,
                     }
                 )
-            # Combine safest policy and base_policy
-            if self.alpha == "one_minus_safety":
-                safety = self.get_step_safety(base_actions, boxes, corners)
-                alpha = (1 - safety)
-            elif self.alpha == "learned":
+
+            if self.alpha == "learned":
                 raise NotImplemented
             else:
                 alpha = self.alpha
