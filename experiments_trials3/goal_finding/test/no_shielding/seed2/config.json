@@ -5,13 +5,13 @@
   "env_type": "GoalFinding-v0",
 
   "env_features": {
-    "layout": "grid7x7_3_ghosts",
-    "reward_goal": 10,
-    "reward_crash": -10,
+    "layout": "smallGrid",
+    "reward_goal": 500,
+    "reward_crash": -500,
     "reward_food": 0,
     "reward_time": -0.1,
-    "render": true,
-    "max_steps": 200,
+    "render": false,
+    "max_steps": 50,
     "num_maps": 100,
     "seed": 567
   },
@@ -24,7 +24,7 @@
       "n_epochs": 40,
       "n_steps": 1024,
       "learning_rate": 0.001,
-      "seed": 567,
+      "seed": 111,
       "clip_range": 0.2,
       "gamma": 0.99,
       "step_limit": 1000000,
