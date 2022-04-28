@@ -5,13 +5,13 @@
   "env_type": "GoalFinding-v0",
 
   "env_features": {
-    "layout": "smallGrid",
-    "reward_goal": 500,
-    "reward_crash": -500,
+    "layout": "grid10x10",
+    "reward_goal": 10,
+    "reward_crash": 0,
     "reward_food": 0,
     "reward_time": -0.1,
     "render": false,
-    "max_steps": 50,
+    "max_steps": 200,
     "num_maps": 100,
     "seed": 567
   },
