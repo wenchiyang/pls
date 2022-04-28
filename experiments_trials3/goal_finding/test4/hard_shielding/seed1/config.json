@@ -5,12 +5,12 @@
   "env_type": "GoalFinding-v0",
 
   "env_features": {
-    "layout": "smallGrid42",
+    "layout": "smallGrid",
     "reward_goal": 10,
-    "reward_crash": -10,
+    "reward_crash": 0,
     "reward_food": 0,
     "reward_time": -0.1,
-    "render": true,
+    "render": false,
     "max_steps": 50,
     "num_maps": 100,
     "seed": 567
@@ -30,7 +30,7 @@
       "step_limit": 1000000,
       "program_type": "relative_loc_simple",
       "debug_program_type": "relative_loc_simple",
-      "alpha": 0,
+      "alpha": 1,
       "n_ghost_locs": 4,
       "differentiable_shield": true,
       "net_arch_shared": [],
