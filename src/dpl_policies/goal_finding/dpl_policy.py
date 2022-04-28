@@ -69,7 +69,7 @@ class GoalFinding_Monitor(Monitor):
                 "l": ep_len,
                 "t": round(time.time() - self.t_start, 6),
                 "last_r": reward,
-                "violate_constraint": reward < -1,
+                "violate_constraint": not info["maxsteps_used"] and not info["is_success"],
                 "is_success": info["is_success"]
             }
             for key in self.info_keywords:
