@@ -17,7 +17,7 @@
         "render_mode": "tiny_rgb_array",
         "action_size": 5,
         "difficulty": "medium",
-        "split": "2box10map"
+        "split": "3box10map"
     },
     "model_features": {
         "params": {
