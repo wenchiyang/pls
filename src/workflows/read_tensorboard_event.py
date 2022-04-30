@@ -5,7 +5,7 @@ import altair as alt
 import numpy as np
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-domain_goal_finidng = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "goal_finding", "smallGrid100map"))
+domain_goal_finidng = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "goal_finding", "7grid5g"))
 domain_sokoban = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "sokoban", "2box10map",))
 names = {
     "sokoban": domain_sokoban,
