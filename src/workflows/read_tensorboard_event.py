@@ -129,7 +129,8 @@ def learning_curves(name):
         "alpha_0.5",
         "alpha_0.7",
         "alpha_0.9",
-        "hard_shielding"
+        "hard_shielding",
+        "vsrl"
     ]
 
     df_list = []
@@ -195,7 +196,7 @@ def diff_non_diff(name):
     draw(dd, fig_path)
 
 
-learning_curves("sokoban")
+# learning_curves("sokoban")
 learning_curves("goal_finding")
-diff_non_diff("sokoban")
+# diff_non_diff("sokoban")
 diff_non_diff("goal_finding")
