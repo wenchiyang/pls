@@ -188,13 +188,6 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         if self.alpha == 0:
             # NO shielding
             pass
-        elif self.alpha == "learned":
-            self.alpha_net = nn.Sequential(
-                    nn.Linear(self.input_size, 128),
-                    nn.ReLU(),
-                    nn.Linear(128, 1),
-                    nn.Sigmoid(),
-                )
         else:
             # HARD shielding and SOFT shielding
             input_struct = {
@@ -216,7 +209,13 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 input_struct=input_struct, query_struct=query_struct
             )
 
-
+        if self.alpha == "learned":
+            self.alpha_net = nn.Sequential(
+                    nn.Linear(self.input_size, 128),
+                    nn.ReLU(),
+                    nn.Linear(128, 1),
+                    nn.Sigmoid(),
+                )
 
         # For all settings, calculate "safe_next"
         debug_queries = ["safe_next"]
