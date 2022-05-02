@@ -2,20 +2,27 @@ import pandas as pd
 import os
 from tensorboard.backend.event_processing import event_accumulator
 import altair as alt
+from altair import Column
 import numpy as np
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 domain_goal_finidng = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "goal_finding", "7grid5g"))
 domain_sokoban = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "sokoban", "2box10map",))
-names = {
+NAMES = {
     "sokoban": domain_sokoban,
     "goal_finding": domain_goal_finidng
 }
-norms = {
+NORMS = {
     "sokoban": {"low": -12, "high": 12},
     "goal_finding": {"low": 0, "high": 10}
 }
-alpha_names = {
+
+ALPHA_NAMES_DIFF = {
+    "vsrl": "VSRL",
+    "hard_shielding": "PLS",
+    "no_shielding": "PPO"
+}
+ALPHA_NAMES = {
     "no_shielding": "no shielding",
     "hard_shielding": "hard shielding",
     "alpha_0.1": "alpha=0.1",
@@ -26,18 +33,19 @@ alpha_names = {
     "vsrl": "vsrl"
 }
 NEW_TAGS = [
-    "norm reward",
-    "constraint satisfiability"
+    "reward",
+    "constraint satisfiability",
+    "accepted samples"
 ]
 TAGS = [
     "rollout/ep_rew_mean",
     "rollout/#violations",
-    # "rollout/success_rate"
+    "safety/num_rejected_samples_max"
     # "safety/ep_abs_safety_impr",
     # "safety/n_deaths"
 ]
-SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
-# SEEDS = ["seed1", "seed2"]
+# SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
+SEEDS = ["seed1", "seed2"]
 
 def load_dataframe_from_file(path, tag):
     ea = event_accumulator.EventAccumulator(path)
@@ -60,6 +68,9 @@ def normalize_rew(v, norm):
 def normalize_vio(v, norm=None):
     return 1-v
 
+def normalize_rej(v, norm=None):
+    return 1- (v/100000)
+
 def load_dataframe(folder, tag):
     for event_file in os.listdir(folder):
         if "event" not in event_file:
@@ -69,9 +80,10 @@ def load_dataframe(folder, tag):
         df = smooth_dataframe(df, tsboard_smoothing=0.95)
         return df
 
-def load_single_value(exp,  steps, norm):
+def load_single_value(exp, steps, norm):
     rews = []
     sats = []
+    rejs = []
     for seed in SEEDS:
         folder = os.path.join(exp, seed)
         df0 = load_dataframe(folder, TAGS[0])
@@ -80,29 +92,43 @@ def load_single_value(exp,  steps, norm):
         v1 = get_step_value_in_dataframe(df1, steps=steps)
         ## TODO: this assumes locations and values
         rew = normalize_rew(v0, norm=norm)
-        satisfiability = normalize_vio(v1)
         rews.append(rew)
+
+        satisfiability = normalize_vio(v1)
         sats.append(satisfiability)
+
+        if "vsrl" in folder:
+            df2 = load_dataframe(folder, TAGS[2])
+            v2 = get_step_value_in_dataframe(df2, steps=steps)
+            rej = normalize_rej(v2)
+            rejs.append(rej)
+
     avg_rew = np.mean(rews)
     avg_sat = np.mean(sats)
-    return [avg_rew, avg_sat]
+    if "vsrl" in folder:
+        avg_rej = np.mean(rejs)
+        return [avg_rew, avg_sat, avg_rej]
+    else:
+        return [avg_rew, avg_sat, 1.0]
 
 def load_single_values(domain, alphas, steps, norm):
     d = {}
     for alpha in alphas:
         folder = os.path.join(domain, alpha)
         vs = load_single_value(folder, steps, norm)
-        d[alpha_names[alpha]] = dict(zip(NEW_TAGS, vs))
+        d[ALPHA_NAMES_DIFF[alpha]] = dict(zip(NEW_TAGS, vs))
     return d
 
 
 
-def make_df(dict, x_title, y_key):
+def make_df(d, x_title, y_key):
     y_values = []
-    for x_key in dict.keys():
-        y_values.append(dict[x_key][y_key])
-    data = pd.DataFrame({x_title: list(dict.keys()), y_key: y_values})
+    for x_key in d.keys():
+        y_values.append(d[x_key][y_key])
+    data = pd.DataFrame({x_title: list(d.keys()), y_key: y_values})
     return data
+    # data = pd.DataFrame.from_dict(d, orient='index').rename_axis(x_title).reset_index()
+    # return data
 
 def draw(dd, fig_path):
     charts = []
@@ -110,18 +136,18 @@ def draw(dd, fig_path):
         data = make_df(dd, x_title="alpha", y_key=NEW_TAGS[i])
         c = alt.Chart(data, title=NEW_TAGS[i]).mark_bar().encode(
             x=alt.X("alpha", sort=list(dd.keys())),
-            y=alt.Y(NEW_TAGS[i], title="", scale=alt.Scale(domain=(0, 1)))
+            y=alt.Y(NEW_TAGS[i], title="", scale=alt.Scale(domain=(0, 1))),
+            color="alpha"
         ).properties(
             width=120,
             height=240
         )
         charts.append(c)
-    c = charts[0] | charts[1]
-    # c.show()
-    c.save(fig_path)
+    c = charts[0] | charts[1] | charts[2]
+    c.show()
 
 def learning_curves(name):
-    domain = names[name]
+    domain = NAMES[name]
     alphas = [
         "no_shielding",
         "alpha_0.1",
@@ -147,7 +173,7 @@ def learning_curves(name):
                 df_diff_seeds[seed] = df["value"]
         df_diff_seeds["value"] = df_diff_seeds[SEEDS].mean(axis=1)
         avg_df = df_diff_seeds[["step", "value"]].copy()
-        avg_df["alpha"] = alpha_names[alpha]
+        avg_df["alpha"] = ALPHA_NAMES[alpha]
         df_list.append(avg_df)
     df_main = pd.concat(df_list)
     fig_path = os.path.join(domain, f"{name}_learning_curves.svg")
@@ -182,9 +208,9 @@ def many_alpha():
     draw(dd, fig_path)
 
 def diff_non_diff(name):
-    domain = names[name]
-    norm = norms[name]
-    alpha = ["hard_shielding", "vsrl"]
+    domain = NAMES[name]
+    norm = NORMS[name]
+    alpha = ["no_shielding", "vsrl", "hard_shielding"]
     # alpha = ["no_shielding", "no_shielding"]
     dd = load_single_values(
         domain=domain,
@@ -195,8 +221,60 @@ def diff_non_diff(name):
     fig_path = os.path.join(domain, f"{name}_diff_non_diff.svg")
     draw(dd, fig_path)
 
+def diff_non_diff_new(nnn):
+    dds=[]
+    for name in nnn:
+        domain = NAMES[name]
+        norm = NORMS[name]
+        alpha = ["no_shielding", "vsrl", "hard_shielding"]
+        # alpha = ["no_shielding", "no_shielding"]
+        dd = load_single_values(
+            domain=domain,
+            alphas=alpha,
+            steps=500_000,
+            norm=norm
+        )
+        dds.append(dd)
+    fig_path = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "results.svg"))
+    # fig_path = os.path.join(domain, f"{name}_diff_non_diff.svg")
+    draw_dds(dds, nnn, fig_path)
+
+def draw_dds(dds, nnn, fig_path):
+    charts = []
+    for i in range(len(NEW_TAGS)):
+        datas = []
+        for j,dd in enumerate(dds):
+            data = make_df(dd, x_title="alpha", y_key=NEW_TAGS[i])
+            data["domain"] = nnn[j]
+            datas.append(data)
+        dataframmm = pd.concat(datas)
+        c = alt.Chart(dataframmm, title="").mark_bar().encode(
+            column=Column('domain', title=NEW_TAGS[i]),
+            x=alt.X("alpha", sort=list(dd.keys()), title=None),
+            y=alt.Y(NEW_TAGS[i], title=None, scale=alt.Scale(domain=(0, 1))),
+            color=alt.Color("alpha", legend=None, scale=alt.Scale(scheme='accent')),
+        ).properties(
+            width=60,
+            height=240
+        )
+        charts.append(c)
+    c = charts[0] | charts[1] | charts[2]
+    c.configure_view(
+            strokeWidth=0
+        )
+    # c.show()
+    c.save(fig_path)
+    # data = make_df(dd, x_title="alpha")
+    # c = alt.Chart(data, title=NEW_TAGS).mark_bar().encode(
+    #     x=alt.X("alpha", sort=list(dd.keys())),
+    #     y=alt.Y(NEW_TAGS, title="", scale=alt.Scale(domain=(0, 1))),
+    #     color="alpha"
+    # ).properties(
+    #     width=120,
+    #     height=240
+    # )
 
 # learning_curves("sokoban")
-learning_curves("goal_finding")
+# learning_curves("goal_finding")
 # diff_non_diff("sokoban")
-diff_non_diff("goal_finding")
+diff_non_diff_new(["goal_finding", "sokoban"])
