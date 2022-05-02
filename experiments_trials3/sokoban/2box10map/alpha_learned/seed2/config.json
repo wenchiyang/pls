@@ -32,7 +32,7 @@
       "step_limit": 1000000,
       "program_type": "sokoban_corner2",
       "debug_program_type": "sokoban_corner2",
-      "alpha": 0.5,
+      "alpha": "learned",
       "n_box_locs": 4,
       "n_corner_locs": 4,
       "differentiable_shield": true,
