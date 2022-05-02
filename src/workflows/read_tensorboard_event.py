@@ -14,23 +14,26 @@ NAMES = {
 }
 NORMS = {
     "sokoban": {"low": -12, "high": 12},
-    "goal_finding": {"low": 0, "high": 10}
+    "goal_finding": {"low": -10, "high": 10}
 }
-
+DOMAIN_NAMES = {
+    "sokoban": "sokoban",
+    "goal_finding": "goal finding"
+}
 ALPHA_NAMES_DIFF = {
     "vsrl": "VSRL",
     "hard_shielding": "PLS",
     "no_shielding": "PPO"
 }
 ALPHA_NAMES = {
-    "no_shielding": "no shielding",
-    "hard_shielding": "hard shielding",
-    "alpha_0.1": "alpha=0.1",
-    "alpha_0.3": "alpha=0.3",
-    "alpha_0.5": "alpha=0.5",
-    "alpha_0.7": "alpha=0.7",
-    "alpha_0.9": "alpha=0.9",
-    "vsrl": "vsrl"
+    "no_shielding": "0.0",
+    "hard_shielding": "1.0",
+    "alpha_0.1": "0.1",
+    "alpha_0.3": "0.3",
+    "alpha_0.5": "0.5",
+    "alpha_0.7": "0.7",
+    "alpha_0.9": "0.9",
+    # "vsrl": "vsrl"
 }
 NEW_TAGS = [
     "reward",
@@ -44,8 +47,8 @@ TAGS = [
     # "safety/ep_abs_safety_impr",
     # "safety/n_deaths"
 ]
-# SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
-SEEDS = ["seed1", "seed2"]
+SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
+# SEEDS = ["seed1", "seed2"]
 
 def load_dataframe_from_file(path, tag):
     ea = event_accumulator.EventAccumulator(path)
@@ -111,15 +114,13 @@ def load_single_value(exp, steps, norm):
     else:
         return [avg_rew, avg_sat, 1.0]
 
-def load_single_values(domain, alphas, steps, norm):
+def load_single_values(domain, alphas, steps, norm, names):
     d = {}
     for alpha in alphas:
         folder = os.path.join(domain, alpha)
         vs = load_single_value(folder, steps, norm)
-        d[ALPHA_NAMES_DIFF[alpha]] = dict(zip(NEW_TAGS, vs))
+        d[names[alpha]] = dict(zip(NEW_TAGS, vs))
     return d
-
-
 
 def make_df(d, x_title, y_key):
     y_values = []
@@ -185,41 +186,41 @@ def learning_curves(name):
     # c.show()
     c.save(fig_path)
 
-def many_alpha():
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    domain = os.path.join(
-        dir_path,
-        "../..",
-        "experiments_trials2",
-        "goal_finding",
-        "smallGrid"
-        # "sokoban",
-        # "2box10map",
-    )
-    alpha = []
-    dd = load_single_values(
-        domain = domain,
-        alphas = alpha,
-        steps=1_000_000,
-        norm={"low": -25, "high": 0}
-    )
+# def many_alpha():
+#     dir_path = os.path.dirname(os.path.realpath(__file__))
+#     domain = os.path.join(
+#         dir_path,
+#         "../..",
+#         "experiments_trials2",
+#         "goal_finding",
+#         "smallGrid"
+#         # "sokoban",
+#         # "2box10map",
+#     )
+#     alpha = []
+#     dd = load_single_values(
+#         domain = domain,
+#         alphas = alpha,
+#         steps=1_000_000,
+#         norm={"low": -25, "high": 0}
+#     )
+#
+#     fig_path = os.path.join(domain, "exp.svg")
+#     draw(dd, fig_path)
 
-    fig_path = os.path.join(domain, "exp.svg")
-    draw(dd, fig_path)
-
-def diff_non_diff(name):
-    domain = NAMES[name]
-    norm = NORMS[name]
-    alpha = ["no_shielding", "vsrl", "hard_shielding"]
-    # alpha = ["no_shielding", "no_shielding"]
-    dd = load_single_values(
-        domain=domain,
-        alphas=alpha,
-        steps=500_000,
-        norm=norm
-    )
-    fig_path = os.path.join(domain, f"{name}_diff_non_diff.svg")
-    draw(dd, fig_path)
+# def diff_non_diff(name):
+#     domain = NAMES[name]
+#     norm = NORMS[name]
+#     alpha = ["no_shielding", "vsrl", "hard_shielding"]
+#     # alpha = ["no_shielding", "no_shielding"]
+#     dd = load_single_values(
+#         domain=domain,
+#         alphas=alpha,
+#         steps=500_000,
+#         norm=norm
+#     )
+#     fig_path = os.path.join(domain, f"{name}_diff_non_diff.svg")
+#     draw(dd, fig_path)
 
 def diff_non_diff_new(nnn):
     dds=[]
@@ -232,20 +233,46 @@ def diff_non_diff_new(nnn):
             domain=domain,
             alphas=alpha,
             steps=500_000,
-            norm=norm
+            norm=norm,
+            names=ALPHA_NAMES_DIFF
         )
         dds.append(dd)
     fig_path = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "results.svg"))
     # fig_path = os.path.join(domain, f"{name}_diff_non_diff.svg")
-    draw_dds(dds, nnn, fig_path)
+    draw_dds(dds, nnn, fig_path, NEW_TAGS)
 
-def draw_dds(dds, nnn, fig_path):
+def many_alpha_new(nnn):
+    dds=[]
+    for name in nnn:
+        domain = NAMES[name]
+        norm = NORMS[name]
+        alpha = [
+            "no_shielding",
+            "alpha_0.1",
+            "alpha_0.3",
+            "alpha_0.5",
+            "alpha_0.7",
+            "alpha_0.9",
+            "hard_shielding"]
+        # alpha = ["no_shielding", "no_shielding"]
+        dd = load_single_values(
+            domain=domain,
+            alphas=alpha,
+            steps=500_000,
+            norm=norm,
+            names=ALPHA_NAMES
+        )
+        dds.append(dd)
+    fig_path = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "alpha.svg"))
+    draw_dds(dds, nnn, fig_path, NEW_TAGS[:2])
+
+def draw_dds(dds, nnn, fig_path, tags):
     charts = []
-    for i in range(len(NEW_TAGS)):
+    for i in range(len(tags)):
         datas = []
         for j,dd in enumerate(dds):
             data = make_df(dd, x_title="alpha", y_key=NEW_TAGS[i])
-            data["domain"] = nnn[j]
+            data["domain"] = DOMAIN_NAMES[nnn[j]]
             datas.append(data)
         dataframmm = pd.concat(datas)
         c = alt.Chart(dataframmm, title="").mark_bar().encode(
@@ -258,12 +285,15 @@ def draw_dds(dds, nnn, fig_path):
             height=240
         )
         charts.append(c)
-    c = charts[0] | charts[1] | charts[2]
+    if len(tags) == 3:
+        c = charts[0] | charts[1] | charts[2]
+    elif len(tags) == 2:
+        c = charts[0] | charts[1]
     c.configure_view(
             strokeWidth=0
         )
-    # c.show()
-    c.save(fig_path)
+    c.show()
+    # c.save(fig_path)
     # data = make_df(dd, x_title="alpha")
     # c = alt.Chart(data, title=NEW_TAGS).mark_bar().encode(
     #     x=alt.X("alpha", sort=list(dd.keys())),
@@ -276,5 +306,5 @@ def draw_dds(dds, nnn, fig_path):
 
 # learning_curves("sokoban")
 # learning_curves("goal_finding")
-# diff_non_diff("sokoban")
-diff_non_diff_new(["goal_finding", "sokoban"])
+# diff_non_diff_new(["goal_finding", "sokoban"])
+many_alpha_new(["sokoban", "goal_finding"])
