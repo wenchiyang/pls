@@ -47,8 +47,8 @@ TAGS = [
     # "safety/ep_abs_safety_impr",
     # "safety/n_deaths"
 ]
-SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
-# SEEDS = ["seed1", "seed2"]
+# SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
+SEEDS = ["seed1", "seed2"]
 
 def load_dataframe_from_file(path, tag):
     ea = event_accumulator.EventAccumulator(path)
@@ -57,8 +57,8 @@ def load_dataframe_from_file(path, tag):
     return df
 
 def smooth_dataframe(df, tsboard_smoothing):
-    smoothed_df = df.ewm(alpha=(1 - tsboard_smoothing)).mean()
-    return smoothed_df
+    df["value"] = df["value"].ewm(alpha=(1 - tsboard_smoothing)).mean()
+    return df
 
 def get_step_value_in_dataframe(df, steps):
     idx = df["step"].sub(steps).abs().idxmin()
@@ -74,13 +74,14 @@ def normalize_vio(v, norm=None):
 def normalize_rej(v, norm=None):
     return 1- (v/100000)
 
-def load_dataframe(folder, tag):
+def load_dataframe(folder, tag, smooth=True):
     for event_file in os.listdir(folder):
         if "event" not in event_file:
             continue
         path = os.path.join(folder, event_file)
         df = load_dataframe_from_file(path, tag)
-        df = smooth_dataframe(df, tsboard_smoothing=0.95)
+        if smooth:
+            df = smooth_dataframe(df, tsboard_smoothing=0.95)
         return df
 
 def load_single_value(exp, steps, norm):
@@ -163,26 +164,27 @@ def learning_curves(name):
     df_list = []
     for alpha in alphas:
         folder = os.path.join(domain, alpha)
-        df_diff_seeds = None
         for seed in SEEDS:
             path = os.path.join(folder, seed)
-            df = load_dataframe(path, TAGS[0])
-            if df_diff_seeds is None:
-                df_diff_seeds = df[["value", "step"]]
-                df_diff_seeds = df_diff_seeds.rename(columns={"value": seed})
-            else:
-                df_diff_seeds[seed] = df["value"]
-        df_diff_seeds["value"] = df_diff_seeds[SEEDS].mean(axis=1)
-        avg_df = df_diff_seeds[["step", "value"]].copy()
-        avg_df["alpha"] = ALPHA_NAMES[alpha]
-        df_list.append(avg_df)
+            df = load_dataframe(path, TAGS[0], smooth=True)
+            df["seed"] = seed
+            df["alpha"] = alpha
+            df_list.append(df[["value", "step", "seed", "alpha"]])
+
     df_main = pd.concat(df_list)
     fig_path = os.path.join(domain, f"{name}_learning_curves.svg")
-    c = alt.Chart(df_main).mark_line().encode(
+
+    line = alt.Chart(df_main).mark_line().encode(
         x=alt.X("step"),
-        y=alt.Y("value"),
+        y=alt.Y("mean(value)"),
         color="alpha"
     )
+    band = alt.Chart(df_main).mark_errorband(extent='ci').encode(
+        x=alt.X("step"),
+        y=alt.Y('value'),
+        color="alpha"
+    )
+    c = line + band
     # c.show()
     c.save(fig_path)
 
@@ -292,8 +294,8 @@ def draw_dds(dds, nnn, fig_path, tags):
     c.configure_view(
             strokeWidth=0
         )
-    c.show()
-    # c.save(fig_path)
+    # c.show()
+    c.save(fig_path)
     # data = make_df(dd, x_title="alpha")
     # c = alt.Chart(data, title=NEW_TAGS).mark_bar().encode(
     #     x=alt.X("alpha", sort=list(dd.keys())),
@@ -305,6 +307,6 @@ def draw_dds(dds, nnn, fig_path, tags):
     # )
 
 # learning_curves("sokoban")
-# learning_curves("goal_finding")
+learning_curves("goal_finding")
 # diff_non_diff_new(["goal_finding", "sokoban"])
-many_alpha_new(["sokoban", "goal_finding"])
+# many_alpha_new(["goal_finding", "sokoban"])
