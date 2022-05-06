@@ -1,6 +1,7 @@
 import gym
 import pacman_gym
 import gym_sokoban
+import carracing_gym
 
 import torch as th
 from torch import nn
@@ -23,9 +24,17 @@ from dpl_policies.sokoban.dpl_policy import (
     Sokoban_DPLActorCriticPolicy,
     Sokoban_Callback
 )
-from dpl_policies.sokoban.sokoban_ppo import Sokoban_DPLPPO
+from dpl_policies.carracing.dpl_policy import (
+    Carracing_Encoder,
+    Carracing_Monitor,
+    Carracing_DPLActorCriticPolicy,
+    Carracing_Callback
+)
+
 from dpl_policies.goal_finding.goal_finding_ppo import GoalFinding_DPLPPO
 from dpl_policies.pacman.pacman_ppo import Pacman_DPLPPO
+from dpl_policies.sokoban.sokoban_ppo import Sokoban_DPLPPO
+from dpl_policies.carracing.carracing_ppo import Carracing_DPLPPO
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import CheckpointCallback
 
@@ -87,7 +96,19 @@ def setup_env(folder, config, eval=False):
         custom_callback = None
         custom_callback = Sokoban_Callback(custom_callback)
 
-
+    elif "Car" in env_name:
+        image_encoder_cls = Carracing_Encoder
+        shielding_settings = {
+            "n_grass_locs": config["model_features"]["params"]["n_grass_locs"],
+            "sensor_noise": config["model_features"]["params"]["sensor_noise"],
+            "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
+        }
+        env = Carracing_Monitor(
+            env,
+            allow_early_resets=False
+        )
+        custom_callback = None
+        custom_callback = Carracing_Callback(custom_callback)
 
     return env, image_encoder_cls, shielding_settings, custom_callback
 
@@ -135,6 +156,9 @@ def main(folder, config):
     elif "Sokoban" in env_name or "Boxoban" in env_name:
         model_cls = Sokoban_DPLPPO
         policy_cls = Sokoban_DPLActorCriticPolicy
+    elif "Car" in env_name :
+        model_cls = Carracing_DPLPPO
+        policy_cls = Carracing_DPLActorCriticPolicy
 
 
 
