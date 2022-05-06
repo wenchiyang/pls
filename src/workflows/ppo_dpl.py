@@ -1,6 +1,6 @@
 import gym
-import pacman_gym
-import gym_sokoban
+# import pacman_gym
+# import gym_sokoban
 import carracing_gym
 
 import torch as th
