@@ -7,6 +7,7 @@ setup(
         # environment
         "gym",
         "torch",
+        "torchvision",
         "cherry-rl",
         "stable-baselines3[extra]",
         "networkx",
@@ -23,5 +24,6 @@ setup(
         "altair_saver",
         "selenium",
         "matplotlib",
+        "tqdm",
     ],  # And any other dependencies required
 )

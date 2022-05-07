@@ -8,11 +8,17 @@ import time
 from stable_baselines3.common.callbacks import ConvertCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.policies import ActorCriticPolicy
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+import matplotlib.pyplot as plt
+import torchvision
+from tqdm import tqdm
+
 from stable_baselines3.common.type_aliases import (
     GymObs,
     GymStepReturn,
     Schedule,
 )
+from stable_baselines3.common.preprocessing import is_image_space
 
 from deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
 from dpl_policies.carracing.util import get_ground_truth_of_grass, is_grass
@@ -62,12 +68,30 @@ class Carracing_Encoder(nn.Module):
         self.max_num_rejected_samples = shielding_settings["max_num_rejected_samples"]
 
     def forward(self, x):
-        xx = th.flatten(x, 1)
-        return xx
+        return x
+
 
 class Carracing_Callback(ConvertCallback):
     def __init__(self, callback):
         super(Carracing_Callback, self).__init__(callback)
+        self.is_rollout = False
+        self.is_training = False
+
+    def _on_rollout_start(self):
+        self.is_rollout = True
+
+    def _on_rollout_end(self):
+        self.is_rollout = False
+
+    def _on_training_start(self):
+        self.is_training = True
+
+    def _on_training_end(self):
+        self.is_training = False
+
+    def _on_step(self):
+        return True
+
 
 class Carracing_Monitor(Monitor):
     def __init__(self, *args, **kwargs):
@@ -80,16 +104,19 @@ class Carracing_Monitor(Monitor):
         if self.needs_reset:
             raise RuntimeError("Tried to step environment that needs reset")
         observation, reward, done, info = self.env.step(action)
+        # green penalty
+        if np.mean(observation[:, :, 1]) > 175.0:
+            reward -= 0.05
         self.rewards.append(reward)
 
         if done:
             self.needs_reset = True
             ep_rew = sum(self.rewards)
             ep_len = len(self.rewards)
+
             # symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
 
             violate_constraint = info["violation"]
-
 
             ep_info = {
                 "r": round(ep_rew, 6),
@@ -112,20 +139,67 @@ class Carracing_Monitor(Monitor):
         return observation, reward, done, info
 
 
+class CustomCNNFeaturesExtractor(BaseFeaturesExtractor):
+    """
+    A CNN based architecture the for PPO features extractor.
+    The architecture is a standard multi layer CNN with ReLU activations.
+
+    :param observation_space: Metadata about the observation space to operate over. Assumes shape represents HWC.
+    :param features_dim: The number of features to extract from the observations.
+    """
+
+    def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 256):
+        super(CustomCNNFeaturesExtractor, self).__init__(observation_space, features_dim)
+        self._features_dim = features_dim
+        _, _, n_input_channels = observation_space.shape
+        self.extractor_network = nn.Sequential(  # Input shape (3, 96, 96)
+            nn.Conv2d(n_input_channels, 8, kernel_size=3, stride=2),  # (8, 47, 47)
+            nn.ReLU(),
+            nn.Conv2d(8, 16, kernel_size=3, stride=2),  # (16, 23, 23)
+            nn.ReLU(),
+            nn.Conv2d(16, 32, kernel_size=3, stride=2),  # (32, 11, 11)
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2),  # (32, 11, 11)
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1),  # (64, 5, 5)
+            nn.ReLU(),
+            nn.Conv2d(128, features_dim, kernel_size=3, stride=1),  # (128, 3, 3) -> (256, 1, 1)
+            nn.ReLU()
+        )
+
+    """
+    Forward pass through the model.
+
+    :param observations: BCHW tensor representing the states to extract features from.
+
+    Returns:
+        Tensor of shape (B,features_dim) representing a compressed view of the input image.
+        Intended to be used for policy and 
+    """
+
+    def forward(self, observations: th.Tensor) -> th.Tensor:
+        # Normalizes the inputs
+        observations = observations / 255.0
+        # Reorders BHWC to BCHW
+        observations = observations.permute(0, 3, 1, 2)
+        feature_pred = self.extractor_network(observations)
+        return feature_pred.view(-1, self._features_dim)
 
 
 class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
     def __init__(
-        self,
-        observation_space: gym.spaces.Space,
-        action_space: gym.spaces.Space,
-        lr_schedule: Schedule,
-        image_encoder: Carracing_Encoder = None,
-        alpha=0.5,
-        differentiable_shield = True,
-        **kwargs
+            self,
+            observation_space: gym.spaces.Space,
+            action_space: gym.spaces.Space,
+            lr_schedule: Schedule,
+            image_encoder: Carracing_Encoder = None,
+            alpha=0.5,
+            differentiable_shield=True,
+            **kwargs
     ):
-        super(Carracing_DPLActorCriticPolicy, self).__init__(observation_space, action_space, lr_schedule, **kwargs)
+        super(Carracing_DPLActorCriticPolicy, self).__init__(observation_space, action_space, lr_schedule,
+                                                             features_extractor_class=CustomCNNFeaturesExtractor,
+                                                             **kwargs)
         ###############################
 
         self.image_encoder = image_encoder
@@ -147,18 +221,15 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
         with open(self.debug_program_path) as f:
             self.debug_program = f.read()
 
-
         self.evidences = ["safe_next"]
         # IMPORTANT: THE ORDER OF QUERIES IS THE ORDER OF THE OUTPUT
         self.queries = [
-            "safe_action(do_nothing)",
-            "safe_action(accelerate)",
-            "safe_action(brake)",
-            "safe_action(turn_left)",
-            "safe_action(turn_right)",
-        ][: self.n_actions]
-
-
+                           "safe_action(do_nothing)",
+                           "safe_action(accelerate)",
+                           "safe_action(brake)",
+                           "safe_action(turn_left)",
+                           "safe_action(turn_right)",
+                       ][: self.n_actions]
 
         if self.alpha == 0:
             # NO shielding
@@ -183,11 +254,11 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
 
         if self.alpha == "learned":
             self.alpha_net = nn.Sequential(
-                    nn.Linear(self.input_size, 128),
-                    nn.ReLU(),
-                    nn.Linear(128, 1),
-                    nn.Sigmoid(),
-                )
+                nn.Linear(self.input_size, 128),
+                nn.ReLU(),
+                nn.Linear(128, 1),
+                nn.Sigmoid(),
+            )
 
         # For all settings, calculate "safe_next"
         debug_queries = ["safe_next"]
@@ -230,6 +301,7 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
             object_detect_probs["ground_truth_grass"]
         )
         return abs_safe_next_shielded, abs_safe_next_base
+
     def logging_per_step(self, mass, object_detect_probs, base_policy, action_lookup, logger):
         for act in range(self.action_space.n):
             logger.record(
@@ -270,7 +342,7 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
         base_actions = distribution.distribution.probs
 
         with th.no_grad():
-            ground_truth_grass = th.zeros((x.size()[0], 3)) # TODO: For No Shielding
+            ground_truth_grass = th.zeros((x.size()[0], 3))  # TODO: For No Shielding
             # ground_truth_grass = get_ground_truth_of_grass(
             #     input=x,
             # )
@@ -301,7 +373,8 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
                         }
                     )
                 safe_next = results["safe_next"]
-                if not th.any(safe_next.isclose(th.zeros(actions.shape))) or num_rejected_samples > self.max_num_rejected_samples:
+                if not th.any(safe_next.isclose(
+                        th.zeros(actions.shape))) or num_rejected_samples > self.max_num_rejected_samples:
                     break
                 else:
                     num_rejected_samples += 1
@@ -340,22 +413,17 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
         safeast_actions = results["safe_action"]
         actions = alpha * safeast_actions + (1 - alpha) * base_actions
 
-
         mass = Categorical(probs=actions)
         if not deterministic:
             actions = mass.sample()
         else:
-            actions = th.argmax(mass.probs,dim=1)
+            actions = th.argmax(mass.probs, dim=1)
         log_prob = mass.log_prob(actions)
-
-
 
         return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
-
-
     def evaluate_actions(
-        self, obs: th.Tensor, actions: th.Tensor
+            self, obs: th.Tensor, actions: th.Tensor
     ) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
         """
         Evaluate actions according to the current policy,
@@ -383,5 +451,5 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
         with th.no_grad():
-            _actions, values, log_prob, mass, _  = self.forward(observation, deterministic)
+            _actions, values, log_prob, mass, _ = self.forward(observation, deterministic)
             return _actions

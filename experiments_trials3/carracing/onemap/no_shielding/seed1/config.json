@@ -15,8 +15,8 @@
     "params": {
       "log_interval": 1,
       "batch_size": 128,
-      "n_epochs": 40,
-      "n_steps": 1024,
+      "n_epochs": 15,
+      "n_steps": 4096,
       "learning_rate": 0.001,
       "seed": 567,
       "clip_range": 0.2,
@@ -28,8 +28,8 @@
       "n_grass_locs": 3,
       "differentiable_shield": true,
       "net_arch_shared": [],
-      "net_arch_pi": [128],
-      "net_arch_vf": [128],
+      "net_arch_pi": [64, 64],
+      "net_arch_vf": [64, 64],
       "sensor_noise": 0,
       "max_num_rejected_samples": 100000
     }

@@ -2,6 +2,8 @@ import torch as th
 from typing import Optional
 import gym
 
+from tqdm import tqdm
+
 from stable_baselines3.common.type_aliases import (
     GymEnv,
     MaybeCallback
@@ -15,6 +17,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.buffers import RolloutBuffer
 from .util import safe_max, safe_min
 
+
 class DPL_RolloutBuffer(RolloutBuffer):
     def __init__(self, *args, **kwargs):
         self.distribution = None
@@ -24,21 +27,22 @@ class DPL_RolloutBuffer(RolloutBuffer):
         self.distribution = np.zeros((self.buffer_size, self.n_envs, self.action_space.n), dtype=np.float32)
         super(DPL_RolloutBuffer, self).reset()
 
+
 class Carracing_DPLPPO(PPO):
     def __init__(self, *args, **kwargs):
         super(Carracing_DPLPPO, self).__init__(*args, **kwargs)
 
     def learn(
-        self,
-        total_timesteps: int,
-        callback: MaybeCallback = None,
-        log_interval: int = 1,
-        eval_env: Optional[GymEnv] = None,
-        eval_freq: int = -1,
-        n_eval_episodes: int = 5,
-        tb_log_name: str = "PPO",
-        eval_log_path: Optional[str] = None,
-        reset_num_timesteps: bool = True,
+            self,
+            total_timesteps: int,
+            callback: MaybeCallback = None,
+            log_interval: int = 1,
+            eval_env: Optional[GymEnv] = None,
+            eval_freq: int = -1,
+            n_eval_episodes: int = 5,
+            tb_log_name: str = "PPO",
+            eval_log_path: Optional[str] = None,
+            reset_num_timesteps: bool = True,
     ) -> "PPO":
         iteration = 0
         self.n_deaths = 0
@@ -52,13 +56,11 @@ class Carracing_DPLPPO(PPO):
             reset_num_timesteps,
             tb_log_name,
         )
-
-        callback.on_training_start(locals(), globals())
+        step_progress_bar = tqdm(total=total_timesteps // self.n_steps, desc="learn")
 
         while self.num_timesteps < total_timesteps:
-
             continue_training = self.collect_rollouts(
-                self.env, callback, self.rollout_buffer, n_rollout_steps=self.n_steps
+                self.env, callback, self.rollout_buffer, n_rollout_steps=self.n_steps, render=(iteration % 5 == 0)
             )
 
             if continue_training is False:
@@ -66,7 +68,6 @@ class Carracing_DPLPPO(PPO):
 
             iteration += 1
             self._update_current_progress_remaining(self.num_timesteps, total_timesteps)
-
             # Display training infos # TODO: put the following in a callback
             if log_interval is not None and iteration % log_interval == 0:
                 self.logger.record("safety/n_deaths", self.n_deaths)
@@ -193,19 +194,19 @@ class Carracing_DPLPPO(PPO):
                     "time/total_timesteps", self.num_timesteps, exclude="tensorboard"
                 )
                 self.logger.dump(step=self.num_timesteps)
-
             self.train()
-
+            step_progress_bar.update(1)
         callback.on_training_end()
-
+        step_progress_bar.close()
         return self
 
     def collect_rollouts(
-        self,
-        env: VecEnv,
-        callback: BaseCallback,
-        rollout_buffer: RolloutBuffer,
-        n_rollout_steps: int,
+            self,
+            env: VecEnv,
+            callback: BaseCallback,
+            rollout_buffer: RolloutBuffer,
+            n_rollout_steps: int,
+            render_interval: int
     ) -> bool:
         """
         Collect experiences using the current policy and fill a ``RolloutBuffer``.
@@ -217,6 +218,8 @@ class Carracing_DPLPPO(PPO):
             (and at the beginning and end of the rollout)
         :param rollout_buffer: Buffer to fill with rollouts
         :param n_steps: Number of experiences to collect per environment
+        :param render_interval: The number of elapsed steps between rendered frames.
+        Higher for faster processing.
         :return: True if function returned with at least `n_rollout_steps`
             collected, False if callback terminated rollout prematurely.
         """
@@ -233,15 +236,17 @@ class Carracing_DPLPPO(PPO):
         callback.on_rollout_start()
         alphas = []
         nums_rejected_samples = []
-        abs_safeties_shielded = [] # TODO: can be put in call back
+        abs_safeties_shielded = []  # TODO: can be put in call back
         abs_safeties_base = []
         n_risky_states = 0
-
+        progress_bar = tqdm(total=n_rollout_steps)
+        progress_bar.set_description("collect_rollouts")
         while n_steps < n_rollout_steps:
+            progress_bar.update(1)
             if (
-                self.use_sde
-                and self.sde_sample_freq > 0
-                and n_steps % self.sde_sample_freq == 0
+                    self.use_sde
+                    and self.sde_sample_freq > 0
+                    and n_steps % self.sde_sample_freq == 0
             ):
                 # Sample a new noise matrix
                 self.policy.reset_noise(env.num_envs)
@@ -249,7 +254,6 @@ class Carracing_DPLPPO(PPO):
             with th.no_grad():
                 # Convert to pytorch tensor or to TensorDict
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
-
                 (
                     actions,
                     values,
@@ -293,18 +297,17 @@ class Carracing_DPLPPO(PPO):
                 )
 
             new_obs, rewards, dones, infos = env.step(clipped_actions)
-
-            for e in env.envs:
-                if e.env.render_or_not:
-                    e.env.render()
-
+            if n_steps % render_interval == 0:
+                if rewards: progress_bar.set_postfix({"reward": str(rewards)})
+                for e in env.envs:
+                    if e.env.render_or_not:
+                        e.env.render()
             self.num_timesteps += env.num_envs
 
             # Give access to local variables
             callback.update_locals(locals())
             if callback.on_step() is False:
                 return False
-
 
             if dones:
                 ep_len = infos[0]["episode"]["l"]
@@ -360,10 +363,9 @@ class Carracing_DPLPPO(PPO):
         with th.no_grad():
             # Compute value for the last timestep
             values = self.policy.predict_values(obs_as_tensor(new_obs, self.device))
-
         rollout_buffer.compute_returns_and_advantage(last_values=values, dones=dones)
 
         callback.on_rollout_end()
-
+        progress_bar.close()
         return True
 
