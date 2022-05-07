@@ -60,7 +60,7 @@ class Carracing_DPLPPO(PPO):
 
         while self.num_timesteps < total_timesteps:
             continue_training = self.collect_rollouts(
-                self.env, callback, self.rollout_buffer, n_rollout_steps=self.n_steps, render=(iteration % 5 == 0)
+                self.env, callback, self.rollout_buffer, n_rollout_steps=self.n_steps
             )
 
             if continue_training is False:
@@ -206,7 +206,7 @@ class Carracing_DPLPPO(PPO):
             callback: BaseCallback,
             rollout_buffer: RolloutBuffer,
             n_rollout_steps: int,
-            render_interval: int
+            render_interval: int = 50
     ) -> bool:
         """
         Collect experiences using the current policy and fill a ``RolloutBuffer``.
