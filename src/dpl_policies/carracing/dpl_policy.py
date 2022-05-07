@@ -86,9 +86,9 @@ class Carracing_Monitor(Monitor):
             self.needs_reset = True
             ep_rew = sum(self.rewards)
             ep_len = len(self.rewards)
-            violate_constraint = is_grass(
-                input=th.from_numpy(observation)[None,:,:,:],
-            )
+            # symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
+
+            violate_constraint = info["violation"]
 
 
             ep_info = {
@@ -97,7 +97,7 @@ class Carracing_Monitor(Monitor):
                 "t": round(time.time() - self.t_start, 6),
                 "last_r": reward,
                 "violate_constraint": violate_constraint,
-                "is_success": info["all_boxes_on_target"]
+                "is_success": info["is_success"]
             }
             for key in self.info_keywords:
                 ep_info[key] = info[key]
