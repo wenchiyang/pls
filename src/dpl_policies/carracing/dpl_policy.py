@@ -270,12 +270,13 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
         base_actions = distribution.distribution.probs
 
         with th.no_grad():
-            ground_truth_grass = get_ground_truth_of_grass(
-                input=x,
-            )
-
-            grasses = ground_truth_grass + (self.sensor_noise) * th.randn(ground_truth_grass.shape)
-            grasses = th.clamp(grasses, min=0, max=1)
+            ground_truth_grass = th.zeros((x.size()[0], 3)) # TODO: For No Shielding
+            # ground_truth_grass = get_ground_truth_of_grass(
+            #     input=x,
+            # )
+            #
+            # grasses = ground_truth_grass + (self.sensor_noise) * th.randn(ground_truth_grass.shape)
+            # grasses = th.clamp(grasses, min=0, max=1)
 
             object_detect_probs = {
                 "ground_truth_grass": ground_truth_grass
