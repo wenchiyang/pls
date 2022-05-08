@@ -2,7 +2,7 @@ import torch as th
 from typing import Optional
 import gym
 
-from tqdm import tqdm
+# from tqdm import tqdm
 
 from stable_baselines3.common.type_aliases import (
     GymEnv,
@@ -56,7 +56,7 @@ class Carracing_DPLPPO(PPO):
             reset_num_timesteps,
             tb_log_name,
         )
-        step_progress_bar = tqdm(total=total_timesteps // self.n_steps, desc="learn")
+        # step_progress_bar = tqdm(total=total_timesteps // self.n_steps, desc="learn")
 
         while self.num_timesteps < total_timesteps:
             continue_training = self.collect_rollouts(
@@ -195,9 +195,9 @@ class Carracing_DPLPPO(PPO):
                 )
                 self.logger.dump(step=self.num_timesteps)
             self.train()
-            step_progress_bar.update(1)
+            # step_progress_bar.update(1)
         callback.on_training_end()
-        step_progress_bar.close()
+        # step_progress_bar.close()
         return self
 
     def collect_rollouts(
@@ -206,7 +206,7 @@ class Carracing_DPLPPO(PPO):
             callback: BaseCallback,
             rollout_buffer: RolloutBuffer,
             n_rollout_steps: int,
-            render_interval: int = 50
+            render_interval: int = 10
     ) -> bool:
         """
         Collect experiences using the current policy and fill a ``RolloutBuffer``.
@@ -239,10 +239,10 @@ class Carracing_DPLPPO(PPO):
         abs_safeties_shielded = []  # TODO: can be put in call back
         abs_safeties_base = []
         n_risky_states = 0
-        progress_bar = tqdm(total=n_rollout_steps)
-        progress_bar.set_description("collect_rollouts")
+        # progress_bar = tqdm(total=n_rollout_steps)
+        # progress_bar.set_description("collect_rollouts")
         while n_steps < n_rollout_steps:
-            progress_bar.update(1)
+            # progress_bar.update(1)
             if (
                     self.use_sde
                     and self.sde_sample_freq > 0
@@ -298,7 +298,7 @@ class Carracing_DPLPPO(PPO):
 
             new_obs, rewards, dones, infos = env.step(clipped_actions)
             if n_steps % render_interval == 0:
-                if rewards: progress_bar.set_postfix({"reward": str(rewards)})
+                # if rewards: progress_bar.set_postfix({"reward": str(rewards)})
                 for e in env.envs:
                     if e.env.render_or_not:
                         e.env.render()
@@ -366,6 +366,6 @@ class Carracing_DPLPPO(PPO):
         rollout_buffer.compute_returns_and_advantage(last_values=values, dones=dones)
 
         callback.on_rollout_end()
-        progress_bar.close()
+        # progress_bar.close()
         return True
 

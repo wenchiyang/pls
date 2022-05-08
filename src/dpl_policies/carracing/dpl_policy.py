@@ -104,8 +104,13 @@ class Carracing_Monitor(Monitor):
         if self.needs_reset:
             raise RuntimeError("Tried to step environment that needs reset")
         observation, reward, done, info = self.env.step(action)
+        # if reward > 0:
+        #     k = 1
+
         # green penalty
-        if np.mean(observation[:, :, 1]) > 175.0:
+        symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
+        violate_constraint = th.all(symbolic_state)
+        if violate_constraint:
             reward -= 0.05
         self.rewards.append(reward)
 
@@ -115,8 +120,7 @@ class Carracing_Monitor(Monitor):
             ep_len = len(self.rewards)
 
             # symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
-
-            violate_constraint = info["violation"]
+            # violate_constraint = th.all(symbolic_state)
 
             ep_info = {
                 "r": round(ep_rew, 6),
@@ -342,13 +346,18 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
         base_actions = distribution.distribution.probs
 
         with th.no_grad():
-            ground_truth_grass = th.zeros((x.size()[0], 3))  # TODO: For No Shielding
-            # ground_truth_grass = get_ground_truth_of_grass(
-            #     input=x,
-            # )
-            #
-            # grasses = ground_truth_grass + (self.sensor_noise) * th.randn(ground_truth_grass.shape)
-            # grasses = th.clamp(grasses, min=0, max=1)
+            # ground_truth_grass = th.zeros((x.size()[0], 3))
+            ground_truth_grass = get_ground_truth_of_grass(
+                input=x,
+            )
+            # DEBUG
+            any_grass = th.any(ground_truth_grass, dim=1)
+            if any_grass[0]:
+                k=1
+
+
+            grasses = ground_truth_grass + (self.sensor_noise) * th.randn(ground_truth_grass.shape)
+            grasses = th.clamp(grasses, min=0, max=1)
 
             object_detect_probs = {
                 "ground_truth_grass": ground_truth_grass

@@ -273,18 +273,17 @@ def get_ground_truth_of_grass(
     arr = input
     # from matplotlib import pyplot as plt
     # temp = np.dot(arr[..., :3], [0.2989, 0.5870, 0.1140])
-    # temp[:, 71:75, 44:46] = -1  # left
-    # temp[:, 71:75, 50:52] = -1  # right
-    # temp[:, 64:66, 46:50] = -1  # top
+    # temp[:, 70:71, 44:45] = -1  # left
+    # temp[:, 70:71, 51:52] = -1  # right
+    # temp[:, 64:65, 47:49] = -1  # top
     # plt.imshow(temp[0], cmap=plt.get_cmap('gray'), vmin=0, vmax=255)
     # plt.show()
 
     # gray scale
     temp_arr = np.dot(arr[..., :3], [0.2989, 0.5870, 0.1140])
-
-    left = th.tensor(np.mean(temp_arr[:, 71:75, 44:46], axis=(1,2)))
-    right = th.tensor(np.mean(temp_arr[:, 71:75, 50:52], axis=(1,2)))
-    top = th.tensor(np.mean(temp_arr[:, 64:66, 46:50], axis=(1,2)))
+    left =  th.tensor(np.mean(temp_arr[:, 70:71, 44:45], axis=(1,2)))
+    right = th.tensor(np.mean(temp_arr[:, 70:71, 51:52], axis=(1,2)))
+    top =   th.tensor(np.mean(temp_arr[:, 64:65, 47:49], axis=(1,2)))
     try:
         assert th.all(th.logical_or(is_grass(left), is_road(left)))
         assert th.all(th.logical_or(is_grass(right), is_road(right)))
@@ -293,7 +292,7 @@ def get_ground_truth_of_grass(
         print("AssertionError, get_ground_truth_of_grass failed.")
         print(left, right, top)
         # import pdb; pdb.set_trace()
-    sym_state = is_grass(th.stack((top, left, right), dim=1))
+    sym_state = is_grass(th.stack((top, left, right), dim=1)).float()
 
 
     return sym_state
