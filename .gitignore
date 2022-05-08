@@ -2,3 +2,4 @@
 *.pkl
 model
 *.html
+**/__pycache__/
