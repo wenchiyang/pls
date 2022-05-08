@@ -385,9 +385,9 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
                 input=x,
             )
             # DEBUG
-            any_grass = th.any(ground_truth_grass, dim=1)
-            if any_grass[0]:
-                k=1
+            # any_grass = th.any(ground_truth_grass, dim=1)
+            # if any_grass[0]:
+            #     k=1
 
 
             grasses = ground_truth_grass + (self.sensor_noise) * th.randn(ground_truth_grass.shape)
