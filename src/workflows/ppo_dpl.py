@@ -102,6 +102,7 @@ def setup_env(folder, config, eval=False):
             "n_grass_locs": config["model_features"]["params"]["n_grass_locs"],
             "sensor_noise": config["model_features"]["params"]["sensor_noise"],
             "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
+            "convert_input_to_grayscale": config["model_features"]["params"]["convert_input_to_grayscale"],
         }
         env = Carracing_Monitor(
             env,
@@ -145,7 +146,6 @@ def main(folder, config):
     color_channels = env.color_channels
     n_pixels = (height * grid_size) * (width * grid_size) * color_channels
     n_actions = env.action_size
-
     env_name = config["env_type"]
     if "GoalFinding" in env_name:
         model_cls = GoalFinding_DPLPPO
@@ -159,7 +159,6 @@ def main(folder, config):
     elif "Car" in env_name :
         model_cls = Carracing_DPLPPO
         policy_cls = Carracing_DPLActorCriticPolicy
-
 
 
     image_encoder = image_encoder_cls(

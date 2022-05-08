@@ -5,7 +5,7 @@
   "env_type": "CarRacing-v1",
 
   "env_features": {
-    "render": false,
+    "render": true,
     "num_maps": 1,
     "seed": 567
   },
