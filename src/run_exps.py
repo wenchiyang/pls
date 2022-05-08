@@ -77,6 +77,7 @@ if __name__ == "__main__":
                 #  "alpha_0.9",
                 # "alpha_learned"
                 # "vsrl"
+                # "experimental/grayscale_input"
             ],
         "seeds":
             # ["seed1", "seed2", "seed3", "seed4", "seed5"]
@@ -105,4 +106,5 @@ if __name__ == "__main__":
                               )
         exps.append(folder)
     # main_cluster()
+    print(exps)
     run_train()
