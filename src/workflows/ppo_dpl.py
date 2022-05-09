@@ -101,8 +101,7 @@ def setup_env(folder, config, eval=False):
         shielding_settings = {
             "n_grass_locs": config["model_features"]["params"]["n_grass_locs"],
             "sensor_noise": config["model_features"]["params"]["sensor_noise"],
-            "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
-            "convert_input_to_grayscale": config["model_features"]["params"]["convert_input_to_grayscale"],
+            "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"]
         }
         env = Carracing_Monitor(
             env,
