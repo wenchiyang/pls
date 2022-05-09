@@ -68,7 +68,7 @@ if __name__ == "__main__":
             "carracing/onemap"
         ],
         "exps": [
-            "temp"
+            "test"
             # "no_shielding",
             # "hard_shielding",
             #  "alpha_0.1",
@@ -81,7 +81,7 @@ if __name__ == "__main__":
             ],
         "seeds":
             # ["seed1", "seed2", "seed3", "seed4", "seed5"]
-            ["seed1"]
+            ["stack1", "stack4", "stack8"]
     }
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
