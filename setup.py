@@ -19,6 +19,7 @@ setup(
         "asyncssh",
         "bokeh",
         # visialization
+        "pyvirtualdisplay",
         "tensorboard",
         "altair",
         "altair_saver",

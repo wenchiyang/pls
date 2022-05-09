@@ -2,7 +2,7 @@ import gym
 import torch as th
 from torch import nn
 import numpy as np
-from typing import Union, Tuple, Dict, Any
+from typing import Union, Tuple
 from torch.distributions import Categorical
 import time
 from stable_baselines3.common.callbacks import ConvertCallback
@@ -21,7 +21,7 @@ from stable_baselines3.common.type_aliases import (
 from stable_baselines3.common.preprocessing import is_image_space
 
 from deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
-from dpl_policies.carracing.util import get_ground_truth_of_grass, is_grass
+from dpl_policies.carracing.util import get_ground_truth_of_grass, is_all_grass
 from os import path
 import pickle
 
@@ -66,21 +66,6 @@ class Carracing_Encoder(nn.Module):
         self.folder = folder
         self.sensor_noise = shielding_settings["sensor_noise"]
         self.max_num_rejected_samples = shielding_settings["max_num_rejected_samples"]
-        self.obs_to_grayscale = shielding_settings["convert_input_to_grayscale"]
-
-    def preprocess_obs(self, obs: th.Tensor) -> th.Tensor:
-        '''
-        Performs task specific observation preprocessing.
-
-        :param obs: The observed state to preprocess.
-        '''
-        # normalize image to [0, 1]
-        obs = obs / 255
-        # Reorder BHWC to BCHW
-        obs = obs.permute(0, 3, 1, 2)
-        if self.obs_to_grayscale:
-            obs = torchvision.transforms.functional.rgb_to_grayscale(obs)
-        return obs
 
     def forward(self, x):
         return x
@@ -115,17 +100,16 @@ class Carracing_Monitor(Monitor):
     def reset(self, **kwargs) -> GymObs:
         return super(Carracing_Monitor, self).reset(**kwargs)
 
+
     def step(self, action: Union[np.ndarray, int]) -> GymStepReturn:
         if self.needs_reset:
             raise RuntimeError("Tried to step environment that needs reset")
         observation, reward, done, info = self.env.step(action)
-        # if reward > 0:
-        #     k = 1
 
-        # green penalty
-        symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
-        violate_constraint = th.all(symbolic_state)
-        if violate_constraint:
+        # symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
+        # violate_constraint = th.all(symbolic_state)
+        all_green = is_all_grass(observation)
+        if all_green: # green penalty
             reward -= 0.05
         self.rewards.append(reward)
 
@@ -134,8 +118,8 @@ class Carracing_Monitor(Monitor):
             ep_rew = sum(self.rewards)
             ep_len = len(self.rewards)
 
-            # symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
-            # violate_constraint = th.all(symbolic_state)
+            symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
+            violate_constraint = th.all(symbolic_state)
 
             ep_info = {
                 "r": round(ep_rew, 6),
@@ -170,48 +154,34 @@ class CustomCNNFeaturesExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 256):
         super(CustomCNNFeaturesExtractor, self).__init__(observation_space, features_dim)
         self._features_dim = features_dim
-        self._network_initialized = False
+        n_stacked_images, _, _ = observation_space.shape
+        self.extractor_network = nn.Sequential(  # Input shape (3, 96, 96)
+            nn.Conv2d(n_stacked_images, 8, kernel_size=3, stride=2),  # (8, 47, 47)
+            nn.ReLU(),
+            nn.Conv2d(8, 16, kernel_size=3, stride=2),  # (16, 23, 23)
+            nn.ReLU(),
+            nn.Conv2d(16, 32, kernel_size=3, stride=2),  # (32, 11, 11)
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2),  # (32, 11, 11)
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1),  # (64, 5, 5)
+            nn.ReLU(),
+            nn.Conv2d(128, features_dim, kernel_size=3, stride=1),  # (128, 3, 3) -> (256, 1, 1)
+            nn.ReLU()
+        )
 
-    def _initialize_network(self, input_shape: th.Size) -> None:
-        """
-        Initializes the feature extractor network. This lazy style init is necessary,
-        because the input dimensions depend on several config settings and it
-        cannot be trivially computed until all input preprocessing is applied.
+    """
+    Forward pass through the model.
 
-        :param n_input_channels: The number of input channels for the first conv layer.
-        """
-        if not self._network_initialized:
-            _, n_input_channels, _, _ = input_shape
-            self.extractor_network = nn.Sequential(  # Input shape (n_input_channels, input_height, input_width)
-                nn.Conv2d(n_input_channels, 8, kernel_size=3, stride=2),  # (8, 47, 47)
-                nn.ReLU(),
-                nn.Conv2d(8, 16, kernel_size=3, stride=2),  # (16, 23, 23)
-                nn.ReLU(),
-                nn.Conv2d(16, 32, kernel_size=3, stride=2),  # (32, 11, 11)
-                nn.ReLU(),
-                nn.Conv2d(32, 64, kernel_size=3, stride=2),  # (32, 11, 11)
-                nn.ReLU(),
-                nn.Conv2d(64, 128, kernel_size=3, stride=1),  # (64, 5, 5)
-                nn.ReLU(),
-                nn.Conv2d(128, self._features_dim, kernel_size=3, stride=1),  # (128, 3, 3) -> (256, 1, 1)
-                nn.ReLU()
-            )
-            self._network_initialized = True
+    :param observations: BCHW tensor representing the states to extract features from.
+
+    Returns:
+        Tensor of shape (B,features_dim) representing a compressed view of the input image.
+        Intended to be used for policy and 
+    """
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
-        """
-        Forward pass through the model.
-
-        :param observations: BCHW tensor representing the states to extract features from.
-
-        Returns:
-            Tensor of shape (B,features_dim) representing a compressed view of the input image.
-        """
-        if not self._network_initialized:
-            self._initialize_network(observations.shape)
-
-        feature_pred = self.extractor_network(observations)
-        return feature_pred.view(-1, self._features_dim)
+        return self.extractor_network(observations).view(-1, self._features_dim)
 
 
 class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
@@ -352,17 +322,6 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
             )
             return abs_safe_next["safe_next"]
 
-    def extract_features(self, obs: th.Tensor) -> th.Tensor:
-        """
-        Overwrites BaseModel.extract_features to apply custom
-        observation preprocessing before extracting features.
-        :param obs: The observed state to apply preprocessing to.
-        :return Features extracted from preprocessed observation.
-        """
-        assert self.features_extractor is not None, "No features extractor was set"
-        obs = self.image_encoder.preprocess_obs(obs)
-        return self.features_extractor(obs)
-
     def forward(self, x, deterministic: bool = False):
         """
         Forward pass in all the networks (actor and critic)
@@ -372,7 +331,8 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
         :return: action, value and log probability of the action
         """
         # Preprocess the observation if needed
-        features = self.extract_features(x)
+        obs = self.image_encoder(x)
+        features = self.extract_features(obs)
         latent_pi, latent_vf = self.mlp_extractor(features)
         # Evaluate the values for the given observations
         values = self.value_net(latent_vf)
@@ -380,15 +340,9 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
         base_actions = distribution.distribution.probs
 
         with th.no_grad():
-            # ground_truth_grass = th.zeros((x.size()[0], 3))
             ground_truth_grass = get_ground_truth_of_grass(
                 input=x,
             )
-            # DEBUG
-            # any_grass = th.any(ground_truth_grass, dim=1)
-            # if any_grass[0]:
-            #     k=1
-
 
             grasses = ground_truth_grass + (self.sensor_noise) * th.randn(ground_truth_grass.shape)
             grasses = th.clamp(grasses, min=0, max=1)

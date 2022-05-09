@@ -260,30 +260,38 @@ def get_ground_truth_of_box(
 # is_grass = lambda x: 160 < x < 180 or x < 90
 # is_road = lambda x: 100 < x < 145
 
-is_grass = lambda x: th.logical_or(th.logical_and(160 < x, x < 180), x < 90)
-is_road = lambda x: th.logical_and(100 < x, x < 145)
+is_grass = lambda x: th.logical_or(th.logical_and(0.25 < x, x < 0.28), x < -0.9)
+is_road = lambda x: th.logical_and(-0.3 < x, x < 0.1)
 
 
+def is_all_grass(
+        input
+):
+    arr = th.tensor(input)
+    image = arr[:, 0:84, :]
+    mean_color = th.mean(image)
+    is_grass(mean_color)
+    return is_grass(mean_color)
 
 def get_ground_truth_of_grass(
     input
 ):
-
     # arr = self.env.render(mode="state_pixels")
-    arr = input
+
+    # take only the first frame in the stack
+    arr = th.squeeze(input[:,0,:,:], dim=1)
+
     # from matplotlib import pyplot as plt
-    # temp = np.dot(arr[..., :3], [0.2989, 0.5870, 0.1140])
-    # temp[:, 70:71, 44:45] = -1  # left
-    # temp[:, 70:71, 51:52] = -1  # right
-    # temp[:, 64:65, 47:49] = -1  # top
-    # plt.imshow(temp[0], cmap=plt.get_cmap('gray'), vmin=0, vmax=255)
+    # temp = arr.clone()
+    # temp[:, 70:71, 44:45] = 1  # left
+    # temp[:, 70:71, 51:52] = 1  # right
+    # temp[:, 64:65, 47:49] = 1  # top
+    # plt.imshow(temp[0], cmap=plt.get_cmap('gray'), vmin=-1, vmax=1)
     # plt.show()
 
-    # gray scale
-    temp_arr = np.dot(arr[..., :3], [0.2989, 0.5870, 0.1140])
-    left =  th.tensor(np.mean(temp_arr[:, 70:71, 44:45], axis=(1,2)))
-    right = th.tensor(np.mean(temp_arr[:, 70:71, 51:52], axis=(1,2)))
-    top =   th.tensor(np.mean(temp_arr[:, 64:65, 47:49], axis=(1,2)))
+    left = th.mean(arr[:, 70:71, 44:45], dim=(1, 2))
+    right = th.mean(arr[:, 70:71, 51:52], dim=(1, 2))
+    top = th.mean(arr[:, 64:65, 47:49], dim=(1, 2))
     try:
         assert th.all(th.logical_or(is_grass(left), is_road(left)))
         assert th.all(th.logical_or(is_grass(right), is_road(right)))
@@ -291,8 +299,6 @@ def get_ground_truth_of_grass(
     except AssertionError:
         print("AssertionError, get_ground_truth_of_grass failed.")
         print(left, right, top)
-        # import pdb; pdb.set_trace()
     sym_state = is_grass(th.stack((top, left, right), dim=1)).float()
-
 
     return sym_state

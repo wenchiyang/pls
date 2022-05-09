@@ -2,4 +2,6 @@
 *.pkl
 model
 *.html
-**/__pycache__/
+*.p
+*.pyc
+event*
