@@ -167,7 +167,7 @@ def draw(dd, fig_path):
     c = charts[0] | charts[1] | charts[2]
     c.show()
 
-def curves(domain_name, curve_type, alphas, names, step_limit, fig_title):
+def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_title_abbr):
     domain = NAMES[domain_name]
 
     df_list = []
@@ -190,15 +190,18 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title):
     line = alt.Chart(df_main).mark_line().encode(
         x=alt.X("step",
                 scale=alt.Scale(domain=(0, step_limit)),
-                axis=alt.Axis(format='~s', title="M steps", grid=False)),
-        y=alt.Y("mean(value)",
                 axis=alt.Axis(
                     format='~s',
-                    title="Avg Return / Epis",
+                    title="M steps",
+                    grid=False)),
+        y=alt.Y("mean(value)",
+                axis=alt.Axis(
+                    # format='~s',
+                    title=f"Avg {fig_title_abbr} / Epis",
                     grid=False)),
         color=alt.Color("alpha",
                         legend=alt.Legend(
-                            title=f"Avg Return on {DOMAIN_ABBR[domain_name]}",
+                            title=f"Avg {fig_title_abbr} on {DOMAIN_ABBR[domain_name]}",
                             orient='none',
                             direction='horizontal',
                             legendX=-10, legendY=-35,
@@ -301,56 +304,60 @@ def draw_dds(dds, nnn, fig_path, tags):
     # )
 
 curves("sokoban",
-                alphas=[
-                    "no_shielding",
-                    "hard_shielding",
-                    "alpha_0.3",
-                    "vsrl"
-                ],
-                curve_type=TAGS[1], # violation_curves
-                names=ALPHA_NAMES_LEARNING_CURVES,
-                step_limit=5,
-                fig_title="violation_curves"
+        alphas=[
+            "no_shielding",
+            "hard_shielding",
+            "alpha_0.3",
+            "vsrl"
+        ],
+        curve_type=TAGS[1], # violation_curves
+        names=ALPHA_NAMES_LEARNING_CURVES,
+        step_limit=5,
+        fig_title="violation_curves",
+        fig_title_abbr="Violation"
                 )
 
 curves("goal_finding",
-                alphas=[
-                    "no_shielding",
-                    "hard_shielding",
-                    "alpha_0.3",
-                    "vsrl"
-                ],
-                curve_type=TAGS[0], # violation_curves
-                names=ALPHA_NAMES_LEARNING_CURVES,
-                step_limit=1,
-                fig_title="violation_curves"
-                )
+        alphas=[
+            "no_shielding",
+            "hard_shielding",
+            "alpha_0.3",
+            "vsrl"
+        ],
+        curve_type=TAGS[1], # violation_curves
+        names=ALPHA_NAMES_LEARNING_CURVES,
+        step_limit=1,
+        fig_title="violation_curves",
+        fig_title_abbr="Violation"
+        )
 
 # curves("sokoban",
-#                 alphas=[
-#                     "no_shielding",
-#                     "hard_shielding",
-#                     "alpha_0.3",
-#                     "vsrl"
-#                 ],
-#                 curve_type=TAGS[0], # learning_curves
-#                 names=ALPHA_NAMES_LEARNING_CURVES,
-#                 step_limit=5,
-#                 fig_title="learning_curves"
-#                 )
+#         alphas=[
+#             "no_shielding",
+#             "hard_shielding",
+#             "alpha_0.3",
+#             "vsrl"
+#         ],
+#         curve_type=TAGS[0], # learning_curves
+#         names=ALPHA_NAMES_LEARNING_CURVES,
+#         step_limit=5,
+#         fig_title="learning_curves",
+#         fig_title_abbr="Return"
+#         )
 #
 # curves("goal_finding",
-#                 alphas=[
-#                     "no_shielding",
-#                     "hard_shielding",
-#                     "alpha_0.3",
-#                     "vsrl"
-#                 ],
-#                 curve_type=TAGS[0], # learning_curves
-#                 names=ALPHA_NAMES_LEARNING_CURVES,
-#                 step_limit=1,
-#                 fig_title="learning_curves"
-#                 )
+#         alphas=[
+#             "no_shielding",
+#             "hard_shielding",
+#             "alpha_0.3",
+#             "vsrl"
+#         ],
+#         curve_type=TAGS[0], # learning_curves
+#         names=ALPHA_NAMES_LEARNING_CURVES,
+#         step_limit=1,
+#         fig_title="learning_curves",
+#         fig_title_abbr="Return"
+#         )
 
 # diff_non_diff_new(["goal_finding", "sokoban"])
 # many_alpha_new(["goal_finding", "sokoban"])
