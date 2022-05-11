@@ -182,7 +182,7 @@ def learning_curves(domain_name, alphas, names):
 
     df_main = pd.concat(df_list)
     df_main["step"] = df_main["step"] / 1000000
-    fig_path = os.path.join(domain, f"{name}_learning_curves.svg")
+    fig_path = os.path.join(domain, f"{domain_name}_learning_curves.svg")
 
     line = alt.Chart(df_main).mark_line().encode(
         x=alt.X("step",
