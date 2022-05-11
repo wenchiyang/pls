@@ -46,7 +46,7 @@ ALPHA_NAMES = {
 }
 ALPHA_NAMES_LEARNING_CURVES = {
     "no_shielding": "PPO",
-    "hard_shielding": "PLS",
+    "hard_shielding": "PLS BASE",
     "alpha_0.1": "PLS",
     "alpha_0.3": "PLS",
     "alpha_0.5": "PLS",
@@ -178,6 +178,9 @@ def learning_curves(domain_name, alphas, names, step_limit):
             df = load_dataframe(path, TAGS[0], smooth=True)
             df["seed"] = seed
             df["alpha"] = names[alpha]
+            if alpha == "vsrl":
+                # take only 1M steps
+                df = df.drop(df[df.step > 1000000].index)
             df_list.append(df[["value", "step", "seed", "alpha"]])
 
     df_main = pd.concat(df_list)
@@ -211,8 +214,8 @@ def learning_curves(domain_name, alphas, names, step_limit):
         color="alpha"
     )
     c = line + band
-    # c.show()
-    c.save(fig_path)
+    c.show()
+    # c.save(fig_path)
 
 # def many_alpha():
 #     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -337,28 +340,25 @@ learning_curves("sokoban",
                 alphas=[
                     "no_shielding",
                     "hard_shielding",
-                    "alpha_0.1",
                     "alpha_0.3",
-                    "alpha_0.5",
-                    "alpha_0.7",
-                    "alpha_0.9",
                     "vsrl"
                 ],
-                names=ALPHA_NAMES,
+                # names=ALPHA_NAMES,
+                names=ALPHA_NAMES_LEARNING_CURVES,
                 step_limit=5
-                # names=ALPHA_NAMES_LEARNING_CURVES
                 )
-# some dask computation
-# learning_curves("goal_finding",
-#                 alphas=[
-#                     "no_shielding",
-#                     "alpha_0.3",
-#                     "vsrl"
-#                 ],
-#                 # names=ALPHA_NAMES
-#                 names=ALPHA_NAMES_LEARNING_CURVES,
-#                 step_limit=1
-#                 )
+
+learning_curves("goal_finding",
+                alphas=[
+                    "no_shielding",
+                    "hard_shielding",
+                    "alpha_0.3",
+                    "vsrl"
+                ],
+                # names=ALPHA_NAMES
+                names=ALPHA_NAMES_LEARNING_CURVES,
+                step_limit=1
+                )
 # diff_non_diff_new(["goal_finding", "sokoban"])
 # many_alpha_new(["goal_finding", "sokoban"])
 
