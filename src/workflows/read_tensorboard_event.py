@@ -205,8 +205,8 @@ def learning_curves(domain_name, alphas, names, step_limit):
                             titleAnchor='middle'
                         ))
     ).properties(
-            width=400, #200
-            height=400 #100
+            width=200,
+            height=100
         )
     band = alt.Chart(df_main).mark_errorband(extent='ci').encode(
         x=alt.X("step"),
@@ -214,8 +214,8 @@ def learning_curves(domain_name, alphas, names, step_limit):
         color="alpha"
     )
     c = line + band
-    c.show()
-    # c.save(fig_path)
+    # c.show()
+    c.save(fig_path)
 
 # def many_alpha():
 #     dir_path = os.path.dirname(os.path.realpath(__file__))
