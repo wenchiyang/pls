@@ -66,7 +66,7 @@ TAGS = [
     # "safety/ep_abs_safety_impr",
     # "safety/n_deaths"
 ]
-SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"] 
+SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
 # SEEDS = ["seed1"]
 
 def load_dataframe_from_file(path, tag):
@@ -336,17 +336,17 @@ def draw_dds(dds, nnn, fig_path, tags):
     # )
 
 
-# learning_curves("sokoban",
-#                 alphas=[
-#                     "no_shielding",
-#                     "hard_shielding",
-#                     "alpha_0.3",
-#                     "vsrl"
-#                 ],
-#                 # names=ALPHA_NAMES,
-#                 names=ALPHA_NAMES_LEARNING_CURVES,
-#                 step_limit=5
-#                 )
+learning_curves("sokoban",
+                alphas=[
+                    "no_shielding",
+                    "hard_shielding",
+                    "alpha_0.3",
+                    "vsrl"
+                ],
+                # names=ALPHA_NAMES,
+                names=ALPHA_NAMES_LEARNING_CURVES,
+                step_limit=5
+                )
 
 learning_curves("goal_finding",
                 alphas=[
