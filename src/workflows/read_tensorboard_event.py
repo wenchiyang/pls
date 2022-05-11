@@ -167,7 +167,7 @@ def draw(dd, fig_path):
     c = charts[0] | charts[1] | charts[2]
     c.show()
 
-def learning_curves(domain_name, alphas, names, step_limit):
+def curves(domain_name, curve_type, alphas, names, step_limit, fig_title):
     domain = NAMES[domain_name]
 
     df_list = []
@@ -175,7 +175,7 @@ def learning_curves(domain_name, alphas, names, step_limit):
         folder = os.path.join(domain, alpha)
         for seed in SEEDS:
             path = os.path.join(folder, seed)
-            df = load_dataframe(path, TAGS[0], smooth=True)
+            df = load_dataframe(path, curve_type, smooth=True)
             df["seed"] = seed
             df["alpha"] = names[alpha]
             if alpha == "vsrl":
@@ -185,7 +185,7 @@ def learning_curves(domain_name, alphas, names, step_limit):
 
     df_main = pd.concat(df_list)
     df_main["step"] = df_main["step"] / 1000000
-    fig_path = os.path.join(domain, f"{domain_name}_learning_curves.svg")
+    fig_path = os.path.join(domain, f"{domain_name}_{fig_title}.svg")
 
     line = alt.Chart(df_main).mark_line().encode(
         x=alt.X("step",
@@ -217,41 +217,6 @@ def learning_curves(domain_name, alphas, names, step_limit):
     # c.show()
     c.save(fig_path)
 
-# def many_alpha():
-#     dir_path = os.path.dirname(os.path.realpath(__file__))
-#     domain = os.path.join(
-#         dir_path,
-#         "../..",
-#         "experiments_trials2",
-#         "goal_finding",
-#         "smallGrid"
-#         # "sokoban",
-#         # "2box10map",
-#     )
-#     alpha = []
-#     dd = load_single_values(
-#         domain = domain,
-#         alphas = alpha,
-#         steps=1_000_000,
-#         norm={"low": -25, "high": 0}
-#     )
-#
-#     fig_path = os.path.join(domain, "exp.svg")
-#     draw(dd, fig_path)
-
-# def diff_non_diff(name):
-#     domain = NAMES[name]
-#     norm = NORMS[name]
-#     alpha = ["no_shielding", "vsrl", "hard_shielding"]
-#     # alpha = ["no_shielding", "no_shielding"]
-#     dd = load_single_values(
-#         domain=domain,
-#         alphas=alpha,
-#         steps=500_000,
-#         norm=norm
-#     )
-#     fig_path = os.path.join(domain, f"{name}_diff_non_diff.svg")
-#     draw(dd, fig_path)
 
 def diff_non_diff_new(nnn):
     dds=[]
@@ -335,30 +300,58 @@ def draw_dds(dds, nnn, fig_path, tags):
     #     height=240
     # )
 
-
-learning_curves("sokoban",
+curves("sokoban",
                 alphas=[
                     "no_shielding",
                     "hard_shielding",
                     "alpha_0.3",
                     "vsrl"
                 ],
-                # names=ALPHA_NAMES,
+                curve_type=TAGS[1], # violation_curves
                 names=ALPHA_NAMES_LEARNING_CURVES,
-                step_limit=5
+                step_limit=5,
+                fig_title="violation_curves"
                 )
 
-learning_curves("goal_finding",
+curves("goal_finding",
                 alphas=[
                     "no_shielding",
                     "hard_shielding",
                     "alpha_0.3",
                     "vsrl"
                 ],
-                # names=ALPHA_NAMES
+                curve_type=TAGS[0], # violation_curves
                 names=ALPHA_NAMES_LEARNING_CURVES,
-                step_limit=1
+                step_limit=1,
+                fig_title="violation_curves"
                 )
+
+# curves("sokoban",
+#                 alphas=[
+#                     "no_shielding",
+#                     "hard_shielding",
+#                     "alpha_0.3",
+#                     "vsrl"
+#                 ],
+#                 curve_type=TAGS[0], # learning_curves
+#                 names=ALPHA_NAMES_LEARNING_CURVES,
+#                 step_limit=5,
+#                 fig_title="learning_curves"
+#                 )
+#
+# curves("goal_finding",
+#                 alphas=[
+#                     "no_shielding",
+#                     "hard_shielding",
+#                     "alpha_0.3",
+#                     "vsrl"
+#                 ],
+#                 curve_type=TAGS[0], # learning_curves
+#                 names=ALPHA_NAMES_LEARNING_CURVES,
+#                 step_limit=1,
+#                 fig_title="learning_curves"
+#                 )
+
 # diff_non_diff_new(["goal_finding", "sokoban"])
 # many_alpha_new(["goal_finding", "sokoban"])
 
