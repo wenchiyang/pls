@@ -5,13 +5,13 @@ import altair as alt
 from altair import Column
 import numpy as np
 
-# dir_path = os.path.dirname(os.path.realpath(__file__))
-# domain_goal_finidng = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "goal_finding", "7grid5g"))
-# domain_sokoban = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "sokoban", "2box10map",))
+dir_path = os.path.dirname(os.path.realpath(__file__))
+domain_goal_finidng = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "goal_finding", "7grid5g"))
+domain_sokoban = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "sokoban", "2box10map",))
 
-dir_path = "/cw/dtaijupiter/NoCsBack/dtai/wenchi/NeSyProject/experiments_trials3"
-domain_goal_finidng = os.path.join(dir_path, "goal_finding", "7grid5g")
-domain_sokoban = os.path.join(dir_path, "sokoban", "2box10map")
+# dir_path = "/cw/dtaijupiter/NoCsBack/dtai/wenchi/NeSyProject/experiments_trials3"
+# domain_goal_finidng = os.path.join(dir_path, "goal_finding", "7grid5g")
+# domain_sokoban = os.path.join(dir_path, "sokoban", "2box10map")
 
 NAMES = {
     "sokoban": domain_sokoban,
@@ -66,8 +66,8 @@ TAGS = [
     # "safety/ep_abs_safety_impr",
     # "safety/n_deaths"
 ]
-# SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
-SEEDS = ["seed1", "seed2"]
+SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
+# SEEDS = ["seed1", "seed2"]
 
 def load_dataframe_from_file(path, tag):
     ea = event_accumulator.EventAccumulator(path)
@@ -182,7 +182,7 @@ def learning_curves(domain_name, alphas, names):
 
     df_main = pd.concat(df_list)
     df_main["step"] = df_main["step"] / 1000000
-    # fig_path = os.path.join(domain, f"{name}_learning_curves.svg")
+    fig_path = os.path.join(domain, f"{name}_learning_curves.svg")
 
     line = alt.Chart(df_main).mark_line().encode(
         x=alt.X("step",
@@ -211,8 +211,8 @@ def learning_curves(domain_name, alphas, names):
         color="alpha"
     )
     c = line + band
-    c.show()
-    # c.save(fig_path)
+    # c.show()
+    c.save(fig_path)
 
 # def many_alpha():
 #     dir_path = os.path.dirname(os.path.realpath(__file__))
