@@ -7,19 +7,20 @@
   "env_features": {
     "render": false,
     "num_maps": 1,
-    "seed": 567
+    "seed": 567,
+    "num_stacked_img": 4
   },
 
   "model_features": {
     "name": "hard_shielding",
     "params": {
       "log_interval": 1,
-      "batch_size": 128,
+      "batch_size": 512,
       "n_epochs": 15,
-      "n_steps": 2048,
+      "n_steps": 4096,
       "learning_rate": 0.001,
       "seed": 567,
-      "clip_range": 0.2,
+      "clip_range": 0.1,
       "gamma": 0.99,
       "step_limit": 1000000,
       "program_type": "carracing_grass",

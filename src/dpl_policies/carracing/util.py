@@ -257,11 +257,14 @@ def get_ground_truth_of_box(
 
     return res2
 
-# is_grass = lambda x: 160 < x < 180 or x < 90
-# is_road = lambda x: 100 < x < 145
+MY_BAR_COLOR =   1
+MY_GRASS_COLOR = 0.6
+MY_ROAD_COLOR =  -0.1
+MY_CAR_COLOR =   1
 
-is_grass = lambda x: th.logical_or(th.logical_and(0.25 < x, x < 0.28), x < -0.9)
-is_road = lambda x: th.logical_and(-0.3 < x, x < 0.1)
+
+is_grass = lambda x: x > 0
+is_road = lambda x: th.logical_and(-0.15 < x, x < -0.05)
 
 
 def is_all_grass(
@@ -270,8 +273,8 @@ def is_all_grass(
     arr = th.tensor(input)
     image = arr[:, 0:84, :]
     mean_color = th.mean(image)
-    is_grass(mean_color)
-    return is_grass(mean_color)
+
+    return mean_color > 0.55
 
 def get_ground_truth_of_grass(
     input
@@ -292,13 +295,17 @@ def get_ground_truth_of_grass(
     left = th.mean(arr[:, 70:71, 44:45], dim=(1, 2))
     right = th.mean(arr[:, 70:71, 51:52], dim=(1, 2))
     top = th.mean(arr[:, 64:65, 47:49], dim=(1, 2))
-    try:
-        assert th.all(th.logical_or(is_grass(left), is_road(left)))
-        assert th.all(th.logical_or(is_grass(right), is_road(right)))
-        assert th.all(th.logical_or(is_grass(top), is_road(top)))
-    except AssertionError:
-        print("AssertionError, get_ground_truth_of_grass failed.")
-        print(left, right, top)
+    assert th.all(th.logical_or(is_grass(left), is_road(left))), f"left: {left}"
+    assert th.all(th.logical_or(is_grass(right), is_road(right))), f"right: {right}"
+    assert th.all(th.logical_or(is_grass(top), is_road(top))), f"top: {top}"
+
+    # try:
+    #     assert th.all(th.logical_or(is_grass(left), is_road(left))), f"left: {left}"
+    #     assert th.all(th.logical_or(is_grass(right), is_road(right))), f"right: {right}"
+    #     assert th.all(th.logical_or(is_grass(top), is_road(top))), f"top: {top}"
+    # except AssertionError:
+    #     print("AssertionError, get_ground_truth_of_grass failed.")
+    #     print(left, right, top)
     sym_state = is_grass(th.stack((top, left, right), dim=1)).float()
 
     return sym_state
