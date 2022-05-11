@@ -5,3 +5,4 @@ model
 *.p
 *.pyc
 event*
+log*
