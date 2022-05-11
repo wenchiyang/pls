@@ -7,7 +7,7 @@ import numpy as np
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 domain_goal_finidng = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "goal_finding", "7grid5g"))
-domain_sokoban = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "sokoban", "2box10map",))
+domain_sokoban = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "sokoban", "2box10map_long"))
 
 # dir_path = "/cw/dtaijupiter/NoCsBack/dtai/wenchi/NeSyProject/experiments_trials3"
 # domain_goal_finidng = os.path.join(dir_path, "goal_finding", "7grid5g")
@@ -167,7 +167,7 @@ def draw(dd, fig_path):
     c = charts[0] | charts[1] | charts[2]
     c.show()
 
-def learning_curves(domain_name, alphas, names):
+def learning_curves(domain_name, alphas, names, step_limit):
     domain = NAMES[domain_name]
 
     df_list = []
@@ -186,7 +186,7 @@ def learning_curves(domain_name, alphas, names):
 
     line = alt.Chart(df_main).mark_line().encode(
         x=alt.X("step",
-                scale=alt.Scale(domain=(0, 1)),
+                scale=alt.Scale(domain=(0, step_limit)),
                 axis=alt.Axis(format='~s', title="M steps", grid=False)),
         y=alt.Y("mean(value)",
                 axis=alt.Axis(
@@ -202,8 +202,8 @@ def learning_curves(domain_name, alphas, names):
                             titleAnchor='middle'
                         ))
     ).properties(
-            width=200,
-            height=100
+            width=400, #200
+            height=400 #100
         )
     band = alt.Chart(df_main).mark_errorband(extent='ci').encode(
         x=alt.X("step"),
@@ -344,19 +344,21 @@ learning_curves("sokoban",
                     "alpha_0.9",
                     "vsrl"
                 ],
-                names=ALPHA_NAMES
+                names=ALPHA_NAMES,
+                step_limit=5
                 # names=ALPHA_NAMES_LEARNING_CURVES
                 )
 # some dask computation
-learning_curves("goal_finding",
-                alphas=[
-                    "no_shielding",
-                    "alpha_0.3",
-                    "vsrl"
-                ],
-                # names=ALPHA_NAMES
-                names=ALPHA_NAMES_LEARNING_CURVES
-                )
+# learning_curves("goal_finding",
+#                 alphas=[
+#                     "no_shielding",
+#                     "alpha_0.3",
+#                     "vsrl"
+#                 ],
+#                 # names=ALPHA_NAMES
+#                 names=ALPHA_NAMES_LEARNING_CURVES,
+#                 step_limit=1
+#                 )
 # diff_non_diff_new(["goal_finding", "sokoban"])
 # many_alpha_new(["goal_finding", "sokoban"])
 
