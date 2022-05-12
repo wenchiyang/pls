@@ -392,22 +392,22 @@ def plot_bar_chart(dds, domain_names, fig_path, tags):
 #         step_limit=1,
 #         fig_title="violation_curves",
 #         fig_title_abbr="Violation")
-# curves("carracing",
-#         alphas=[
-#             "no_shielding",
-#             "hard_shielding",
-#             "alpha_0.1",
-#             "alpha_0.3",
-#             "alpha_0.5",
-#             "alpha_0.7",
-#             "alpha_0.9",
-#             "vsrl"
-#         ],
-#         curve_type=TAGS[1], # violation_curves
-#         names=ALPHA_NAMES,
-#         step_limit=1,
-#         fig_title="violation_curves",
-#         fig_title_abbr="Violation")
+curves("carracing",
+        alphas=[
+            "no_shielding",
+            "hard_shielding",
+            "alpha_0.1",
+            # "alpha_0.3",
+            # "alpha_0.5",
+            # "alpha_0.7",
+            # "alpha_0.9",
+            "vsrl"
+        ],
+        curve_type=TAGS[1], # violation_curves
+        names=ALPHA_NAMES_LEARNING_CURVES,
+        step_limit=1,
+        fig_title="violation_curves",
+        fig_title_abbr="Violation")
 
 # curves("sokoban",
 #         alphas=[
@@ -439,14 +439,14 @@ curves("carracing",
             "no_shielding",
             "hard_shielding",
             "alpha_0.1",
-            "alpha_0.3",
-            "alpha_0.5",
-            "alpha_0.7",
-            "alpha_0.9",
+            # "alpha_0.3",
+            # "alpha_0.5",
+            # "alpha_0.7",
+            # "alpha_0.9",
             "vsrl"
         ],
         curve_type=TAGS[0], # learning_curves
-        names=ALPHA_NAMES, # ALPHA_NAMES_LEARNING_CURVES
+        names=ALPHA_NAMES_LEARNING_CURVES, # ALPHA_NAMES_LEARNING_CURVES
         step_limit=1,
         fig_title="learning_curves",
         fig_title_abbr="Return")
