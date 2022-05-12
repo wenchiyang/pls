@@ -21,7 +21,7 @@ DOMAIN_ABBR= {
     "sokoban": "Sokoban",
     "goal_finding": "GF"
 }
-NORMS = {
+NORMS_REW = {
     "sokoban": {"low": -12, "high": 12},
     "goal_finding": {"low": -10, "high": 10}
 }
@@ -55,9 +55,9 @@ ALPHA_NAMES_LEARNING_CURVES = {
     "vsrl": "VSRL"
 }
 NEW_TAGS = [
-    "reward",
-    "constraint satisfiability",
-    "accepted samples"
+    "Return",
+    "Safety",
+    "Rejected Samples"
 ]
 TAGS = [
     "rollout/ep_rew_mean",
@@ -102,6 +102,11 @@ def load_dataframe(folder, tag, smooth=True):
         if smooth:
             df = smooth_dataframe(df, tsboard_smoothing=0.95)
         return df
+
+def load_step_value(folder, tag, n_step):
+    df = load_dataframe(folder, tag)
+    value = get_step_value_in_dataframe(df, steps=n_step)
+    return value
 
 def load_single_value(exp, steps, norm):
     rews = []
@@ -169,7 +174,6 @@ def draw(dd, fig_path):
 
 def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_title_abbr):
     domain = NAMES[domain_name]
-
     df_list = []
     for alpha in alphas:
         folder = os.path.join(domain, alpha)
@@ -185,7 +189,6 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
 
     df_main = pd.concat(df_list)
     df_main["step"] = df_main["step"] / 1000000
-    fig_path = os.path.join(domain, f"{domain_name}_{fig_title}.svg")
 
     line = alt.Chart(df_main).mark_line().encode(
         x=alt.X("step",
@@ -218,14 +221,63 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
     )
     c = line + band
     # c.show()
+    fig_path = os.path.join(domain, f"{domain_name}_{fig_title}.svg")
+    c.save(fig_path)
+
+def safety_optimality_df(domain_name, alphas):
+    norm = NORMS_REW[domain_name]
+    domain = NAMES[domain_name]
+    data = []
+    for alpha in alphas:
+        for seed in SEEDS:
+            folder = os.path.join(domain, alpha, seed)
+            safety = load_step_value(folder, TAGS[1], n_step = 1_000_000)
+            optimality = load_step_value(folder, TAGS[0], n_step = 1_000_000)
+            safety = normalize_vio(safety)
+            optimality = normalize_rew(optimality, norm)
+            data.append([ALPHA_NAMES[alpha], seed, safety, optimality])
+    df = pd.DataFrame(data, columns=["alpha", "seed", "safety", "optimality"])
+    return df
+
+def safety_optimality_draw(domain_name):
+    alphas = ["no_shielding", "alpha_0.1", "alpha_0.3", "alpha_0.5", "alpha_0.7", "alpha_0.9", "hard_shielding"]
+    df = safety_optimality_df(domain_name, alphas)
+    c = alt.Chart(df, title=f"Safety-Return on {DOMAIN_ABBR[domain_name]}").mark_point().encode(
+        x=alt.X("safety",
+                scale=alt.Scale(domain=(0, 1)),
+                axis=alt.Axis(
+                    format='~s',
+                    title="Safety",
+                    grid=False)),
+        y=alt.Y("optimality", title=None,
+                scale=alt.Scale(domain=(0, 1)),
+                axis=alt.Axis(
+                    format='~s',
+                    title="Return",
+                    grid=False)),
+        color=alt.Color("alpha",
+                        legend=alt.Legend(
+                            title=f"alpha",
+                            orient='none',
+                            # direction='horizontal',
+                            legendX=10, legendY=100,
+                            # titleAnchor='middle'
+                        )),
+    ).properties(
+        width=200,
+        height=200
+    )
+    # c.show()
+    fig_path = os.path.join(NAMES[domain_name], f"{domain_name}_safety_return.svg")
     c.save(fig_path)
 
 
-def diff_non_diff_new(nnn):
+
+def diff_non_diff_new(domain_names):
     dds=[]
-    for name in nnn:
+    for name in domain_names:
         domain = NAMES[name]
-        norm = NORMS[name]
+        norm = NORMS_REW[name]
         alpha = ["no_shielding", "vsrl", "hard_shielding"]
         # alpha = ["no_shielding", "no_shielding"]
         dd = load_single_values(
@@ -238,13 +290,14 @@ def diff_non_diff_new(nnn):
         dds.append(dd)
     fig_path = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "results.svg"))
     # fig_path = os.path.join(domain, f"{name}_diff_non_diff.svg")
-    draw_dds(dds, nnn, fig_path, NEW_TAGS)
+    plot_bar_chart(dds, domain_names, fig_path, NEW_TAGS)
 
-def many_alpha_new(nnn):
+
+def many_alpha_new(domain_names):
     dds=[]
-    for name in nnn:
+    for name in domain_names:
         domain = NAMES[name]
-        norm = NORMS[name]
+        norm = NORMS_REW[name]
         alpha = [
             "no_shielding",
             "alpha_0.1",
@@ -263,15 +316,16 @@ def many_alpha_new(nnn):
         )
         dds.append(dd)
     fig_path = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "alpha.svg"))
-    draw_dds(dds, nnn, fig_path, NEW_TAGS[:2])
+    plot_bar_chart(dds, domain_names, fig_path, NEW_TAGS[:2])
 
-def draw_dds(dds, nnn, fig_path, tags):
+
+def plot_bar_chart(dds, domain_names, fig_path, tags):
     charts = []
     for i in range(len(tags)):
         datas = []
         for j,dd in enumerate(dds):
             data = make_df(dd, x_title="alpha", y_key=NEW_TAGS[i])
-            data["domain"] = DOMAIN_NAMES[nnn[j]]
+            data["domain"] = DOMAIN_NAMES[domain_names[j]]
             datas.append(data)
         dataframmm = pd.concat(datas)
         c = alt.Chart(dataframmm, title="").mark_bar().encode(
@@ -293,43 +347,37 @@ def draw_dds(dds, nnn, fig_path, tags):
         )
     # c.show()
     c.save(fig_path)
-    # data = make_df(dd, x_title="alpha")
-    # c = alt.Chart(data, title=NEW_TAGS).mark_bar().encode(
-    #     x=alt.X("alpha", sort=list(dd.keys())),
-    #     y=alt.Y(NEW_TAGS, title="", scale=alt.Scale(domain=(0, 1))),
-    #     color="alpha"
-    # ).properties(
-    #     width=120,
-    #     height=240
-    # )
 
-curves("sokoban",
-        alphas=[
-            "no_shielding",
-            "hard_shielding",
-            "alpha_0.3",
-            "vsrl"
-        ],
-        curve_type=TAGS[1], # violation_curves
-        names=ALPHA_NAMES_LEARNING_CURVES,
-        step_limit=5,
-        fig_title="violation_curves",
-        fig_title_abbr="Violation"
-                )
+# SEEDS = ["seed1", "seed2"]
+safety_optimality_draw("goal_finding")
+# diff_non_diff_new(["goal_finding", "sokoban"])
 
-curves("goal_finding",
-        alphas=[
-            "no_shielding",
-            "hard_shielding",
-            "alpha_0.3",
-            "vsrl"
-        ],
-        curve_type=TAGS[1], # violation_curves
-        names=ALPHA_NAMES_LEARNING_CURVES,
-        step_limit=1,
-        fig_title="violation_curves",
-        fig_title_abbr="Violation"
-        )
+
+# curves("sokoban",
+#         alphas=[
+#             "no_shielding",
+#             "hard_shielding",
+#             "alpha_0.3",
+#             "vsrl"
+#         ],
+#         curve_type=TAGS[1], # violation_curves
+#         names=ALPHA_NAMES_LEARNING_CURVES,
+#         step_limit=5,
+#         fig_title="violation_curves",
+#         fig_title_abbr="Violation")
+#
+# curves("goal_finding",
+#         alphas=[
+#             "no_shielding",
+#             "hard_shielding",
+#             "alpha_0.3",
+#             "vsrl"
+#         ],
+#         curve_type=TAGS[1], # violation_curves
+#         names=ALPHA_NAMES_LEARNING_CURVES,
+#         step_limit=1,
+#         fig_title="violation_curves",
+#         fig_title_abbr="Violation")
 
 # curves("sokoban",
 #         alphas=[
@@ -342,8 +390,7 @@ curves("goal_finding",
 #         names=ALPHA_NAMES_LEARNING_CURVES,
 #         step_limit=5,
 #         fig_title="learning_curves",
-#         fig_title_abbr="Return"
-#         )
+#         fig_title_abbr="Return")
 #
 # curves("goal_finding",
 #         alphas=[
@@ -356,10 +403,9 @@ curves("goal_finding",
 #         names=ALPHA_NAMES_LEARNING_CURVES,
 #         step_limit=1,
 #         fig_title="learning_curves",
-#         fig_title_abbr="Return"
-#         )
+#         fig_title_abbr="Return")
 
-# diff_non_diff_new(["goal_finding", "sokoban"])
+
 # many_alpha_new(["goal_finding", "sokoban"])
 
 
