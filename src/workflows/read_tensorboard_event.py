@@ -348,12 +348,18 @@ def plot_bar_chart(dds, domain_names, fig_path, tags):
     # c.show()
     c.save(fig_path)
 
-SEEDS = ["seed1", "seed2"]
+# SEEDS = ["seed1", "seed2"]
 safety_optimality_draw(
     "goal_finding",
     n_step=1_000_000,
     x_axis_range=(0.5, 1),
     y_axis_range=(0.7, 1)
+)
+safety_optimality_draw(
+    "sokoban",
+    n_step=5_000_000,
+    x_axis_range=(0.0, 1),
+    y_axis_range=(0.0, 1)
 )
 # diff_non_diff_new(["goal_finding", "sokoban"])
 
