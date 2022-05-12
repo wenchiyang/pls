@@ -262,7 +262,8 @@ def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
                             # direction='horizontal',
                             legendX=10, legendY=70,
                             # titleAnchor='middle'
-                        )),
+                        ),
+                        scale=alt.Scale(scheme='redblue')),
     ).properties(
         width=200,
         height=200
@@ -358,8 +359,8 @@ safety_optimality_draw(
 safety_optimality_draw(
     "sokoban",
     n_step=5_000_000,
-    x_axis_range=(0.0, 1),
-    y_axis_range=(0.0, 1)
+    x_axis_range=(0.3, 1),
+    y_axis_range=(0.0, 0.6)
 )
 # diff_non_diff_new(["goal_finding", "sokoban"])
 
