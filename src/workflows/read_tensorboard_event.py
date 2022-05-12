@@ -8,6 +8,7 @@ import numpy as np
 dir_path = os.path.dirname(os.path.realpath(__file__))
 domain_goal_finidng = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "goal_finding", "7grid5g"))
 domain_sokoban = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "sokoban", "2box10map_long"))
+domain_carracing = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "carracing", "onemap"))
 
 # dir_path = "/cw/dtaijupiter/NoCsBack/dtai/wenchi/NeSyProject/experiments_trials3"
 # domain_goal_finidng = os.path.join(dir_path, "goal_finding", "7grid5g")
@@ -15,19 +16,18 @@ domain_sokoban = os.path.abspath(os.path.join(dir_path, "../..", "experiments_tr
 
 NAMES = {
     "sokoban": domain_sokoban,
-    "goal_finding": domain_goal_finidng
+    "goal_finding": domain_goal_finidng,
+    "carracing": domain_carracing
 }
 DOMAIN_ABBR= {
     "sokoban": "Sokoban",
-    "goal_finding": "GF"
+    "goal_finding": "GF",
+    "carracing": "CR"
 }
 NORMS_REW = {
     "sokoban": {"low": -12, "high": 12},
-    "goal_finding": {"low": -10, "high": 10}
-}
-DOMAIN_NAMES = {
-    "sokoban": "sokoban",
-    "goal_finding": "goal finding"
+    "goal_finding": {"low": -10, "high": 10},
+    "carracing": {"low": -50, "high": 900}
 }
 ALPHA_NAMES_DIFF = {
     "vsrl": "VSRL",
@@ -211,8 +211,8 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
                             titleAnchor='middle'
                         ))
     ).properties(
-            width=200,
-            height=100
+            width=200, #200
+            height=600 #100
         )
     band = alt.Chart(df_main).mark_errorband(extent='ci').encode(
         x=alt.X("step"),
@@ -326,7 +326,7 @@ def plot_bar_chart(dds, domain_names, fig_path, tags):
         datas = []
         for j,dd in enumerate(dds):
             data = make_df(dd, x_title="alpha", y_key=NEW_TAGS[i])
-            data["domain"] = DOMAIN_NAMES[domain_names[j]]
+            data["domain"] = DOMAIN_ABBR[domain_names[j]]
             datas.append(data)
         dataframmm = pd.concat(datas)
         c = alt.Chart(dataframmm, title="").mark_bar().encode(
@@ -349,7 +349,9 @@ def plot_bar_chart(dds, domain_names, fig_path, tags):
     # c.show()
     c.save(fig_path)
 
-# SEEDS = ["seed1", "seed2"]
+
+
+
 safety_optimality_draw(
     "goal_finding",
     n_step=1_000_000,
@@ -362,7 +364,7 @@ safety_optimality_draw(
     x_axis_range=(0.3, 1),
     y_axis_range=(0.0, 0.6)
 )
-# diff_non_diff_new(["goal_finding", "sokoban"])
+
 
 
 # curves("sokoban",
@@ -416,8 +418,24 @@ safety_optimality_draw(
 #         step_limit=1,
 #         fig_title="learning_curves",
 #         fig_title_abbr="Return")
-
+SEEDS = ["seed2", "seed3"]
+curves("carracing",
+        alphas=[
+            "no_shielding",
+            "hard_shielding",
+            "alpha_0.1",
+            "alpha_0.3",
+            "alpha_0.5",
+            "alpha_0.7",
+            "alpha_0.9",
+            "vsrl"
+        ],
+        curve_type=TAGS[0], # learning_curves
+        names=ALPHA_NAMES_LEARNING_CURVES,
+        step_limit=1,
+        fig_title="learning_curves",
+        fig_title_abbr="Return")
 
 # many_alpha_new(["goal_finding", "sokoban"])
-
+# diff_non_diff_new(["goal_finding", "sokoban"])
 
