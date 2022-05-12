@@ -24,6 +24,7 @@ from deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
 from dpl_policies.carracing.util import get_ground_truth_of_grass, is_all_grass
 from os import path
 import pickle
+from random import random
 
 
 #
@@ -105,13 +106,22 @@ class Carracing_Monitor(Monitor):
         if self.needs_reset:
             raise RuntimeError("Tried to step environment that needs reset")
         observation, reward, done, info = self.env.step(action)
-
+        if reward > 0:
+            ran = random()
+            print(reward)
+            if ran > 0.9:
+                self.rewards.append(reward)
+            else:
+                self.rewards.append(-0.1)
+        else:
+            self.rewards.append(reward)
         # symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
         # violate_constraint = th.all(symbolic_state)
-        all_green = is_all_grass(observation)
-        if all_green: # green penalty
-            reward -= 0.05
-        self.rewards.append(reward)
+        # TODO: No green panalty
+        # all_green = is_all_grass(observation)
+        # if all_green: # green penalty
+        #     reward -= 0.05
+        # self.rewards.append(reward)
 
         if done:
             self.needs_reset = True
