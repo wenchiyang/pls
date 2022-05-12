@@ -224,33 +224,33 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
     fig_path = os.path.join(domain, f"{domain_name}_{fig_title}.svg")
     c.save(fig_path)
 
-def safety_optimality_df(domain_name, alphas):
+def safety_optimality_df(domain_name, alphas, n_step):
     norm = NORMS_REW[domain_name]
     domain = NAMES[domain_name]
     data = []
     for alpha in alphas:
         for seed in SEEDS:
             folder = os.path.join(domain, alpha, seed)
-            safety = load_step_value(folder, TAGS[1], n_step = 1_000_000)
-            optimality = load_step_value(folder, TAGS[0], n_step = 1_000_000)
+            safety = load_step_value(folder, TAGS[1], n_step)
+            optimality = load_step_value(folder, TAGS[0], n_step)
             safety = normalize_vio(safety)
             optimality = normalize_rew(optimality, norm)
             data.append([ALPHA_NAMES[alpha], seed, safety, optimality])
     df = pd.DataFrame(data, columns=["alpha", "seed", "safety", "optimality"])
     return df
 
-def safety_optimality_draw(domain_name):
+def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
     alphas = ["no_shielding", "alpha_0.1", "alpha_0.3", "alpha_0.5", "alpha_0.7", "alpha_0.9", "hard_shielding"]
-    df = safety_optimality_df(domain_name, alphas)
+    df = safety_optimality_df(domain_name, alphas, n_step)
     c = alt.Chart(df, title=f"Safety-Return on {DOMAIN_ABBR[domain_name]}").mark_point().encode(
         x=alt.X("safety",
-                scale=alt.Scale(domain=(0, 1)),
+                scale=alt.Scale(domain=x_axis_range),
                 axis=alt.Axis(
                     format='~s',
                     title="Safety",
                     grid=False)),
         y=alt.Y("optimality", title=None,
-                scale=alt.Scale(domain=(0, 1)),
+                scale=alt.Scale(domain=y_axis_range),
                 axis=alt.Axis(
                     format='~s',
                     title="Return",
@@ -260,7 +260,7 @@ def safety_optimality_draw(domain_name):
                             title=f"alpha",
                             orient='none',
                             # direction='horizontal',
-                            legendX=10, legendY=100,
+                            legendX=10, legendY=70,
                             # titleAnchor='middle'
                         )),
     ).properties(
@@ -348,8 +348,13 @@ def plot_bar_chart(dds, domain_names, fig_path, tags):
     # c.show()
     c.save(fig_path)
 
-# SEEDS = ["seed1", "seed2"]
-safety_optimality_draw("goal_finding")
+SEEDS = ["seed1", "seed2"]
+safety_optimality_draw(
+    "goal_finding",
+    n_step=1_000_000,
+    x_axis_range=(0.5, 1),
+    y_axis_range=(0.7, 1)
+)
 # diff_non_diff_new(["goal_finding", "sokoban"])
 
 
