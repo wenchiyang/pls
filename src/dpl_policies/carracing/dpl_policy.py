@@ -108,7 +108,7 @@ class Carracing_Monitor(Monitor):
         observation, reward, done, info = self.env.step(action)
         if reward > 0:
             ran = random()
-            print(reward)
+            # print(reward)
             if ran > 0.95:
                 self.rewards.append(reward)
             else:
