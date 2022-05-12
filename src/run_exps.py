@@ -65,19 +65,20 @@ if __name__ == "__main__":
             # "goal_finding/smallGrid100map",
             # "goal_finding/7grid5g"
             # "sokoban/3box10map"
-            "carracing/onemap"
+            # "carracing/onemap"
+            "carracing/no_green_penalty"
         ],
         "exps": [
             # "test"
             "no_shielding",
             "hard_shielding",
-            "alpha_0.1",
-            "alpha_0.3",
-            "alpha_0.5",
-            "alpha_0.7",
-            "alpha_0.9",
+            # "alpha_0.1",
+            # "alpha_0.3",
+            # "alpha_0.5",
+            # "alpha_0.7",
+            # "alpha_0.9",
             # "alpha_learned"
-            "vsrl"
+            # "vsrl"
             ],
         "seeds":
             # ["seed1", "seed2", "seed3", "seed4", "seed5"]

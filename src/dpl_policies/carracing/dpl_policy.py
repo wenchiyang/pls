@@ -109,7 +109,7 @@ class Carracing_Monitor(Monitor):
         if reward > 0:
             ran = random()
             print(reward)
-            if ran > 0.9:
+            if ran > 0.95:
                 self.rewards.append(reward)
             else:
                 self.rewards.append(-0.1)
