@@ -276,6 +276,39 @@ def is_all_grass(
 
     return mean_color > 0.55
 
+def get_ground_truth_of_grass2(
+    input
+):
+    # arr = self.env.render(mode="state_pixels")
+
+    # take only the first frame in the stack
+    arr = th.squeeze(input[:,0,:,:], dim=1)
+
+    # from matplotlib import pyplot as plt
+    # temp = arr.clone()
+    # temp[:, 70:71, 44:45] = 1  # left
+    # temp[:, 70:71, 51:52] = 1  # right
+    # temp[:, 64:65, 47:49] = 1  # top
+    # plt.imshow(temp[0], cmap=plt.get_cmap('gray'), vmin=-1, vmax=1)
+    # plt.show()
+
+    left = th.mean(arr[:, 70:71, 44:45], dim=(1, 2))
+    right = th.mean(arr[:, 70:71, 51:52], dim=(1, 2))
+    top = th.mean(arr[:, 64:65, 47:49], dim=(1, 2))
+
+
+    try:
+        assert th.all(th.logical_or(is_grass(left), is_road(left))), f"left: {left}"
+        assert th.all(th.logical_or(is_grass(right), is_road(right))), f"right: {right}"
+        assert th.all(th.logical_or(is_grass(top), is_road(top))), f"top: {top}"
+    except AssertionError:
+        pass
+        # print("AssertionError, get_ground_truth_of_grass failed.")
+        # print(left, right, top)
+    sym_state = is_grass(th.stack((top, left, right), dim=1)).float()
+
+    return sym_state
+
 def get_ground_truth_of_grass(
     input
 ):

@@ -21,7 +21,7 @@ from stable_baselines3.common.type_aliases import (
 from stable_baselines3.common.preprocessing import is_image_space
 
 from deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
-from dpl_policies.carracing.util import get_ground_truth_of_grass, is_all_grass
+from dpl_policies.carracing.util import get_ground_truth_of_grass, is_all_grass, get_ground_truth_of_grass2
 from os import path
 import pickle
 from random import random
@@ -128,7 +128,7 @@ class Carracing_Monitor(Monitor):
             ep_rew = sum(self.rewards)
             ep_len = len(self.rewards)
 
-            symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
+            symbolic_state = get_ground_truth_of_grass2(th.from_numpy(observation.copy()).unsqueeze(0))
             violate_constraint = th.all(symbolic_state)
 
             ep_info = {
