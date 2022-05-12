@@ -211,8 +211,8 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
                             titleAnchor='middle'
                         ))
     ).properties(
-            width=200, #200 # TODO
-            height=600 #100 # TODO
+            width=200, #200
+            height=100 #100 
         )
     band = alt.Chart(df_main).mark_errorband(extent='ci').encode(
         x=alt.X("step"),
