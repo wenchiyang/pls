@@ -211,8 +211,8 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
                             titleAnchor='middle'
                         ))
     ).properties(
-            width=200, #200
-            height=600 #100
+            width=200, #200 # TODO
+            height=600 #100 # TODO
         )
     band = alt.Chart(df_main).mark_errorband(extent='ci').encode(
         x=alt.X("step"),
@@ -246,13 +246,13 @@ def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
         x=alt.X("safety",
                 scale=alt.Scale(domain=x_axis_range),
                 axis=alt.Axis(
-                    format='~s',
+                    # format='~s',
                     title="Safety",
                     grid=False)),
         y=alt.Y("optimality", title=None,
                 scale=alt.Scale(domain=y_axis_range),
                 axis=alt.Axis(
-                    format='~s',
+                    # format='~s',
                     title="Return",
                     grid=False)),
         color=alt.Color("alpha",
@@ -352,18 +352,18 @@ def plot_bar_chart(dds, domain_names, fig_path, tags):
 
 
 
-safety_optimality_draw(
-    "goal_finding",
-    n_step=1_000_000,
-    x_axis_range=(0.5, 1),
-    y_axis_range=(0.7, 1)
-)
-safety_optimality_draw(
-    "sokoban",
-    n_step=5_000_000,
-    x_axis_range=(0.3, 1),
-    y_axis_range=(0.0, 0.6)
-)
+# safety_optimality_draw(
+#     "goal_finding",
+#     n_step=1_000_000,
+#     x_axis_range=(0.5, 1),
+#     y_axis_range=(0.7, 1)
+# )
+# safety_optimality_draw(
+#     "sokoban",
+#     n_step=5_000_000,
+#     x_axis_range=(0.3, 1),
+#     y_axis_range=(0.0, 0.6)
+# )
 
 
 
@@ -418,7 +418,8 @@ safety_optimality_draw(
 #         step_limit=1,
 #         fig_title="learning_curves",
 #         fig_title_abbr="Return")
-SEEDS = ["seed2", "seed3"]
+
+# SEEDS = ["seed2", "seed3"] #TODO TEST
 curves("carracing",
         alphas=[
             "no_shielding",
