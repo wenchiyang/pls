@@ -292,9 +292,9 @@ def get_ground_truth_of_grass(
     # plt.imshow(temp[0], cmap=plt.get_cmap('gray'), vmin=-1, vmax=1)
     # plt.show()
 
-    left = th.mean(arr[:, 70:71, 44:45], dim=(1, 2))
-    right = th.mean(arr[:, 70:71, 51:52], dim=(1, 2))
-    top = th.mean(arr[:, 64:65, 47:49], dim=(1, 2))
+    left = th.mean(arr[:, 70:71, 42:43], dim=(1, 2))
+    right = th.mean(arr[:, 70:71, 53:54], dim=(1, 2))
+    top = th.mean(arr[:, 58:59, 47:49], dim=(1, 2))
 
 
     try:
