@@ -99,6 +99,7 @@ class Carracing_Monitor(Monitor):
         super(Carracing_Monitor, self).__init__(*args, **kwargs)
 
     def reset(self, **kwargs) -> GymObs:
+        # self.counter_temp = 0
         return super(Carracing_Monitor, self).reset(**kwargs)
 
 
@@ -106,15 +107,18 @@ class Carracing_Monitor(Monitor):
         if self.needs_reset:
             raise RuntimeError("Tried to step environment that needs reset")
         observation, reward, done, info = self.env.step(action)
-        if reward > 0:
-            ran = random()
-            # print(reward)
-            if ran > 0.95:
-                self.rewards.append(reward)
-            else:
-                self.rewards.append(-0.1)
-        else:
-            self.rewards.append(reward)
+        if info["is_success"]:
+            reward += 100
+        # self.counter_temp += 1
+        # if reward > 0:
+        #     print(self.counter_temp)
+        #     # ran = random()
+        #     # if ran > 0.95:
+        #     #     self.rewards.append(reward)
+        #     # else:
+        #     #     self.rewards.append(-0.1)
+
+        self.rewards.append(reward)
         # symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
         # violate_constraint = th.all(symbolic_state)
         # TODO: No green panalty

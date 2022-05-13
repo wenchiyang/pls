@@ -206,7 +206,7 @@ class Carracing_DPLPPO(PPO):
             callback: BaseCallback,
             rollout_buffer: RolloutBuffer,
             n_rollout_steps: int,
-            render_interval: int = 10
+            render_interval: int = 1
     ) -> bool:
         """
         Collect experiences using the current policy and fill a ``RolloutBuffer``.
