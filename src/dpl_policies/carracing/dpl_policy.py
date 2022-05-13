@@ -24,37 +24,7 @@ from deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
 from dpl_policies.carracing.util import get_ground_truth_of_grass, is_all_grass, get_ground_truth_of_grass2
 from os import path
 import pickle
-from random import random
 
-
-#
-# WALL_COLOR = th.tensor([0] * 3, dtype=th.float32)
-# FLOOR_COLOR = th.tensor([1 / 6] * 3, dtype=th.float32)
-# BOX_TARGET_COLOR = th.tensor([2 / 6] * 3, dtype=th.float32)
-# BOX_ON_TARGET_COLOR = th.tensor([3 / 6] * 3, dtype=th.float32)
-# BOX_COLOR = th.tensor([4 / 6] * 3, dtype=th.float32)
-#
-# PLAYER_COLOR = th.tensor([5 / 6] * 3, dtype=th.float32)
-# PLAYER_ON_TARGET_COLOR = th.tensor([1] * 3, dtype=th.float32)
-#
-# PLAYER_COLORS = th.tensor(([5 / 6] * 3, [1] * 3))
-# BOX_COLORS = th.tensor(([3 / 6] * 3, [4 / 6] * 3))
-# OBSTABLE_COLORS = th.tensor(([0] * 3, [3 / 6] * 3, [4 / 6] * 3))
-#
-#
-# NEIGHBORS_RELATIVE_LOCS_BOX = [
-#     (-1, 0),
-#     (1, 0),
-#     (0, -1),
-#     (0, 1),
-#
-# ]  # DO NOT CHANGE THE ORDER: up, down, left, right,
-# NEIGHBORS_RELATIVE_LOCS_CORNER = [
-#     (-2, 0),
-#     (2, 0),
-#     (0, -2),
-#     (0, 2),
-# ]  # DO NOT CHANGE THE ORDER
 
 class Carracing_Encoder(nn.Module):
     def __init__(self, input_size, n_actions, shielding_settings, program_path, debug_program_path, folder):
@@ -110,13 +80,14 @@ class Carracing_Monitor(Monitor):
         if info["is_success"]:
             reward += 100
         # self.counter_temp += 1
-        # if reward > 0:
-        #     print(self.counter_temp)
-        #     # ran = random()
-        #     # if ran > 0.95:
-        #     #     self.rewards.append(reward)
-        #     # else:
-        #     #     self.rewards.append(-0.1)
+        if reward > 0:
+            reward += 50
+            # print(self.counter_temp)
+            # ran = random()
+            # if ran > 0.95:
+            #     self.rewards.append(reward)
+            # else:
+            #     self.rewards.append(-0.1)
 
         self.rewards.append(reward)
         # symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
