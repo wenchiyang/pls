@@ -79,15 +79,17 @@ class Carracing_Monitor(Monitor):
         observation, reward, done, info = self.env.step(action)
         if info["is_success"]:
             reward += 100
+        # if info["new_reward"]:
+        #     reward += 50
         # self.counter_temp += 1
-        if reward > 0:
-            reward += 50
-            # print(self.counter_temp)
-            # ran = random()
-            # if ran > 0.95:
-            #     self.rewards.append(reward)
-            # else:
-            #     self.rewards.append(-0.1)
+        # if reward > 0:
+        #     reward += 50
+        #     # print(self.counter_temp)
+        #     # ran = random()
+        #     # if ran > 0.95:
+        #     #     self.rewards.append(reward)
+        #     # else:
+        #     #     self.rewards.append(-0.1)
 
         self.rewards.append(reward)
         # symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
