@@ -6,3 +6,4 @@ model*
 *.pyc
 event*
 log*
+*.svg
