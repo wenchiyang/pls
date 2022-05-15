@@ -70,6 +70,7 @@ class Carracing_Monitor(Monitor):
 
     def reset(self, **kwargs) -> GymObs:
         # self.counter_temp = 0
+        self.violate_constraint = False
         return super(Carracing_Monitor, self).reset(**kwargs)
 
 
@@ -77,8 +78,8 @@ class Carracing_Monitor(Monitor):
         if self.needs_reset:
             raise RuntimeError("Tried to step environment that needs reset")
         observation, reward, done, info = self.env.step(action)
-        if info["is_success"]:
-            reward += 100
+        # if info["is_success"]:
+        #     reward += 100
         # if info["new_reward"]:
         #     reward += 50
         # self.counter_temp += 1
@@ -100,20 +101,21 @@ class Carracing_Monitor(Monitor):
         #     reward -= 0.05
         # self.rewards.append(reward)
 
+        symbolic_state = get_ground_truth_of_grass2(th.from_numpy(observation.copy()).unsqueeze(0))
+        violate_constraint = th.all(symbolic_state)
+        self.violate_constraint = self.violate_constraint or violate_constraint
+
         if done:
             self.needs_reset = True
             ep_rew = sum(self.rewards)
             ep_len = len(self.rewards)
-
-            symbolic_state = get_ground_truth_of_grass2(th.from_numpy(observation.copy()).unsqueeze(0))
-            violate_constraint = th.all(symbolic_state)
 
             ep_info = {
                 "r": round(ep_rew, 6),
                 "l": ep_len,
                 "t": round(time.time() - self.t_start, 6),
                 "last_r": reward,
-                "violate_constraint": violate_constraint,
+                "violate_constraint": self.violate_constraint,
                 "is_success": info["is_success"]
             }
             for key in self.info_keywords:
