@@ -64,9 +64,10 @@ if __name__ == "__main__":
             # "sokoban/2box10map_long",
             # "goal_finding/smallGrid100map",
             # "goal_finding/7grid5g"
-            # "sokoban/3box10map"
+            "sokoban/2box1map",
+            "sokoban/2box5map",
             # "carracing/onemap"
-            "carracing/sparse_rewards4"
+            # "carracing/sparse_rewards4"
         ],
         "exps": [
             # "test"
@@ -78,7 +79,7 @@ if __name__ == "__main__":
             # "alpha_0.7",
             # "alpha_0.9",
             # "alpha_learned"
-            # "vsrl"
+            "vsrl"
             ],
         "seeds":
             # ["seed1", "seed2", "seed3", "seed4", "seed5"]
