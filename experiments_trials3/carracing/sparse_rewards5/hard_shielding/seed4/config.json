@@ -11,7 +11,10 @@
     "num_stacked_img": 4,
     "spikyness": [0.3333, 1],
     "n_rewardpoints": 500,
-    "n_corners": 12,
+    "n_corners": 12
+  },
+  
+  "monitor_features": {
     "vio_len": 50
   },
 
