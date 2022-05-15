@@ -9,9 +9,10 @@ from stable_baselines3.common.callbacks import ConvertCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-import matplotlib.pyplot as plt
-import torchvision
-from tqdm import tqdm
+# import matplotlib.pyplot as plt
+# import torchvision
+# from tqdm import tqdm
+from collections import deque
 
 from stable_baselines3.common.type_aliases import (
     GymObs,
@@ -65,12 +66,14 @@ class Carracing_Callback(ConvertCallback):
 
 
 class Carracing_Monitor(Monitor):
-    def __init__(self, *args, **kwargs):
-        super(Carracing_Monitor, self).__init__(*args, **kwargs)
+    def __init__(self, vio_len, **kwargs):
+        self.vio_len = vio_len
+        super(Carracing_Monitor, self).__init__(**kwargs)
 
     def reset(self, **kwargs) -> GymObs:
         # self.counter_temp = 0
         self.violate_constraint = False
+        self.violate_constraint_dequeue = deque(maxlen=self.vio_le)
         return super(Carracing_Monitor, self).reset(**kwargs)
 
 
@@ -103,7 +106,13 @@ class Carracing_Monitor(Monitor):
 
         symbolic_state = get_ground_truth_of_grass2(th.from_numpy(observation.copy()).unsqueeze(0))
         violate_constraint = th.all(symbolic_state)
-        self.violate_constraint = self.violate_constraint or violate_constraint
+        self.violate_constraint_dequeue.append(violate_constraint)
+        if len(self.violate_constraint_dequeue) == self.vio_le and False not in set(self.violate_constraint_dequeue):
+            # if VIO_LEN frames violate the constraint
+            all_violate = True
+        else:
+            all_violate = False
+        self.violate_constraint = self.violate_constraint or all_violate
 
         if done:
             self.needs_reset = True
