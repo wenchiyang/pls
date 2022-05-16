@@ -14,6 +14,10 @@
     "n_corners": 12
   },
 
+  "monitor_features": {
+    "vio_len": 1
+  },
+
   "model_features": {
     "name": "no_shielding",
     "params": {
