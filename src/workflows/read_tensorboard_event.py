@@ -7,8 +7,8 @@ import numpy as np
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 domain_goal_finidng = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "goal_finding", "7grid5g"))
-domain_sokoban = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "sokoban", "2box10map_long"))
-domain_carracing = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "carracing", "onemap"))
+domain_sokoban = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "sokoban", "2box5map"))
+domain_carracing = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "carracing", "sparse_rewards4"))
 
 # dir_path = "/cw/dtaijupiter/NoCsBack/dtai/wenchi/NeSyProject/experiments_trials3"
 # domain_goal_finidng = os.path.join(dir_path, "goal_finding", "7grid5g")
@@ -211,11 +211,11 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
                             legendX=-10, legendY=-35,
                             titleAnchor='middle'
                         ),
-                        scale = alt.Scale(domain=["PPO", "VSRL", "PLS BASE", "PLS"], range=["red", "blue", "brown", "green"])
+                        scale = alt.Scale(domain=["PPO", "VSRL", "PLS BASE", "PLS"], range=["red", "blue", "gray", "green"])
                         )
     ).properties(
             width=200, #200
-            height=100 #100
+            height=200 #100
         )
     band = alt.Chart(df_main).mark_errorband(extent='ci').encode(
         x=alt.X("step"),
@@ -375,13 +375,17 @@ def plot_bar_chart(dds, domain_names, fig_path, tags):
 # )
 
 
-SEEDS = ["seed1", "seed2"]
+SEEDS = ["seed1", "seed2",  "seed3", "seed4", "seed5"]
 curves("sokoban",
         alphas=[
-            "no_shielding",
-            "hard_shielding",
+            # "no_shielding",
+            # "hard_shielding",
+            "alpha_0.1",
             "alpha_0.3",
-            "vsrl"
+            "alpha_0.5",
+            "alpha_0.7",
+            "alpha_0.9",
+            # "vsrl"
         ],
         curve_type=TAGS[1], # violation_curves
         names=ALPHA_NAMES_LEARNING_CURVES,
@@ -390,10 +394,14 @@ curves("sokoban",
         fig_title_abbr="Violation")
 curves("sokoban",
         alphas=[
-            "no_shielding",
-            "hard_shielding",
+            # "no_shielding",
+            # "hard_shielding",
+            "alpha_0.1",
             "alpha_0.3",
-            "vsrl"
+            "alpha_0.5",
+            "alpha_0.7",
+            "alpha_0.9",
+            # "vsrl"
         ],
         curve_type=TAGS[0], # learning_curves
         names=ALPHA_NAMES_LEARNING_CURVES,
@@ -401,40 +409,12 @@ curves("sokoban",
         fig_title="learning_curves",
         fig_title_abbr="Return")
 
-SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
-curves("goal_finding",
-        alphas=[
-            "no_shielding",
-            "hard_shielding",
-            "alpha_0.3",
-            "vsrl"
-        ],
-        curve_type=TAGS[1], # violation_curves
-        names=ALPHA_NAMES_LEARNING_CURVES,
-        step_limit=1,
-        fig_title="violation_curves",
-        fig_title_abbr="Violation")
-curves("goal_finding",
-        alphas=[
-            "no_shielding",
-            "hard_shielding",
-            "alpha_0.3",
-            "vsrl"
-        ],
-        curve_type=TAGS[0], # learning_curves
-        names=ALPHA_NAMES_LEARNING_CURVES,
-        step_limit=1,
-        fig_title="learning_curves",
-        fig_title_abbr="Return")
-# curves("carracing",
+# SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
+# curves("goal_finding",
 #         alphas=[
 #             "no_shielding",
 #             "hard_shielding",
-#             "alpha_0.1",
-#             # "alpha_0.3",
-#             # "alpha_0.5",
-#             # "alpha_0.7",
-#             # "alpha_0.9",
+#             "alpha_0.3",
 #             "vsrl"
 #         ],
 #         curve_type=TAGS[1], # violation_curves
@@ -442,26 +422,53 @@ curves("goal_finding",
 #         step_limit=1,
 #         fig_title="violation_curves",
 #         fig_title_abbr="Violation")
-
-
-#
-
-# curves("carracing",
+# curves("goal_finding",
 #         alphas=[
 #             "no_shielding",
 #             "hard_shielding",
-#             "alpha_0.1",
-#             # "alpha_0.3",
-#             # "alpha_0.5",
-#             # "alpha_0.7",
-#             # "alpha_0.9",
+#             "alpha_0.3",
 #             "vsrl"
 #         ],
 #         curve_type=TAGS[0], # learning_curves
-#         names=ALPHA_NAMES_LEARNING_CURVES, # ALPHA_NAMES_LEARNING_CURVES
+#         names=ALPHA_NAMES_LEARNING_CURVES,
 #         step_limit=1,
 #         fig_title="learning_curves",
 #         fig_title_abbr="Return")
+
+SEEDS = ["seed1", "seed2"]
+curves("carracing",
+        alphas=[
+            # "no_shielding",
+            # "hard_shielding",
+            "alpha_0.1",
+            "alpha_0.3",
+            "alpha_0.5",
+            "alpha_0.7",
+            "alpha_0.9",
+            # "vsrl"
+        ],
+        curve_type=TAGS[1], # violation_curves
+        names=ALPHA_NAMES_LEARNING_CURVES,
+        step_limit=1,
+        fig_title="violation_curves",
+        fig_title_abbr="Violation")
+
+curves("carracing",
+        alphas=[
+            # "no_shielding",
+            # "hard_shielding",
+            "alpha_0.1",
+            "alpha_0.3",
+            "alpha_0.5",
+            "alpha_0.7",
+            "alpha_0.9",
+            # "vsrl"
+        ],
+        curve_type=TAGS[0], # learning_curves
+        names=ALPHA_NAMES_LEARNING_CURVES, # ALPHA_NAMES_LEARNING_CURVES
+        step_limit=1,
+        fig_title="learning_curves",
+        fig_title_abbr="Return")
 
 # many_alpha_new(["goal_finding", "sokoban"])
 # diff_non_diff_new(["goal_finding", "sokoban"])
