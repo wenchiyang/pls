@@ -326,9 +326,9 @@ def diff_non_diff_new(domain_names):
         width=100,
         height=120
     )
-    c.show()
-    # fig_path = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", f"rejected_samples.svg"))
-    # c.save(fig_path)
+    # c.show()
+    fig_path = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", f"rejected_samples.svg"))
+    c.save(fig_path)
 
 
 
