@@ -63,8 +63,6 @@ TAGS = [
     "rollout/ep_rew_mean",
     "rollout/#violations",
     "safety/num_rejected_samples_max"
-    # "safety/ep_abs_safety_impr",
-    # "safety/n_deaths"
 ]
 SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
 # SEEDS = ["seed1"]
@@ -91,7 +89,8 @@ def normalize_vio(v, norm=None):
     return 1-v
 
 def normalize_rej(v, norm=None):
-    return 1- (v/100000)
+    # return 1- (v/100000)
+    return v
 
 def load_dataframe(folder, tag, smooth=True):
     for event_file in os.listdir(folder):
@@ -107,6 +106,18 @@ def load_step_value(folder, tag, n_step):
     df = load_dataframe(folder, tag)
     value = get_step_value_in_dataframe(df, steps=n_step)
     return value
+
+def load_single_value_rej_vsrl(exp, steps):
+    rejs = []
+    for seed in SEEDS:
+        folder = os.path.join(exp, "vsrl", seed)
+        df2 = load_dataframe(folder, TAGS[2])
+        v2 = get_step_value_in_dataframe(df2, steps=steps)
+        rej = normalize_rej(v2)
+        rejs.append(rej)
+
+    avg_rej = np.mean(rejs)
+    return avg_rej
 
 def load_single_value(exp, steps, norm):
     rews = []
@@ -290,100 +301,35 @@ def diff_non_diff_new(domain_names):
     dds=[]
     for name in domain_names:
         domain = NAMES[name]
-        norm = NORMS_REW[name]
-        alpha = ["no_shielding", "vsrl", "hard_shielding"]
-        # alpha = ["no_shielding", "no_shielding"]
-        dd = load_single_values(
-            domain=domain,
-            alphas=alpha,
-            steps=500_000,
-            norm=norm,
-            names=ALPHA_NAMES_DIFF
+        # norm = NORMS_REW[name]
+        # alpha = ["no_shielding", "vsrl", "hard_shielding"]
+        dd = load_single_value_rej_vsrl(
+            exp=domain,
+            steps=1_000_000
         )
         dds.append(dd)
-    fig_path = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "results.svg"))
-    # fig_path = os.path.join(domain, f"{name}_diff_non_diff.svg")
-    plot_bar_chart(dds, domain_names, fig_path, NEW_TAGS)
 
+    # plot_bar_chart(dds, domain_names, fig_path, NEW_TAGS[2])
+    dataframmm=pd.DataFrame({"alpha": [DOMAIN_ABBR[d] for d in domain_names], "Rejected Samples": dds})
 
-def many_alpha_new(domain_names):
-    dds=[]
-    for name in domain_names:
-        domain = NAMES[name]
-        norm = NORMS_REW[name]
-        alpha = [
-            "no_shielding",
-            "alpha_0.1",
-            "alpha_0.3",
-            "alpha_0.5",
-            "alpha_0.7",
-            "alpha_0.9",
-            "hard_shielding"]
-        # alpha = ["no_shielding", "no_shielding"]
-        dd = load_single_values(
-            domain=domain,
-            alphas=alpha,
-            steps=500_000,
-            norm=norm,
-            names=ALPHA_NAMES
-        )
-        dds.append(dd)
-    fig_path = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "alpha.svg"))
-    plot_bar_chart(dds, domain_names, fig_path, NEW_TAGS[:2])
-
-
-def plot_bar_chart(dds, domain_names, fig_path, tags):
-    charts = []
-    for i in range(len(tags)):
-        datas = []
-        for j,dd in enumerate(dds):
-            data = make_df(dd, x_title="alpha", y_key=NEW_TAGS[i])
-            data["domain"] = DOMAIN_ABBR[domain_names[j]]
-            datas.append(data)
-        dataframmm = pd.concat(datas)
-        c = alt.Chart(dataframmm, title="").mark_bar().encode(
-            column=Column('domain', title=NEW_TAGS[i]),
-            x=alt.X("alpha", sort=list(dd.keys()), title=None),
-            y=alt.Y(NEW_TAGS[i], title=None, scale=alt.Scale(domain=(0, 1))),
-            color=alt.Color("alpha", legend=None, scale=alt.Scale(scheme='accent')),
-        ).properties(
-            width=60,
-            height=240
-        )
-        charts.append(c)
-    if len(tags) == 3:
-        c = charts[0] | charts[1] | charts[2]
-    elif len(tags) == 2:
-        c = charts[0] | charts[1]
-    c.configure_view(
-            strokeWidth=0
-        )
+    c = alt.Chart(dataframmm, title="").mark_bar().encode(
+        x=alt.X("alpha",
+                sort=[DOMAIN_ABBR[d] for d in domain_names],
+                title=None),
+        y=alt.Y("Rejected Samples", title=None),
+        color=alt.Color("alpha", legend=None, scale=alt.Scale(scheme='accent')),
+    ).properties(
+        width=60,
+        height=240
+    )
     # c.show()
+    fig_path = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", f"rejected_samples.svg"))
     c.save(fig_path)
 
 
 
-
-safety_optimality_draw(
-     "goal_finding",
-     n_step=1_000_000,
-     x_axis_range=(0.6, 1),
-     y_axis_range=(0.7, 1)
-)
-#safety_optimality_draw(
-#     "sokoban",
-#     n_step=1_000_000,
-#     x_axis_range=(0.0, 1),
-#     y_axis_range=(0.0, 0.4)
-#)
-#SEEDS = ["seed1", "seed2"]
-#safety_optimality_draw(
-#     "carracing",
-#     n_step=1_000_000,
-#     x_axis_range=(0.0, 0.3),
-#     y_axis_range=(0.2, 1.0)
-#)
-
+# SEEDS=["seed1", "seed2", "seed3"]
+diff_non_diff_new(["goal_finding", "sokoban", "carracing"])
 
 #SEEDS = ["seed1", "seed2",  "seed3", "seed4", "seed5"]
 #curves("sokoban",
@@ -463,7 +409,3 @@ safety_optimality_draw(
 #        step_limit=1,
 #        fig_title="learning_curves",
 #        fig_title_abbr="Return")
-
-# many_alpha_new(["goal_finding", "sokoban"])
-# diff_non_diff_new(["goal_finding", "sokoban"])
-
