@@ -313,14 +313,15 @@ def diff_non_diff_new(domain_names):
     dataframmm=pd.DataFrame({"alpha": [DOMAIN_ABBR[d] for d in domain_names], "Rejected Samples": dds})
 
     c = alt.Chart(dataframmm, title="").mark_bar().encode(
+        "Rejected Samples",
         x=alt.X("alpha",
                 sort=[DOMAIN_ABBR[d] for d in domain_names],
                 title=None),
-        y=alt.Y("Rejected Samples", title=None),
+        y=alt.Y("Rejected Samples", title=None, format="~s", scale=alt.Scale(domain=(0, 100_000))),
         color=alt.Color("alpha", legend=None, scale=alt.Scale(scheme='accent')),
     ).properties(
         width=60,
-        height=240
+        height=120
     )
     # c.show()
     fig_path = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", f"rejected_samples.svg"))
