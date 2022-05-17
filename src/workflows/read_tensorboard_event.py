@@ -203,7 +203,7 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
                     title=f"Avg {fig_title_abbr} / Epis",
                     grid=False)),
         color=alt.Color("alpha",
-                        sort=["PPO", "PLS BASE"],
+                        #sort=["PPO", "PLS BASE"],
                         legend=alt.Legend(
                             title=f"Avg {fig_title_abbr} on {DOMAIN_ABBR[domain_name]}",
                             orient='none',
@@ -215,12 +215,13 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
                         )
     ).properties(
             width=200, #200
-            height=200 #100
+            height=100 #100
         )
     band = alt.Chart(df_main).mark_errorband(extent='ci').encode(
         x=alt.X("step"),
         y=alt.Y("value",title=""),
-        color=alt.Color("alpha", sort=["PPO", "VSRL", "PLS BASE", "PLS"],
+        color=alt.Color("alpha", 
+                         sort=["PPO", "VSRL", "PLS BASE", "PLS"],
     ))
     c = line + band
     # c.show()
@@ -245,26 +246,34 @@ def safety_optimality_df(domain_name, alphas, n_step):
 def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
     alphas = ["no_shielding", "alpha_0.1", "alpha_0.3", "alpha_0.5", "alpha_0.7", "alpha_0.9", "hard_shielding"]
     df = safety_optimality_df(domain_name, alphas, n_step)
+    x_tick_range = [int(v*10) for v in x_axis_range]
+    x_tick_values = [v/10 for v in range(x_tick_range[0], x_tick_range[1]+1)]
+    y_tick_range = [int(v*10) for v in y_axis_range]
+    y_tick_values = [v/10 for v in range(y_tick_range[0], y_tick_range[1]+1)]
     c = alt.Chart(df, title=f"Safety-Return on {DOMAIN_ABBR[domain_name]}").mark_point().encode(
         x=alt.X("safety",
                 scale=alt.Scale(domain=x_axis_range),
                 axis=alt.Axis(
-                    # format='~s',
+                    format='.1',
+                    values=x_tick_values,
                     title="Safety",
                     grid=False)),
         y=alt.Y("optimality", title=None,
                 scale=alt.Scale(domain=y_axis_range),
                 axis=alt.Axis(
                     format='.1',
+                    values=y_tick_values,
                     title="Return",
                     grid=False)),
         color=alt.Color("alpha",
                         legend=alt.Legend(
                             title=f"alpha",
                             orient='none',
-                            # direction='horizontal',
-                            legendX=10, legendY=70,
-                            # titleAnchor='middle'
+                            direction='horizontal',
+                            #legendX=10, legendY=70,
+                            legendX=20, legendY=-50,
+                            columns=4,
+                            titleAnchor='middle'
                         ),
                         scale=alt.Scale(scheme='redblue')),
     ).properties(
@@ -355,59 +364,52 @@ def plot_bar_chart(dds, domain_names, fig_path, tags):
 
 
 
-# safety_optimality_draw(
-#     "goal_finding",
-#     n_step=1_000_000,
-#     x_axis_range=(0.5, 1),
-#     y_axis_range=(0.7, 1)
-# )
-# safety_optimality_draw(
+safety_optimality_draw(
+     "goal_finding",
+     n_step=1_000_000,
+     x_axis_range=(0.6, 1),
+     y_axis_range=(0.7, 1)
+)
+#safety_optimality_draw(
 #     "sokoban",
-#     n_step=5_000_000,
-#     x_axis_range=(0.3, 1),
-#     y_axis_range=(0.0, 0.6)
-# )
-# safety_optimality_draw(
-#     "carracing",
 #     n_step=1_000_000,
 #     x_axis_range=(0.0, 1),
-#     y_axis_range=(0.0, 1.0)
-# )
+#     y_axis_range=(0.0, 0.4)
+#)
+#SEEDS = ["seed1", "seed2"]
+#safety_optimality_draw(
+#     "carracing",
+#     n_step=1_000_000,
+#     x_axis_range=(0.0, 0.3),
+#     y_axis_range=(0.2, 1.0)
+#)
 
 
-SEEDS = ["seed1", "seed2",  "seed3", "seed4", "seed5"]
-curves("sokoban",
-        alphas=[
-            # "no_shielding",
-            # "hard_shielding",
-            "alpha_0.1",
-            "alpha_0.3",
-            "alpha_0.5",
-            "alpha_0.7",
-            "alpha_0.9",
-            # "vsrl"
-        ],
-        curve_type=TAGS[1], # violation_curves
-        names=ALPHA_NAMES_LEARNING_CURVES,
-        step_limit=1,
-        fig_title="violation_curves",
-        fig_title_abbr="Violation")
-curves("sokoban",
-        alphas=[
-            # "no_shielding",
-            # "hard_shielding",
-            "alpha_0.1",
-            "alpha_0.3",
-            "alpha_0.5",
-            "alpha_0.7",
-            "alpha_0.9",
-            # "vsrl"
-        ],
-        curve_type=TAGS[0], # learning_curves
-        names=ALPHA_NAMES_LEARNING_CURVES,
-        step_limit=1,
-        fig_title="learning_curves",
-        fig_title_abbr="Return")
+#SEEDS = ["seed1", "seed2",  "seed3", "seed4", "seed5"]
+#curves("sokoban",
+#        alphas=[
+#            "no_shielding",
+#            "hard_shielding",
+#            "alpha_0.5",
+#            "vsrl"
+#        ],
+#        curve_type=TAGS[1], # violation_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=1,
+#        fig_title="violation_curves",
+#        fig_title_abbr="Violation")
+#curves("sokoban",
+#        alphas=[
+#            "no_shielding",
+#            "hard_shielding",
+#            "alpha_0.5",
+#            "vsrl"
+#        ],
+#        curve_type=TAGS[0], # learning_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=1,
+#        fig_title="learning_curves",
+#        fig_title_abbr="Return")
 
 # SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
 # curves("goal_finding",
@@ -435,40 +437,32 @@ curves("sokoban",
 #         fig_title="learning_curves",
 #         fig_title_abbr="Return")
 
-SEEDS = ["seed1", "seed2"]
-curves("carracing",
-        alphas=[
-            # "no_shielding",
-            # "hard_shielding",
-            "alpha_0.1",
-            "alpha_0.3",
-            "alpha_0.5",
-            "alpha_0.7",
-            "alpha_0.9",
-            # "vsrl"
-        ],
-        curve_type=TAGS[1], # violation_curves
-        names=ALPHA_NAMES_LEARNING_CURVES,
-        step_limit=1,
-        fig_title="violation_curves",
-        fig_title_abbr="Violation")
+#SEEDS = ["seed1", "seed2"]
+#curves("carracing",
+#        alphas=[
+#            "no_shielding",
+#            "hard_shielding",
+#            "alpha_0.3",
+#            "vsrl"
+#        ],
+#        curve_type=TAGS[1], # violation_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=1,
+#        fig_title="violation_curves",
+#        fig_title_abbr="Violation")
 
-curves("carracing",
-        alphas=[
-            # "no_shielding",
-            # "hard_shielding",
-            "alpha_0.1",
-            "alpha_0.3",
-            "alpha_0.5",
-            "alpha_0.7",
-            "alpha_0.9",
-            # "vsrl"
-        ],
-        curve_type=TAGS[0], # learning_curves
-        names=ALPHA_NAMES_LEARNING_CURVES, # ALPHA_NAMES_LEARNING_CURVES
-        step_limit=1,
-        fig_title="learning_curves",
-        fig_title_abbr="Return")
+#curves("carracing",
+#       alphas=[
+#            "no_shielding",
+#            "hard_shielding",
+#            "alpha_0.3",
+#            "vsrl"
+#        ],
+#        curve_type=TAGS[0], # learning_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES, # ALPHA_NAMES_LEARNING_CURVES
+#        step_limit=1,
+#        fig_title="learning_curves",
+#        fig_title_abbr="Return")
 
 # many_alpha_new(["goal_finding", "sokoban"])
 # diff_non_diff_new(["goal_finding", "sokoban"])
