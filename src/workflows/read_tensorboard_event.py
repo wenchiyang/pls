@@ -183,7 +183,7 @@ def draw(dd, fig_path):
     c = charts[0] | charts[1] | charts[2]
     c.show()
 
-def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_title_abbr, figure_height):
+def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_title_abbr, figure_height=100):
     domain = NAMES[domain_name]
     df_list = []
     for alpha in alphas:
@@ -335,60 +335,60 @@ def rejected_samples(domain_names):
 # SEEDS=["seed1", "seed2", "seed3"]
 # rejected_samples(["goal_finding", "sokoban", "carracing"])
 
-SEEDS = ["seed1", "seed2",  "seed3", "seed4", "seed5"]
-curves("sokoban",
-       alphas=[
-           "no_shielding",
-           "hard_shielding",
-           "alpha_0.1", "alpha_0.3",
-           "alpha_0.5", "alpha_0.7", "alpha_0.9",
-           "vsrl"
-       ],
-       curve_type=TAGS[1], # violation_curves
-       names=ALPHA_NAMES,
-       step_limit=1,
-       fig_title="violation_curves",
-       fig_title_abbr="Violation",
-       figure_height=200)
-curves("sokoban",
-       alphas=[
-           "no_shielding",
-           "hard_shielding",
-           "alpha_0.1", "alpha_0.3",
-           "alpha_0.5", "alpha_0.7", "alpha_0.9",
-           "vsrl"
-       ],
-       curve_type=TAGS[0], # learning_curves
-       names=ALPHA_NAMES,
-       step_limit=1,
-       fig_title="learning_curves",
-       fig_title_abbr="Return",
-       figure_height=200)
-
+# SEEDS = ["seed1", "seed2",  "seed3", "seed4", "seed5"]
 # curves("sokoban",
 #        alphas=[
 #            "no_shielding",
 #            "hard_shielding",
-#            "alpha_0.5",
+#            "alpha_0.1", "alpha_0.3",
+#            "alpha_0.5", "alpha_0.7", "alpha_0.9",
 #            "vsrl"
 #        ],
 #        curve_type=TAGS[1], # violation_curves
-#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        names=ALPHA_NAMES,
 #        step_limit=1,
 #        fig_title="violation_curves",
-#        fig_title_abbr="Violation")
+#        fig_title_abbr="Violation",
+#        figure_height=200)
 # curves("sokoban",
 #        alphas=[
 #            "no_shielding",
 #            "hard_shielding",
-#            "alpha_0.5",
+#            "alpha_0.1", "alpha_0.3",
+#            "alpha_0.5", "alpha_0.7", "alpha_0.9",
 #            "vsrl"
 #        ],
 #        curve_type=TAGS[0], # learning_curves
-#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        names=ALPHA_NAMES,
 #        step_limit=1,
 #        fig_title="learning_curves",
-#        fig_title_abbr="Return")
+#        fig_title_abbr="Return",
+#        figure_height=200)
+
+curves("sokoban",
+       alphas=[
+           "no_shielding",
+           "hard_shielding",
+           "alpha_0.5",
+           "vsrl"
+       ],
+       curve_type=TAGS[1], # violation_curves
+       names=ALPHA_NAMES_LEARNING_CURVES,
+       step_limit=1,
+       fig_title="violation_curves",
+       fig_title_abbr="Violation")
+curves("sokoban",
+       alphas=[
+           "no_shielding",
+           "hard_shielding",
+           "alpha_0.5",
+           "vsrl"
+       ],
+       curve_type=TAGS[0], # learning_curves
+       names=ALPHA_NAMES_LEARNING_CURVES,
+       step_limit=1,
+       fig_title="learning_curves",
+       fig_title_abbr="Return")
 
 # SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
 # curves("goal_finding",
