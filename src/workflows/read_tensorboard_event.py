@@ -214,7 +214,6 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
                     title=f"Avg {fig_title_abbr} / Epis",
                     grid=False)),
         color=alt.Color("alpha",
-                        #sort=["PPO", "PLS BASE"],
                         legend=alt.Legend(
                             title=f"Avg {fig_title_abbr} on {DOMAIN_ABBR[domain_name]}",
                             orient='none',
@@ -411,51 +410,30 @@ def rejected_samples(domain_names):
 #         fig_title="learning_curves",
 #         fig_title_abbr="Return")
 
-#SEEDS = ["seed1", "seed2"]
+
+
 curves("carracing",
        alphas=[
-           "alpha_0.1", "alpha_0.3", "alpha_0.5", "alpha_0.7", "alpha_0.9",
+           "no_shielding",
+           "hard_shielding",
+           "alpha_0.3",
+           "vsrl"
        ],
        curve_type=TAGS[1], # violation_curves
-       names=ALPHA_NAMES,
+       names=ALPHA_NAMES_LEARNING_CURVES,
        step_limit=1,
        fig_title="violation_curves",
-       fig_title_abbr="Violation",
-       figure_height=200)
+       fig_title_abbr="Violation")
 
 curves("carracing",
       alphas=[
-           "alpha_0.1", "alpha_0.3", "alpha_0.5", "alpha_0.7", "alpha_0.9",
+           "no_shielding",
+           "hard_shielding",
+           "alpha_0.3",
+           "vsrl"
        ],
        curve_type=TAGS[0], # learning_curves
-       names=ALPHA_NAMES, # ALPHA_NAMES_LEARNING_CURVES
+       names=ALPHA_NAMES_LEARNING_CURVES, # ALPHA_NAMES_LEARNING_CURVES
        step_limit=1,
        fig_title="learning_curves",
-       fig_title_abbr="Return",
-       figure_height=200)
-#curves("carracing",
-#        alphas=[
-#            "no_shielding",
-#            "hard_shielding",
-#            "alpha_0.3",
-#            "vsrl"
-#        ],
-#        curve_type=TAGS[1], # violation_curves
-#        names=ALPHA_NAMES_LEARNING_CURVES,
-#        step_limit=1,
-#        fig_title="violation_curves",
-#        fig_title_abbr="Violation")
-
-#curves("carracing",
-#       alphas=[
-#            "no_shielding",
-#            "hard_shielding",
-#            "alpha_0.3",
-#            "vsrl"
-#        ],
-#        curve_type=TAGS[0], # learning_curves
-#        names=ALPHA_NAMES_LEARNING_CURVES, # ALPHA_NAMES_LEARNING_CURVES
-#        step_limit=1,
-#        fig_title="learning_curves",
-#        fig_title_abbr="Return")
-figure_height=200
+       fig_title_abbr="Return")
