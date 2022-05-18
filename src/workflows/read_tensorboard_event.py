@@ -412,28 +412,29 @@ def rejected_samples(domain_names):
 
 
 
-curves("carracing",
-       alphas=[
-           "no_shielding",
-           "hard_shielding",
-           "alpha_0.3",
-           "vsrl"
-       ],
-       curve_type=TAGS[1], # violation_curves
-       names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=1,
-       fig_title="violation_curves",
-       fig_title_abbr="Violation")
-
-curves("carracing",
-      alphas=[
-           "no_shielding",
-           "hard_shielding",
-           "alpha_0.3",
-           "vsrl"
-       ],
-       curve_type=TAGS[0], # learning_curves
-       names=ALPHA_NAMES_LEARNING_CURVES, # ALPHA_NAMES_LEARNING_CURVES
-       step_limit=1,
-       fig_title="learning_curves",
-       fig_title_abbr="Return")
+# curves("carracing",
+#        alphas=[
+#            "no_shielding",
+#            "hard_shielding",
+#            "alpha_0.3",
+#            "vsrl"
+#        ],
+#        curve_type=TAGS[1], # violation_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=1,
+#        fig_title="violation_curves",
+#        fig_title_abbr="Violation")
+#
+# curves("carracing",
+#       alphas=[
+#            "no_shielding",
+#            "hard_shielding",
+#            "alpha_0.3",
+#            "vsrl"
+#        ],
+#        curve_type=TAGS[0], # learning_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES, # ALPHA_NAMES_LEARNING_CURVES
+#        step_limit=1,
+#        fig_title="learning_curves",
+#        fig_title_abbr="Return")
+safety_optimality_draw("carracing", n_step=1000000, x_axis_range=[0.1, 0.3], y_axis_range=[0.1, 1.0])
