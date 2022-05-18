@@ -183,7 +183,7 @@ def draw(dd, fig_path):
     c = charts[0] | charts[1] | charts[2]
     c.show()
 
-def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_title_abbr):
+def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_title_abbr, figure_height):
     domain = NAMES[domain_name]
     df_list = []
     for alpha in alphas:
@@ -226,7 +226,7 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
                         )
     ).properties(
             width=200, #200
-            height=100 #100
+            height=figure_height #100
         )
     band = alt.Chart(df_main).mark_errorband(extent='ci').encode(
         x=alt.X("step"),
@@ -297,7 +297,7 @@ def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
 
 
 
-def diff_non_diff_new(domain_names):
+def rejected_samples(domain_names):
     dds=[]
     for name in domain_names:
         domain = NAMES[name]
@@ -333,11 +333,39 @@ def diff_non_diff_new(domain_names):
 
 
 # SEEDS=["seed1", "seed2", "seed3"]
-diff_non_diff_new(["goal_finding", "sokoban", "carracing"])
-# diff_non_diff_new(["goal_finding", "sokoban"])
+# rejected_samples(["goal_finding", "sokoban", "carracing"])
 
-#SEEDS = ["seed1", "seed2",  "seed3", "seed4", "seed5"]
-#curves("sokoban",
+SEEDS = ["seed1", "seed2",  "seed3", "seed4", "seed5"]
+curves("sokoban",
+       alphas=[
+           "no_shielding",
+           "hard_shielding",
+           "alpha_0.1", "alpha_0.3",
+           "alpha_0.5", "alpha_0.7", "alpha_0.9",
+           "vsrl"
+       ],
+       curve_type=TAGS[1], # violation_curves
+       names=ALPHA_NAMES,
+       step_limit=1,
+       fig_title="violation_curves",
+       fig_title_abbr="Violation",
+       figure_height=200)
+curves("sokoban",
+       alphas=[
+           "no_shielding",
+           "hard_shielding",
+           "alpha_0.1", "alpha_0.3",
+           "alpha_0.5", "alpha_0.7", "alpha_0.9",
+           "vsrl"
+       ],
+       curve_type=TAGS[0], # learning_curves
+       names=ALPHA_NAMES,
+       step_limit=1,
+       fig_title="learning_curves",
+       fig_title_abbr="Return",
+       figure_height=200)
+
+# curves("sokoban",
 #        alphas=[
 #            "no_shielding",
 #            "hard_shielding",
@@ -349,7 +377,7 @@ diff_non_diff_new(["goal_finding", "sokoban", "carracing"])
 #        step_limit=1,
 #        fig_title="violation_curves",
 #        fig_title_abbr="Violation")
-#curves("sokoban",
+# curves("sokoban",
 #        alphas=[
 #            "no_shielding",
 #            "hard_shielding",
