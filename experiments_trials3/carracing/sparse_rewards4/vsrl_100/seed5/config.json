@@ -1,0 +1,45 @@
+{
+  "workflow_name": "ppo",
+  "raw_logger": "ppo_raw",
+  "info_logger": "ppo_info",
+  "env_type": "CarRacing-v1",
+
+  "env_features": {
+    "render": false,
+    "num_maps": 1,
+    "seed": 772,
+    "num_stacked_img": 4,
+    "spikyness": [0.3333, 1],
+    "n_rewardpoints": 500,
+    "n_corners": 12
+  },
+
+  "monitor_features": {
+    "vio_len": 1
+  },
+
+  "model_features": {
+    "name": "vsrl",
+    "params": {
+      "log_interval": 1,
+      "batch_size": 512,
+      "n_epochs": 15,
+      "n_steps": 2048,
+      "learning_rate": 0.001,
+      "seed": 772,
+      "clip_range": 0.1,
+      "gamma": 0.99,
+      "step_limit": 1000000,
+      "program_type": "carracing_grass",
+      "debug_program_type": "carracing_grass",
+      "alpha": 1,
+      "n_grass_locs": 3,
+      "differentiable_shield": false,
+      "net_arch_shared": [],
+      "net_arch_pi": [64, 64],
+      "net_arch_vf": [64, 64],
+      "sensor_noise": 0,
+      "max_num_rejected_samples": 100
+    }
+  }
+}
