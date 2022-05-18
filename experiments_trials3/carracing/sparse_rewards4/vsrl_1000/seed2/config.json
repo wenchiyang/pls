@@ -29,7 +29,7 @@
       "seed": 111,
       "clip_range": 0.1,
       "gamma": 0.99,
-      "step_limit": 1000000,
+      "step_limit": 500000,
       "program_type": "carracing_grass",
       "debug_program_type": "carracing_grass",
       "alpha": 1,
