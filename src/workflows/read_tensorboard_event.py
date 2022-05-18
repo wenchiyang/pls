@@ -27,7 +27,7 @@ DOMAIN_ABBR= {
 NORMS_REW = {
     "sokoban": {"low": -12, "high": 12},
     "goal_finding": {"low": -10, "high": 10},
-    "carracing": {"low": -50, "high": 900}
+    "carracing": {"low": -50, "high": 800}
 }
 ALPHA_NAMES_DIFF = {
     "vsrl": "VSRL",
@@ -185,28 +185,30 @@ def draw(dd, fig_path):
 
 def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_title_abbr, figure_height=100):
     domain = NAMES[domain_name]
+    norm = NORMS_REW[domain_name]
     df_list = []
     for alpha in alphas:
         folder = os.path.join(domain, alpha)
         for seed in SEEDS:
             path = os.path.join(folder, seed)
             df = load_dataframe(path, curve_type, smooth=True)
+            if curve_type==TAGS[0]:
+                df["value"] = df["value"].apply(lambda x: normalize_rew(x, norm))
             df["seed"] = seed
             df["alpha"] = names[alpha]
-            if alpha == "vsrl":
-                # take only 1M steps
-                df = df.drop(df[df.step > 1000000].index)
+            # take only step_limit steps
+            df = df.drop(df[df.step > step_limit].index)
             df_list.append(df[["value", "step", "seed", "alpha"]])
 
     df_main = pd.concat(df_list)
-    df_main["step"] = df_main["step"] / 1000000
+    df_main["step"] = df_main["step"] / 100_000
 
     line = alt.Chart(df_main).mark_line().encode(
         x=alt.X("step",
-                scale=alt.Scale(domain=(0, step_limit)),
+                scale=alt.Scale(domain=(0, step_limit/100_000)),
                 axis=alt.Axis(
                     format='~s',
-                    title="M steps",
+                    title="100k steps",
                     grid=False)),
         y=alt.Y("mean(value)",
                 axis=alt.Axis(
@@ -227,12 +229,14 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
             width=200, #200
             height=figure_height #100
         )
-    band = alt.Chart(df_main).mark_errorband(extent='ci').encode(
+    band = alt.Chart(df_main).mark_errorband(extent='ci', opacity=0.1).encode(
         x=alt.X("step"),
         y=alt.Y("value",title=""),
         color=alt.Color("alpha", 
                          sort=["PPO", "VSRL", "PLS BASE", "PLS"],
-    ))
+
+        )
+    )
     c = line + band
     # c.show()
     fig_path = os.path.join(domain, f"{domain_name}_{fig_title}.svg")
@@ -334,107 +338,84 @@ def rejected_samples(domain_names):
 # SEEDS=["seed1", "seed2", "seed3"]
 # rejected_samples(["goal_finding", "sokoban", "carracing"])
 
-# curves("sokoban",
-#        alphas=[
-#            "no_shielding",
-#            "hard_shielding",
-#            "alpha_0.5",
-#            "vsrl"
-#        ],
-#        curve_type=TAGS[1], # violation_curves
-#        names=ALPHA_NAMES_LEARNING_CURVES,
-#        step_limit=1,
-#        fig_title="violation_curves",
-#        fig_title_abbr="Violation")
-# curves("sokoban",
-#        alphas=[
-#            "no_shielding",
-#            "hard_shielding",
-#            "alpha_0.5",
-#            "vsrl"
-#        ],
-#        curve_type=TAGS[0], # learning_curves
-#        names=ALPHA_NAMES_LEARNING_CURVES,
-#        step_limit=1,
-#        fig_title="learning_curves",
-#        fig_title_abbr="Return")
+curves("sokoban",
+       alphas=[
+           "no_shielding",
+           "hard_shielding",
+           "alpha_0.5",
+           "vsrl"
+       ],
+       curve_type=TAGS[1], # violation_curves
+       names=ALPHA_NAMES_LEARNING_CURVES,
+       step_limit=500_000,
+       fig_title="violation_curves",
+       fig_title_abbr="Violation")
+curves("sokoban",
+       alphas=[
+           "no_shielding",
+           "hard_shielding",
+           "alpha_0.5",
+           "vsrl"
+       ],
+       curve_type=TAGS[0], # learning_curves
+       names=ALPHA_NAMES_LEARNING_CURVES,
+       step_limit=500_000,
+       fig_title="learning_curves",
+       fig_title_abbr="Return")
 
-# curves("goal_finding",
-#         alphas=[
-#             "no_shielding",
-#             "hard_shielding",
-#             "alpha_0.3",
-#             "vsrl"
-#         ],
-#         curve_type=TAGS[1], # violation_curves
-#         names=ALPHA_NAMES_LEARNING_CURVES,
-#         step_limit=1,
-#         fig_title="violation_curves",
-#         fig_title_abbr="Violation")
-# curves("goal_finding",
-#         alphas=[
-#             "no_shielding",
-#             "hard_shielding",
-#             "alpha_0.3",
-#             "vsrl"
-#         ],
-#         curve_type=TAGS[0], # learning_curves
-#         names=ALPHA_NAMES_LEARNING_CURVES,
-#         step_limit=1,
-#         fig_title="learning_curves",
-#         fig_title_abbr="Return")
-
-# SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
-# curves("goal_finding",
-#         alphas=[
-#             "no_shielding",
-#             "hard_shielding",
-#             "alpha_0.3",
-#             "vsrl"
-#         ],
-#         curve_type=TAGS[1], # violation_curves
-#         names=ALPHA_NAMES_LEARNING_CURVES,
-#         step_limit=1,
-#         fig_title="violation_curves",
-#         fig_title_abbr="Violation")
-# curves("goal_finding",
-#         alphas=[
-#             "no_shielding",
-#             "hard_shielding",
-#             "alpha_0.3",
-#             "vsrl"
-#         ],
-#         curve_type=TAGS[0], # learning_curves
-#         names=ALPHA_NAMES_LEARNING_CURVES,
-#         step_limit=1,
-#         fig_title="learning_curves",
-#         fig_title_abbr="Return")
+# SEEDS=["seed1", "seed2"]
+curves("goal_finding",
+        alphas=[
+            "no_shielding",
+            "hard_shielding",
+            "alpha_0.3",
+            "vsrl"
+        ],
+        curve_type=TAGS[1], # violation_curves
+        names=ALPHA_NAMES_LEARNING_CURVES,
+        step_limit=500_000,
+        fig_title="violation_curves",
+        fig_title_abbr="Violation")
+curves("goal_finding",
+        alphas=[
+            "no_shielding",
+            "hard_shielding",
+            "alpha_0.3",
+            "vsrl"
+        ],
+        curve_type=TAGS[0], # learning_curves
+        names=ALPHA_NAMES_LEARNING_CURVES,
+        step_limit=500_000,
+        fig_title="learning_curves",
+        fig_title_abbr="Return")
 
 
+curves("carracing",
+       alphas=[
+           "no_shielding",
+           "hard_shielding",
+           "alpha_0.3",
+           "vsrl"
+       ],
+       curve_type=TAGS[1], # violation_curves
+       names=ALPHA_NAMES_LEARNING_CURVES,
+       step_limit=500_000,
+       fig_title="violation_curves",
+       fig_title_abbr="Violation")
 
-# curves("carracing",
-#        alphas=[
-#            "no_shielding",
-#            "hard_shielding",
-#            "alpha_0.3",
-#            "vsrl"
-#        ],
-#        curve_type=TAGS[1], # violation_curves
-#        names=ALPHA_NAMES_LEARNING_CURVES,
-#        step_limit=1,
-#        fig_title="violation_curves",
-#        fig_title_abbr="Violation")
-#
-# curves("carracing",
-#       alphas=[
-#            "no_shielding",
-#            "hard_shielding",
-#            "alpha_0.3",
-#            "vsrl"
-#        ],
-#        curve_type=TAGS[0], # learning_curves
-#        names=ALPHA_NAMES_LEARNING_CURVES, # ALPHA_NAMES_LEARNING_CURVES
-#        step_limit=1,
-#        fig_title="learning_curves",
-#        fig_title_abbr="Return")
-safety_optimality_draw("carracing", n_step=1000000, x_axis_range=[0.1, 0.3], y_axis_range=[0.1, 1.0])
+curves("carracing",
+      alphas=[
+           "no_shielding",
+           "hard_shielding",
+           "alpha_0.3",
+           "vsrl"
+       ],
+       curve_type=TAGS[0], # learning_curves
+       names=ALPHA_NAMES_LEARNING_CURVES, # ALPHA_NAMES_LEARNING_CURVES
+       step_limit=500_000,
+       fig_title="learning_curves",
+       fig_title_abbr="Return")
+
+safety_optimality_draw("carracing", n_step=500_000, x_axis_range=[0.0, 0.9], y_axis_range=[0.3, 0.9])
+safety_optimality_draw("carracing", n_step=500_000, x_axis_range=[0.0, 0.9], y_axis_range=[0.3, 0.9])
+safety_optimality_draw("carracing", n_step=500_000, x_axis_range=[0.0, 0.9], y_axis_range=[0.3, 0.9])
