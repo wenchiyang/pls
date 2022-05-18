@@ -390,32 +390,32 @@ curves("goal_finding",
         fig_title_abbr="Return")
 
 
-curves("carracing",
-       alphas=[
-           "no_shielding",
-           "hard_shielding",
-           "alpha_0.3",
-           "vsrl"
-       ],
-       curve_type=TAGS[1], # violation_curves
-       names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=500_000,
-       fig_title="violation_curves",
-       fig_title_abbr="Violation")
-
-curves("carracing",
-      alphas=[
-           "no_shielding",
-           "hard_shielding",
-           "alpha_0.3",
-           "vsrl"
-       ],
-       curve_type=TAGS[0], # learning_curves
-       names=ALPHA_NAMES_LEARNING_CURVES, # ALPHA_NAMES_LEARNING_CURVES
-       step_limit=500_000,
-       fig_title="learning_curves",
-       fig_title_abbr="Return")
+# curves("carracing",
+#        alphas=[
+#            "no_shielding",
+#            "hard_shielding",
+#            "alpha_0.3",
+#            "vsrl"
+#        ],
+#        curve_type=TAGS[1], # violation_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=500_000,
+#        fig_title="violation_curves",
+#        fig_title_abbr="Violation")
+#
+# curves("carracing",
+#       alphas=[
+#            "no_shielding",
+#            "hard_shielding",
+#            "alpha_0.3",
+#            "vsrl"
+#        ],
+#        curve_type=TAGS[0], # learning_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES, # ALPHA_NAMES_LEARNING_CURVES
+#        step_limit=500_000,
+#        fig_title="learning_curves",
+#        fig_title_abbr="Return")
 
 safety_optimality_draw("sokoban", n_step=500_000, x_axis_range=[0.0, 1.0], y_axis_range=[0.0, 0.4])
 safety_optimality_draw("goal_finding", n_step=500_000, x_axis_range=[0.6, 1.0], y_axis_range=[0.7, 1.0])
-safety_optimality_draw("carracing", n_step=500_000, x_axis_range=[0.0, 0.4], y_axis_range=[0.0, 0.8])
+safety_optimality_draw("carracing", n_step=500_000, x_axis_range=[0.0, 0.3], y_axis_range=[0.0, 0.8])
