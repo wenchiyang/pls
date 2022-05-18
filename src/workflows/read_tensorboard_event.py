@@ -25,8 +25,8 @@ DOMAIN_ABBR= {
     "carracing": "CR"
 }
 NORMS_REW = {
-    "sokoban": {"low": -12, "high": 12},
-    "goal_finding": {"low": -10, "high": 4},
+    "sokoban": {"low": -12, "high": 4},
+    "goal_finding": {"low": -10, "high": 10},
     "carracing": {"low": -50, "high": 800}
 }
 ALPHA_NAMES_DIFF = {
