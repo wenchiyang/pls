@@ -26,7 +26,7 @@ DOMAIN_ABBR= {
 }
 NORMS_REW = {
     "sokoban": {"low": -12, "high": 12},
-    "goal_finding": {"low": -10, "high": 10},
+    "goal_finding": {"low": -10, "high": 4},
     "carracing": {"low": -50, "high": 800}
 }
 ALPHA_NAMES_DIFF = {
@@ -223,7 +223,7 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
                             legendX=-10, legendY=-35,
                             titleAnchor='middle'
                         ),
-                        scale = alt.Scale(domain=["PPO", "VSRL", "PLS BASE", "PLS"], range=["red", "blue", "gray", "green"])
+                        scale=alt.Scale(domain=["PPO", "VSRL", "PLS BASE", "PLS"], range=["red", "blue", "gray", "green"])
                         )
     ).properties(
             width=200, #200
@@ -234,13 +234,14 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
         y=alt.Y("value",title=""),
         color=alt.Color("alpha", 
                          sort=["PPO", "VSRL", "PLS BASE", "PLS"],
-
+                         legend=None
         )
     )
-    c = line + band
-    # c.show()
-    fig_path = os.path.join(domain, f"{domain_name}_{fig_title}.svg")
-    c.save(fig_path)
+    c = alt.layer(band, line).resolve_legend(color='independent')
+    # c.resolve_legend(color='independent')
+    c.show()
+    # fig_path = os.path.join(domain, f"{domain_name}_{fig_title}.svg")
+    # c.save(fig_path)
 
 def safety_optimality_df(domain_name, alphas, n_step):
     norm = NORMS_REW[domain_name]
@@ -416,6 +417,6 @@ curves("carracing",
        fig_title="learning_curves",
        fig_title_abbr="Return")
 
-safety_optimality_draw("carracing", n_step=500_000, x_axis_range=[0.0, 0.9], y_axis_range=[0.3, 0.9])
-safety_optimality_draw("carracing", n_step=500_000, x_axis_range=[0.0, 0.9], y_axis_range=[0.3, 0.9])
-safety_optimality_draw("carracing", n_step=500_000, x_axis_range=[0.0, 0.9], y_axis_range=[0.3, 0.9])
+safety_optimality_draw("sokoban", n_step=500_000, x_axis_range=[0.0, 1.0], y_axis_range=[0.0, 0.4])
+safety_optimality_draw("goal_finding", n_step=500_000, x_axis_range=[0.6, 1.0], y_axis_range=[0.7, 1.0])
+safety_optimality_draw("carracing", n_step=500_000, x_axis_range=[0.0, 0.4], y_axis_range=[0.0, 0.8])
