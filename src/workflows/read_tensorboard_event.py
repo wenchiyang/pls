@@ -364,7 +364,7 @@ def get_time_sample_one_action(name, alpha):
     times = []
     for seed in SEEDS:
         folder = os.path.join(domain, alpha, seed)
-        df = load_dataframe(folder, TAGS[2])
+        df = load_dataframe(folder, TAGS[0])
         df = df.drop(df[df.step > 500000].index)
         time = df["wall_time"].max() - df["wall_time"].min()
         times.append(time)
@@ -377,9 +377,9 @@ print(get_time_sample_one_action("goal_finding", "hard_shielding"))
 print(get_time_sample_one_action("sokoban", "hard_shielding"))
 print(get_time_sample_one_action("carracing", "hard_shielding"))
 
-# print(get_time_sample_one_action("goal_finding", "vsrl"))
-# print(get_time_sample_one_action("sokoban", "vsrl"))
-# print(get_time_sample_one_action("carracing", "vsrl"))
+print(get_time_sample_one_action("goal_finding", "vsrl"))
+print(get_time_sample_one_action("sokoban", "vsrl"))
+print(get_time_sample_one_action("carracing", "vsrl"))
 
 # print(get_number_of_rejected_samples("goal_finding"))
 # print(get_number_of_rejected_samples("sokoban"))
