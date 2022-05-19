@@ -359,11 +359,11 @@ def get_number_of_rejected_samples(name):
     avg_rej = np.mean(rejs)
     return avg_rej
 
-def get_time_sample_one_action(name):
+def get_time_sample_one_action(name, alpha):
     domain = NAMES[name]
     times = []
     for seed in SEEDS:
-        folder = os.path.join(domain, "vsrl", seed)
+        folder = os.path.join(domain, alpha, seed)
         df = load_dataframe(folder, TAGS[2])
         df = df.drop(df[df.step > 500000].index)
         time = df["wall_time"].max() - df["wall_time"].min()
@@ -373,9 +373,14 @@ def get_time_sample_one_action(name):
 
 
 # SEEDS=["seed1"]
-print(get_time_sample_one_action("goal_finding"))
-print(get_time_sample_one_action("sokoban"))
-print(get_time_sample_one_action("carracing"))
+print(get_time_sample_one_action("goal_finding", "hard_shielding"))
+print(get_time_sample_one_action("sokoban", "hard_shielding"))
+print(get_time_sample_one_action("carracing", "hard_shielding"))
+
+# print(get_time_sample_one_action("goal_finding", "vsrl"))
+# print(get_time_sample_one_action("sokoban", "vsrl"))
+# print(get_time_sample_one_action("carracing", "vsrl"))
+
 # print(get_number_of_rejected_samples("goal_finding"))
 # print(get_number_of_rejected_samples("sokoban"))
 # print(get_number_of_rejected_samples("carracing"))
