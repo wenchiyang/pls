@@ -7,7 +7,7 @@
   "env_features": {
     "render": false,
     "num_maps": 1,
-    "seed": 111,
+    "seed": 772,
     "num_stacked_img": 4,
     "spikyness": [0.3333, 1],
     "n_rewardpoints": 500,
@@ -26,7 +26,7 @@
       "n_epochs": 15,
       "n_steps": 2048,
       "learning_rate": 0.001,
-      "seed": 111,
+      "seed": 772,
       "clip_range": 0.1,
       "gamma": 0.99,
       "step_limit": 1000000,
@@ -39,7 +39,7 @@
       "net_arch_pi": [64, 64],
       "net_arch_vf": [64, 64],
       "sensor_noise": 0,
-      "max_num_rejected_samples": 100000
+      "max_num_rejected_samples": 100
     }
   }
 }
