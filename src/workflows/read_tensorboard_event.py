@@ -359,13 +359,26 @@ def get_number_of_rejected_samples(name):
     avg_rej = np.mean(rejs)
     return avg_rej
 
+def get_time_sample_one_action(name):
+    domain = NAMES[name]
+    times = []
+    for seed in SEEDS:
+        folder = os.path.join(domain, "vsrl", seed)
+        df = load_dataframe(folder, TAGS[2])
+        df = df.drop(df[df.step > 500000].index)
+        time = df["wall_time"].max() - df["wall_time"].min()
+        times.append(time)
+    avg_time = np.mean(times)
+    return avg_time/500000
+
 
 # SEEDS=["seed1"]
-# rejected_samples(["goal_finding", "sokoban", "carracing"])
-
-print(get_number_of_rejected_samples("goal_finding"))
-print(get_number_of_rejected_samples("sokoban"))
-print(get_number_of_rejected_samples("carracing"))
+print(get_time_sample_one_action("goal_finding"))
+print(get_time_sample_one_action("sokoban"))
+print(get_time_sample_one_action("carracing"))
+# print(get_number_of_rejected_samples("goal_finding"))
+# print(get_number_of_rejected_samples("sokoban"))
+# print(get_number_of_rejected_samples("carracing"))
 
 # curves("sokoban",
 #        alphas=[
