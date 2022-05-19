@@ -39,7 +39,7 @@
       "net_arch_pi": [64, 64],
       "net_arch_vf": [64, 64],
       "sensor_noise": 0,
-      "max_num_rejected_samples": 100
+      "max_num_rejected_samples": 100000
     }
   }
 }
