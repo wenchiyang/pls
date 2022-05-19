@@ -333,33 +333,34 @@ def rejected_samples(domain_names):
     fig_path = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", f"rejected_samples.svg"))
     c.save(fig_path)
 
-def load_single_value_rej_vsrl2(exp):
-    rejs = []
-    for seed in SEEDS:
-        folder = os.path.join(exp, "vsrl", seed)
-        df = load_dataframe(folder, TAGS[2])
-        df = df.drop(df[df.step > 500000].index)
-        v2 = df["value"].mean()
-        rej = normalize_rej(v2)
-        rejs.append(rej)
-
-    avg_rej = np.mean(rejs)
-    return avg_rej
+# def load_single_value_rej_vsrl2(exp):
+#     rejs = []
+#     for seed in SEEDS:
+#         folder = os.path.join(exp, "vsrl", seed)
+#         df = load_dataframe(folder, TAGS[2])
+#         df = df.drop(df[df.step > 500000].index)
+#         v2 = df["value"].mean()
+#         rej = normalize_rej(v2)
+#         rejs.append(rej)
+#
+#     avg_rej = np.mean(rejs)
+#     return avg_rej
 
 def get_number_of_rejected_samples(name):
     domain = NAMES[name]
     rejs = []
     for seed in SEEDS:
         folder = os.path.join(domain, "vsrl", seed)
-        df2 = load_dataframe(folder, TAGS[2])
-        v2 = df2["value"].mean()
+        df = load_dataframe(folder, TAGS[2])
+        df = df.drop(df[df.step > 500000].index)
+        v2 = df["value"].mean()
         rej = normalize_rej(v2)
         rejs.append(rej)
     avg_rej = np.mean(rejs)
     return avg_rej
 
 
-# SEEDS=["seed1", "seed2", "seed3"]
+# SEEDS=["seed1"]
 # rejected_samples(["goal_finding", "sokoban", "carracing"])
 
 print(get_number_of_rejected_samples("goal_finding"))
