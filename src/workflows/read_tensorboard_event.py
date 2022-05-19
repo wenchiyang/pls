@@ -285,7 +285,7 @@ def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
                             orient='none',
                             direction='horizontal',
                             #legendX=10, legendY=70,
-                            legendX=20, legendY=-35,
+                            legendX=20, legendY=-30,
                             columns=4,
                             titleAnchor='middle'
                         ),
@@ -337,8 +337,9 @@ def load_single_value_rej_vsrl2(exp):
     rejs = []
     for seed in SEEDS:
         folder = os.path.join(exp, "vsrl", seed)
-        df2 = load_dataframe(folder, TAGS[2])
-        v2 = df2["value"].mean()
+        df = load_dataframe(folder, TAGS[2])
+        df = df.drop(df[df.step > 500000].index)
+        v2 = df["value"].mean()
         rej = normalize_rej(v2)
         rejs.append(rej)
 
