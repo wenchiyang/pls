@@ -285,7 +285,7 @@ def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
                             orient='none',
                             direction='horizontal',
                             #legendX=10, legendY=70,
-                            legendX=20, legendY=-50,
+                            legendX=20, legendY=-35,
                             columns=4,
                             titleAnchor='middle'
                         ),
@@ -333,10 +333,37 @@ def rejected_samples(domain_names):
     fig_path = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", f"rejected_samples.svg"))
     c.save(fig_path)
 
+def load_single_value_rej_vsrl2(exp):
+    rejs = []
+    for seed in SEEDS:
+        folder = os.path.join(exp, "vsrl", seed)
+        df2 = load_dataframe(folder, TAGS[2])
+        v2 = df2["value"].mean()
+        rej = normalize_rej(v2)
+        rejs.append(rej)
+
+    avg_rej = np.mean(rejs)
+    return avg_rej
+
+def get_number_of_rejected_samples(name):
+    domain = NAMES[name]
+    rejs = []
+    for seed in SEEDS:
+        folder = os.path.join(domain, "vsrl", seed)
+        df2 = load_dataframe(folder, TAGS[2])
+        v2 = df2["value"].mean()
+        rej = normalize_rej(v2)
+        rejs.append(rej)
+    avg_rej = np.mean(rejs)
+    return avg_rej
 
 
 # SEEDS=["seed1", "seed2", "seed3"]
 # rejected_samples(["goal_finding", "sokoban", "carracing"])
+
+print(get_number_of_rejected_samples("goal_finding"))
+print(get_number_of_rejected_samples("sokoban"))
+print(get_number_of_rejected_samples("carracing"))
 
 # curves("sokoban",
 #        alphas=[
@@ -416,6 +443,6 @@ def rejected_samples(domain_names):
 #        fig_title="learning_curves",
 #        fig_title_abbr="Return")
 
-safety_optimality_draw("sokoban", n_step=500_000, x_axis_range=[0.0, 1.0], y_axis_range=[0.0, 0.6])
-safety_optimality_draw("goal_finding", n_step=500_000, x_axis_range=[0.6, 1.0], y_axis_range=[0.4, 1.0])
-safety_optimality_draw("carracing", n_step=500_000, x_axis_range=[0.0, 0.3], y_axis_range=[0.0, 0.8])
+# safety_optimality_draw("sokoban", n_step=500_000, x_axis_range=[0.0, 1.0], y_axis_range=[0.0, 0.6])
+# safety_optimality_draw("goal_finding", n_step=500_000, x_axis_range=[0.6, 1.0], y_axis_range=[0.4, 1.0])
+# safety_optimality_draw("carracing", n_step=500_000, x_axis_range=[0.0, 0.3], y_axis_range=[0.0, 0.8])
