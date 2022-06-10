@@ -26,5 +26,6 @@ setup(
         "selenium",
         "matplotlib",
         "tqdm",
+        "scikit-image"
     ],  # And any other dependencies required
 )

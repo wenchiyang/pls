@@ -109,9 +109,10 @@ def initial_log(name, args):
     logger.info(f"Render:           {args['render']}")
 
 
+
+# FOR TINYGRID INPUT
 def get_ground_wall(input, center_color, detect_color):
     centers = (input == center_color).nonzero()[:, 1:]
-
     neighbors = th.stack(
         (
             input[th.arange(input.size(0)), centers[:, 0] - 1 , centers[:, 1]],

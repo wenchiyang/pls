@@ -1,33 +1,123 @@
+from gym import spaces
 from torch import nn
 import torch as th
-from typing import Optional
+from torch.nn import functional as F
+from typing import Optional, NamedTuple, Generator
 import gym
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback
 
 from stable_baselines3 import PPO
 import time
 import numpy as np
-from stable_baselines3.common.utils import obs_as_tensor, safe_mean
+from stable_baselines3.common.utils import obs_as_tensor, safe_mean, explained_variance
 from stable_baselines3.common.vec_env import VecEnv
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.buffers import RolloutBuffer
-from stable_baselines3.common.utils import explained_variance
-from gym import spaces
-from torch.nn import functional as F
 from .util import safe_max, safe_min
+from gym.spaces import Box
+from stable_baselines3.common.preprocessing import get_obs_shape
+from stable_baselines3.common.vec_env import VecNormalize
+
 
 WALL_COLOR = 0.25
 GHOST_COLOR = 0.5
 PACMAN_COLOR = 0.75
 FOOD_COLOR = 1
 
+class GoalFinding_RolloutBufferSamples(NamedTuple):
+    observations: th.Tensor
+    tinygrids: th.Tensor
+    actions: th.Tensor
+    old_values: th.Tensor
+    old_log_prob: th.Tensor
+    advantages: th.Tensor
+    returns: th.Tensor
+
+class GoalFinding_RolloutBuffer(RolloutBuffer):
+    def __init__(self, *args, tinygrid_space, **kwargs):
+        self.tinygrid_shape = get_obs_shape(tinygrid_space)
+        super(GoalFinding_RolloutBuffer, self).__init__(*args, **kwargs)
+
+    def reset(self) -> None:
+        super(GoalFinding_RolloutBuffer, self).reset()
+        self.tinygrids = np.zeros((self.buffer_size, self.n_envs) + self.tinygrid_shape, dtype=np.float32)
+
+    def add(self, *args, tinygrid, **kwargs) -> None:
+        self.tinygrids[self.pos] = np.array(tinygrid).copy()
+        super(GoalFinding_RolloutBuffer, self).add(*args, **kwargs)
+
+    def get(self, batch_size: Optional[int] = None) -> Generator[GoalFinding_RolloutBufferSamples, None, None]:
+        assert self.full, ""
+        indices = np.random.permutation(self.buffer_size * self.n_envs)
+        # Prepare the data
+        if not self.generator_ready:
+
+            _tensor_names = [
+                "observations",
+                "tinygrids",
+                "actions",
+                "values",
+                "log_probs",
+                "advantages",
+                "returns",
+            ]
+
+            for tensor in _tensor_names:
+                self.__dict__[tensor] = self.swap_and_flatten(self.__dict__[tensor])
+            self.generator_ready = True
+
+        # Return everything, don't create minibatches
+        if batch_size is None:
+            batch_size = self.buffer_size * self.n_envs
+
+        start_idx = 0
+        while start_idx < self.buffer_size * self.n_envs:
+            yield self._get_samples(indices[start_idx : start_idx + batch_size])
+            start_idx += batch_size
+
+    def _get_samples(self, batch_inds: np.ndarray, env: Optional[VecNormalize] = None) -> GoalFinding_RolloutBufferSamples:
+        data = (
+            self.observations[batch_inds],
+            self.tinygrids[batch_inds],
+            self.actions[batch_inds],
+            self.values[batch_inds].flatten(),
+            self.log_probs[batch_inds].flatten(),
+            self.advantages[batch_inds].flatten(),
+            self.returns[batch_inds].flatten(),
+        )
+        return GoalFinding_RolloutBufferSamples(*tuple(map(self.to_torch, data)))
+
 
 class GoalFinding_DPLPPO(PPO):
-    def __init__(self, *args, **kwargs):
-        super(GoalFinding_DPLPPO, self).__init__(*args, **kwargs)
+    def __init__(self, *args, env, **kwargs):
+        # observation_space = Box(
+        #     low=-1,
+        #     high=1,
+        #     shape=(
+        #         35, 35
+        #     )
+        # )
+        # env.observation_space = observation_space
+        super(GoalFinding_DPLPPO, self).__init__(*args, env, **kwargs)
 
     def _setup_model(self) -> None:
         super(GoalFinding_DPLPPO, self)._setup_model()
+        self.tinygrid_space = Box(
+            low=0,
+            high=1,
+            shape=(
+                7,7
+            )
+        )
+        self.rollout_buffer = GoalFinding_RolloutBuffer(
+            self.n_steps,
+            self.observation_space,
+            self.action_space,
+            device=self.device,
+            gamma=self.gamma,
+            gae_lambda=self.gae_lambda,
+            n_envs=self.n_envs,
+            tinygrid_space=self.tinygrid_space,)
 
     def learn(
         self,
@@ -251,13 +341,16 @@ class GoalFinding_DPLPPO(PPO):
             with th.no_grad():
                 # Convert to pytorch tensor or to TensorDict
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
+                tinygrid = self.env.render("tinygrid")
+                tinygrid = obs_as_tensor(tinygrid, self.device).unsqueeze(0)
+
                 (
                     actions,
                     values,
                     log_probs,
                     mass,
                     (object_detect_probs, base_policy),
-                ) = self.policy.forward(obs_tensor)
+                ) = self.policy.forward(obs_tensor, tinygrid)
                 action_lookup = env.envs[0].get_action_lookup()
 
                 self.policy.logging_per_step(
@@ -355,19 +448,22 @@ class GoalFinding_DPLPPO(PPO):
                         rewards[idx] += self.gamma * terminal_value
 
             rollout_buffer.add(
-                self._last_obs,
+                self._last_obs, # TODO tinygrid
                 actions,
                 rewards,
                 self._last_episode_starts,
                 values,
-                log_probs
+                log_probs,
+                tinygrid=tinygrid
             )
             self._last_obs = new_obs
             self._last_episode_starts = dones
 
         with th.no_grad():
             # Compute value for the last timestep
-            values = self.policy.predict_values(obs_as_tensor(new_obs, self.device))
+            new_obs_tensor = obs_as_tensor(new_obs, self.device)
+            new_obs_ = self.policy.image_encoder(new_obs_tensor).numpy()
+            values = self.policy.predict_values(obs_as_tensor(new_obs_, self.device))
 
         rollout_buffer.compute_returns_and_advantage(last_values=values, dones=dones)
 
@@ -375,7 +471,127 @@ class GoalFinding_DPLPPO(PPO):
 
         return True
 
+    def train(self) -> None:
+        """
+        Update policy using the currently gathered rollout buffer.
+        """
+        # Switch to train mode (this affects batch norm / dropout)
+        self.policy.set_training_mode(True)
+        # Update optimizer learning rate
+        self._update_learning_rate(self.policy.optimizer)
+        # Compute current clip range
+        clip_range = self.clip_range(self._current_progress_remaining)
+        # Optional: clip range for the value function
+        if self.clip_range_vf is not None:
+            clip_range_vf = self.clip_range_vf(self._current_progress_remaining)
 
+        entropy_losses = []
+        pg_losses, value_losses = [], []
+        clip_fractions = []
+
+        continue_training = True
+
+        # train for n_epochs epochs
+        for epoch in range(self.n_epochs):
+            approx_kl_divs = []
+            # Do a complete pass on the rollout buffer
+            for rollout_data in self.rollout_buffer.get(self.batch_size):
+                actions = rollout_data.actions
+                if isinstance(self.action_space, spaces.Discrete):
+                    # Convert discrete action from float to long
+                    actions = rollout_data.actions.long().flatten()
+
+                # Re-sample the noise matrix because the log_std has changed
+                if self.use_sde:
+                    self.policy.reset_noise(self.batch_size)
+
+                values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, rollout_data.tinygrids, actions)
+                values = values.flatten()
+                # Normalize advantage
+                advantages = rollout_data.advantages
+                if self.normalize_advantage:
+                    advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+
+                # ratio between old and new policy, should be one at the first iteration
+                ratio = th.exp(log_prob - rollout_data.old_log_prob)
+
+                # clipped surrogate loss
+                policy_loss_1 = advantages * ratio
+                policy_loss_2 = advantages * th.clamp(ratio, 1 - clip_range, 1 + clip_range)
+                policy_loss = -th.min(policy_loss_1, policy_loss_2).mean()
+
+                # Logging
+                pg_losses.append(policy_loss.item())
+                clip_fraction = th.mean((th.abs(ratio - 1) > clip_range).float()).item()
+                clip_fractions.append(clip_fraction)
+
+                if self.clip_range_vf is None:
+                    # No clipping
+                    values_pred = values
+                else:
+                    # Clip the different between old and new value
+                    # NOTE: this depends on the reward scaling
+                    values_pred = rollout_data.old_values + th.clamp(
+                        values - rollout_data.old_values, -clip_range_vf, clip_range_vf
+                    )
+                # Value loss using the TD(gae_lambda) target
+                value_loss = F.mse_loss(rollout_data.returns, values_pred)
+                value_losses.append(value_loss.item())
+
+                # Entropy loss favor exploration
+                if entropy is None:
+                    # Approximate entropy when no analytical form
+                    entropy_loss = -th.mean(-log_prob)
+                else:
+                    entropy_loss = -th.mean(entropy)
+
+                entropy_losses.append(entropy_loss.item())
+
+                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
+
+                # Calculate approximate form of reverse KL Divergence for early stopping
+                # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
+                # and discussion in PR #419: https://github.com/DLR-RM/stable-baselines3/pull/419
+                # and Schulman blog: http://joschu.net/blog/kl-approx.html
+                with th.no_grad():
+                    log_ratio = log_prob - rollout_data.old_log_prob
+                    approx_kl_div = th.mean((th.exp(log_ratio) - 1) - log_ratio).cpu().numpy()
+                    approx_kl_divs.append(approx_kl_div)
+
+                if self.target_kl is not None and approx_kl_div > 1.5 * self.target_kl:
+                    continue_training = False
+                    if self.verbose >= 1:
+                        print(f"Early stopping at step {epoch} due to reaching max kl: {approx_kl_div:.2f}")
+                    break
+
+                # Optimization step
+                self.policy.optimizer.zero_grad()
+                loss.backward()
+                # Clip grad norm
+                th.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
+                self.policy.optimizer.step()
+
+            if not continue_training:
+                break
+
+        self._n_updates += self.n_epochs
+        explained_var = explained_variance(self.rollout_buffer.values.flatten(), self.rollout_buffer.returns.flatten())
+
+        # Logs
+        self.logger.record("train/entropy_loss", np.mean(entropy_losses))
+        self.logger.record("train/policy_gradient_loss", np.mean(pg_losses))
+        self.logger.record("train/value_loss", np.mean(value_losses))
+        self.logger.record("train/approx_kl", np.mean(approx_kl_divs))
+        self.logger.record("train/clip_fraction", np.mean(clip_fractions))
+        self.logger.record("train/loss", loss.item())
+        self.logger.record("train/explained_variance", explained_var)
+        if hasattr(self.policy, "log_std"):
+            self.logger.record("train/std", th.exp(self.policy.log_std).mean().item())
+
+        self.logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
+        self.logger.record("train/clip_range", clip_range)
+        if self.clip_range_vf is not None:
+            self.logger.record("train/clip_range_vf", clip_range_vf)
     # def collect_rollouts_old(
     #     self,
     #     env: VecEnv,

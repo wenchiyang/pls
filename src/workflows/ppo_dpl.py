@@ -37,7 +37,7 @@ from dpl_policies.sokoban.sokoban_ppo import Sokoban_DPLPPO
 from dpl_policies.carracing.carracing_ppo import Carracing_DPLPPO
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import CheckpointCallback
-
+import math
 
 
 
@@ -49,7 +49,7 @@ def setup_env(folder, config, eval=False):
     else:
         env_args = config["env_features"]
     if "Boxoban" in env_name:
-        cache_root = os.path.abspath(os.path.join(folder, "../../../../.."))
+        cache_root = os.path.join(folder, "../../../../..")
         env_args["cache_root"] = cache_root
     env = gym.make(env_name, **env_args)
     # env = gym.make(env_name)
@@ -60,11 +60,15 @@ def setup_env(folder, config, eval=False):
             "n_ghost_locs": config["model_features"]["params"]["n_ghost_locs"],
             "sensor_noise": config["model_features"]["params"]["sensor_noise"],
             "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
+            "use_learned_observations": config["model_features"]["params"]["use_learned_observations"],
+            "noisy_observations": config["model_features"]["params"]["noisy_observations"],
+            "observation_type": config["model_features"]["params"]["observation_type"],
         }
         env = GoalFinding_Monitor(
             env,
             allow_early_resets=False
         )
+
         custom_callback = None
         custom_callback = GoalFinding_Callback(custom_callback)
     elif "Pacman" in env_name:
@@ -140,11 +144,19 @@ def main(folder, config):
         folder, config
     )
 
-    grid_size = env.grid_size
-    height = env.grid_height
-    width = env.grid_weight
-    color_channels = env.color_channels
-    n_pixels = (height * grid_size) * (width * grid_size) * color_channels
+    # grid_size = env.grid_size
+    # height = env.grid_height
+    # width = env.grid_weight
+    # color_channels = env.color_channels
+    # n_pixels = (height * grid_size) * (width * grid_size) * color_channels
+    height = config["model_features"]["encoder_params"]["height"]
+    width = config["model_features"]["encoder_params"]["width"]
+    downsampling_size = config["model_features"]["encoder_params"]["downsampling_size"]
+
+    net_input_dim = math.ceil(height / downsampling_size)
+
+    n_pixels = net_input_dim
+
     n_actions = env.action_size
     env_name = config["env_type"]
     if "GoalFinding" in env_name:
@@ -162,12 +174,12 @@ def main(folder, config):
 
 
     image_encoder = image_encoder_cls(
-        n_pixels, n_actions, shielding_settings, program_path, debug_program_path, folder
+        n_pixels, downsampling_size, n_actions, shielding_settings, program_path, debug_program_path, folder
     )
 
     model = model_cls(
         policy_cls,
-        env,
+        env=env,
         learning_rate=config["model_features"]["params"]["learning_rate"],
         n_steps=config["model_features"]["params"]["n_steps"],
         # n_steps: The number of steps to run for each environment per update
@@ -183,6 +195,7 @@ def main(folder, config):
             "net_arch": net_arch,
             "activation_fn": nn.ReLU,
             "optimizer_class": th.optim.Adam,
+            "input_size": n_pixels
         },
         verbose=0,
         seed=config["model_features"]["params"]["seed"],

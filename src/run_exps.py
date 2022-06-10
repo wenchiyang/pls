@@ -64,27 +64,27 @@ if __name__ == "__main__":
             # "sokoban/2box10map_long",
             # "goal_finding/smallGrid100map",
             # "goal_finding/7grid5g"
-            "sokoban/2box1map",
-            "sokoban/2box5map",
+            "goal_finding/7grid5g_gray"
+            # "sokoban/2box1map",
+            # "sokoban/2box5map",
             # "carracing/onemap"
             # "carracing/sparse_rewards4"
         ],
         "exps": [
             # "test"
             "no_shielding",
-            "hard_shielding",
+            # "hard_shielding",
             # "alpha_0.1",
             # "alpha_0.3",
             # "alpha_0.5",
             # "alpha_0.7",
             # "alpha_0.9",
             # "alpha_learned"
-            "vsrl"
+            # "vsrl"
             ],
         "seeds":
             # ["seed1", "seed2", "seed3", "seed4", "seed5"]
-            ["seed1", "seed2"]
-            # ["t5"]
+            ["t1", "t2", "t3", "t4"]
     }
 
     dir_path = os.path.dirname(os.path.realpath(__file__))

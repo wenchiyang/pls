@@ -8,6 +8,7 @@ import time
 from stable_baselines3.common.callbacks import ConvertCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.policies import ActorCriticPolicy
+from stable_baselines3.common.buffers import RolloutBuffer
 from stable_baselines3.common.type_aliases import (
     GymObs,
     GymStepReturn,
@@ -15,9 +16,12 @@ from stable_baselines3.common.type_aliases import (
 )
 from os import path
 import pickle
-
+from gym.spaces import Box
 from deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
 from .util import get_ground_wall
+from matplotlib import pyplot as plt
+from skimage.measure import block_reduce
+from observation_nets.observation_nets import Observation_net
 
 WALL_COLOR = 0.25
 GHOST_COLOR = 0.5
@@ -25,20 +29,32 @@ PACMAN_COLOR = 0.75
 FOOD_COLOR = 1
 
 
+
+
 class GoalFinding_Encoder(nn.Module):
-    def __init__(self, input_size, n_actions, shielding_settings, program_path, debug_program_path, folder):
+    def __init__(self, input_size, downsampling_size, n_actions, shielding_settings, program_path, debug_program_path, folder):
         super(GoalFinding_Encoder, self).__init__()
         self.input_size = input_size
+        self.downsampling_size = downsampling_size
         self.n_ghost_locs = shielding_settings["n_ghost_locs"]
         self.n_actions = n_actions
         self.program_path = program_path
         self.debug_program_path = debug_program_path
         self.folder = folder
-        self.sensor_noise = shielding_settings["sensor_noise"]
-        self.max_num_rejected_samples = shielding_settings["max_num_rejected_samples"]
+        self.shielding_settings = shielding_settings
+        # self.sensor_noise = shielding_settings["sensor_noise"]
+        # self.max_num_rejected_samples = shielding_settings["max_num_rejected_samples"]
+
+    def downsampling(self, x):
+        dz = block_reduce(x, block_size=(1, self.downsampling_size, self.downsampling_size), func=np.mean)
+        dz = th.tensor(dz)
+        # plt.imshow(dz, cmap="gray", vmin=-1, vmax=1)
+        # plt.show()
+        return dz
 
 
     def forward(self, x):
+        x = self.downsampling(x)
         xx = th.flatten(x, 1)
         return xx
 
@@ -50,8 +66,10 @@ class GoalFinding_Monitor(Monitor):
     def __init__(self, *args, **kwargs):
         super(GoalFinding_Monitor, self).__init__(*args, **kwargs)
 
+
     def reset(self, **kwargs) -> GymObs:
-        return super(GoalFinding_Monitor, self).reset(**kwargs)
+        output = super(GoalFinding_Monitor, self).reset(**kwargs)
+        return output
 
     def step(self, action: Union[np.ndarray, int]) -> GymStepReturn:
         if self.needs_reset:
@@ -94,13 +112,22 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             image_encoder: GoalFinding_Encoder = None,
             alpha = 0.5,
             differentiable_shield = True,
+            input_size = 1,
             **kwargs
     ):
-        super(GoalFinding_DPLActorCriticPolicy, self).__init__(observation_space,action_space, lr_schedule, **kwargs)
+        observation_space = Box(
+                low=-1,
+                high=1,
+                shape=(
+                    input_size, input_size
+                )
+            )
+        super(GoalFinding_DPLActorCriticPolicy, self).__init__(observation_space, action_space, lr_schedule, **kwargs)
         ###############################
-
         self.image_encoder = image_encoder
         self.input_size = self.image_encoder.input_size
+
+
 
         self.n_ghost_locs = self.image_encoder.n_ghost_locs
 
@@ -108,15 +135,21 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         self.program_path = self.image_encoder.program_path
         self.debug_program_path = self.image_encoder.debug_program_path
         self.folder = self.image_encoder.folder
-        self.sensor_noise = self.image_encoder.sensor_noise
+        self.sensor_noise = self.image_encoder.shielding_settings["sensor_noise"]
+        self.max_num_rejected_samples = self.image_encoder.shielding_settings["max_num_rejected_samples"]
+        self.use_learned_observations = self.image_encoder.shielding_settings["use_learned_observations"]
+        self.noisy_observations = self.image_encoder.shielding_settings["noisy_observations"]
+        self.observation_type = self.image_encoder.shielding_settings["observation_type"]
         self.alpha = alpha
         self.differentiable_shield = differentiable_shield
-        self.max_num_rejected_samples = self.image_encoder.max_num_rejected_samples
+        self.sig = nn.Sigmoid()
+
 
         with open(self.program_path) as f:
             self.program = f.read()
         with open(self.debug_program_path) as f:
             self.debug_program = f.read()
+
 
         ##### SOFT SHILDENG WITH GROUND TRUTH ####
         self.queries = [
@@ -151,10 +184,16 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                 program=self.debug_program, queries=self.queries, evidences=["safe_next"],
                 input_struct=input_struct, query_struct=query_struct
             )
+            if self.use_learned_observations:
+                observation_model_path = path.join(self.folder, "../../../data", self.observation_type)
+                use_cuda = False
+                device = th.device("cuda" if use_cuda else "cpu")
+                self.observation_model = Observation_net(input_size=35*35, output_size=4).to(device)
+                self.observation_model.load_state_dict(th.load(observation_model_path))
 
         if self.alpha == "learned":
             self.alpha_net = nn.Sequential(
-                    nn.Linear(self.input_size, 128),
+                    nn.Linear(self.input_size*self.input_size, 128),
                     nn.ReLU(),
                     nn.Linear(128, 1),
                     nn.Sigmoid(),
@@ -235,7 +274,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
     #                 object_detect_probs["ground_truth_ghost"],
     #                 object_detect_probs["ground_truth_wall"],
     #             )
-    def forward(self, x, deterministic: bool = False):
+    def forward(self, x, tinygrid, deterministic: bool = False):
         """
         Forward pass in all the networks (actor and critic)
 
@@ -253,9 +292,17 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         base_actions = distribution.distribution.probs
 
         with th.no_grad():
-            ground_truth_ghost = get_ground_wall(x, PACMAN_COLOR, GHOST_COLOR)
-            ghosts = ground_truth_ghost + (self.sensor_noise)*th.randn(ground_truth_ghost.shape)
-            ghosts = th.clamp(ghosts, min=0, max=1)
+            ground_truth_ghost = get_ground_wall(tinygrid, PACMAN_COLOR, GHOST_COLOR)
+            # ghosts = ground_truth_ghost + (self.sensor_noise)*th.randn(ground_truth_ghost.shape)
+            # ghosts = th.clamp(ghosts, min=0, max=1)
+            if self.use_learned_observations:
+                output = self.observation_model(x)
+                if self.noisy_observations:
+                    ghosts = self.sig(output)
+                else:
+                    ghosts = (self.sig(output) > 0.5).float()
+            else:
+                ghosts = ground_truth_ghost
             object_detect_probs = {
                 "ground_truth_ghost": ground_truth_ghost,
             }
@@ -294,8 +341,6 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                     "action": base_actions,
                 }
             )
-
-
             if self.alpha == "learned":
                 alpha = self.alpha_net(obs)
                 object_detect_probs["alpha"] = alpha
@@ -319,7 +364,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         safeast_actions = results["safe_action"]
         actions = alpha * safeast_actions + (1 - alpha) * base_actions
 
-
+        # TODO: This is incorrect: This should be the shilded policy distrivution (of type CategoricalDistribution)
         mass = Categorical(probs=actions)
         if not deterministic:
             actions = mass.sample()
@@ -400,7 +445,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
     def evaluate_actions(
-        self, obs: th.Tensor, actions: th.Tensor
+        self, obs: th.Tensor, tinygrid: th.Tensor, actions: th.Tensor
     ) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
         """
         Evaluate actions according to the current policy,
@@ -421,7 +466,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             return values, log_prob, distribution.entropy()
 
 
-        _, values, _, mass, _ = self.forward(obs)
+        _, values, _, mass, _ = self.forward(obs, tinygrid=tinygrid)
         log_prob = mass.log_prob(actions)
         return values, log_prob, mass.entropy()
 
