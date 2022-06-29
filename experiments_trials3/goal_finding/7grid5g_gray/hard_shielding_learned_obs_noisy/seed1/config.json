@@ -26,7 +26,7 @@
       "log_interval": 1,
       "batch_size": 512,
       "n_epochs": 15,
-      "n_steps": 1024,
+      "n_steps": 2048,
       "learning_rate": 0.001,
       "seed": 567,
       "clip_range": 0.1,
@@ -42,11 +42,14 @@
       "net_arch_vf": [64, 64],
       "sensor_noise": 0,
       "max_num_rejected_samples": 100000,
-      "use_learned_observations": null,
-      "noisy_observations": null,
-      "observation_type": null
+      "use_learned_observations": true,
+      "noisy_observations": true,
+      "observation_type": "observation_model_100_examples.pt"
     }
   }
 }
+
+
+
 
 
