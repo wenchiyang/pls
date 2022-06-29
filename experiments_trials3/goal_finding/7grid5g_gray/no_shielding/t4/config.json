@@ -14,21 +14,19 @@
     "max_steps": 200,
     "num_maps": 100,
     "seed": 567,
-    "render_mode": "gray"
+    "render_mode": "gray",
+    "height": 240,
+    "width": 240,
+    "downsampling_size": 7
   },
 
   "model_features": {
     "name": "no_shielding",
-    "encoder_params": {
-      "height": 240,
-      "width": 240,
-      "downsampling_size": 9
-    },
     "params": {
       "log_interval": 1,
-      "batch_size": 512,
+      "batch_size": 128,
       "n_epochs": 15,
-      "n_steps": 2048,
+      "n_steps": 1024,
       "learning_rate": 0.001,
       "seed": 567,
       "clip_range": 0.1,

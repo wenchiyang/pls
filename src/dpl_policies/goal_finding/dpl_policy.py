@@ -33,10 +33,11 @@ FOOD_COLOR = 1
 
 
 class GoalFinding_Encoder(nn.Module):
-    def __init__(self, input_size, downsampling_size, n_actions, shielding_settings, program_path, debug_program_path, folder):
+    # def __init__(self, input_size, downsampling_size, n_actions, shielding_settings, program_path, debug_program_path, folder):
+    def __init__(self, input_size, n_actions, shielding_settings, program_path, debug_program_path,
+                 folder):
         super(GoalFinding_Encoder, self).__init__()
         self.input_size = input_size
-        self.downsampling_size = downsampling_size
         self.n_ghost_locs = shielding_settings["n_ghost_locs"]
         self.n_actions = n_actions
         self.program_path = program_path
@@ -55,7 +56,7 @@ class GoalFinding_Encoder(nn.Module):
 
 
     def forward(self, x):
-        x = self.downsampling(x)
+        # x = self.downsampling(x)
         xx = th.flatten(x, 1)
         return xx
 

@@ -14,16 +14,14 @@
     "max_steps": 200,
     "num_maps": 100,
     "seed": 567,
-    "render_mode": "gray"
+    "render_mode": "gray",
+    "height": 240,
+    "width": 240,
+    "downsampling_size": 7
   },
 
   "model_features": {
     "name": "no_shielding",
-    "encoder_params": {
-      "height": 240,
-      "width": 240,
-      "downsampling_size": 7
-    },
     "params": {
       "log_interval": 1,
       "batch_size": 512,

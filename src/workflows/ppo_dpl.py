@@ -149,9 +149,13 @@ def main(folder, config):
     # width = env.grid_weight
     # color_channels = env.color_channels
     # n_pixels = (height * grid_size) * (width * grid_size) * color_channels
-    height = config["model_features"]["encoder_params"]["height"]
-    width = config["model_features"]["encoder_params"]["width"]
-    downsampling_size = config["model_features"]["encoder_params"]["downsampling_size"]
+    # -----------
+    # height = config["model_features"]["encoder_params"]["height"]
+    # width = config["model_features"]["encoder_params"]["width"]
+    # downsampling_size = config["model_features"]["encoder_params"]["downsampling_size"]
+    height = config["env_features"]["height"]
+    width = config["env_features"]["width"]
+    downsampling_size = config["env_features"]["downsampling_size"]
 
     net_input_dim = math.ceil(height / downsampling_size)
 
@@ -173,10 +177,12 @@ def main(folder, config):
         policy_cls = Carracing_DPLActorCriticPolicy
 
 
+    # image_encoder = image_encoder_cls(
+    #     n_pixels, downsampling_size, n_actions, shielding_settings, program_path, debug_program_path, folder
+    # )
     image_encoder = image_encoder_cls(
-        n_pixels, downsampling_size, n_actions, shielding_settings, program_path, debug_program_path, folder
+        n_pixels, n_actions, shielding_settings, program_path, debug_program_path, folder
     )
-
     model = model_cls(
         policy_cls,
         env=env,
