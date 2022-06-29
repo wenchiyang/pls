@@ -7,7 +7,7 @@ import gym
 import pacman_gym
 from pacman_gym.envs.goal_finding import sample_layout
 import csv
-from src.dpl_policies.goal_finding.util import get_ground_wall
+from dpl_policies.goal_finding.util import get_ground_wall
 import torch as th
 import pandas as pd
 import numpy as np
