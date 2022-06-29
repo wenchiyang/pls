@@ -5,6 +5,7 @@ import numpy as np
 from typing import Union, Tuple
 from torch.distributions import Categorical
 import time
+from stable_baselines3.common.distributions import CategoricalDistribution
 from stable_baselines3.common.callbacks import ConvertCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.policies import ActorCriticPolicy
@@ -364,7 +365,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         safeast_actions = results["safe_action"]
         actions = alpha * safeast_actions + (1 - alpha) * base_actions
 
-        # TODO: This is incorrect: This should be the shilded policy distrivution (of type CategoricalDistribution)
+        # TODO: This is incorrect? This should be the shielded policy distrivution (of type CategoricalDistribution)
         mass = Categorical(probs=actions)
         if not deterministic:
             actions = mass.sample()

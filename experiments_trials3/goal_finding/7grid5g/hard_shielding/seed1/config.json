@@ -13,11 +13,17 @@
     "render": false,
     "max_steps": 200,
     "num_maps": 100,
-    "seed": 567
+    "seed": 567,
+    "render_mode": "tinygrid"
   },
 
   "model_features": {
     "name": "no_shielding",
+    "encoder_params": {
+      "height": 7,
+      "width": 7,
+      "downsampling_size": 1
+    },
     "params": {
       "log_interval": 1,
       "batch_size": 128,
@@ -37,7 +43,10 @@
       "net_arch_pi": [128],
       "net_arch_vf": [128],
       "sensor_noise": 0,
-      "max_num_rejected_samples": 100000
+      "max_num_rejected_samples": 100000,
+      "use_learned_observations": false,
+      "noisy_observations": null,
+      "observation_type": null
     }
   }
 }
