@@ -5,11 +5,9 @@ import numpy as np
 from typing import Union, Tuple
 from torch.distributions import Categorical
 import time
-from stable_baselines3.common.distributions import CategoricalDistribution
 from stable_baselines3.common.callbacks import ConvertCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.policies import ActorCriticPolicy
-from stable_baselines3.common.buffers import RolloutBuffer
 from stable_baselines3.common.type_aliases import (
     GymObs,
     GymStepReturn,
@@ -30,8 +28,6 @@ PACMAN_COLOR = 0.75
 FOOD_COLOR = 1
 
 
-
-
 class GoalFinding_Encoder(nn.Module):
     # def __init__(self, input_size, downsampling_size, n_actions, shielding_settings, program_path, debug_program_path, folder):
     def __init__(self, input_size, n_actions, shielding_settings, program_path, debug_program_path,
@@ -47,12 +43,12 @@ class GoalFinding_Encoder(nn.Module):
         # self.sensor_noise = shielding_settings["sensor_noise"]
         # self.max_num_rejected_samples = shielding_settings["max_num_rejected_samples"]
 
-    def downsampling(self, x):
-        dz = block_reduce(x, block_size=(1, self.downsampling_size, self.downsampling_size), func=np.mean)
-        dz = th.tensor(dz)
-        # plt.imshow(dz, cmap="gray", vmin=-1, vmax=1)
-        # plt.show()
-        return dz
+    # def downsampling(self, x):
+    #     dz = block_reduce(x, block_size=(1, self.downsampling_size, self.downsampling_size), func=np.mean)
+    #     dz = th.tensor(dz)
+    #     # plt.imshow(dz, cmap="gray", vmin=-1, vmax=1)
+    #     # plt.show()
+    #     return dz
 
 
     def forward(self, x):
@@ -315,7 +311,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             object_detect_probs["alpha"] = 0
             return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
 
-        if not self.differentiable_shield and self.alpha == 1:
+        if not self.differentiable_shield and self.alpha == 1: # VSRL
             num_rejected_samples = 0
             while True:
                 actions = distribution.get_actions(deterministic=deterministic)
@@ -335,6 +331,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             object_detect_probs["num_rejected_samples"] = num_rejected_samples
             object_detect_probs["alpha"] = 1
             return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
+
 
         if self.differentiable_shield:
             results = self.dpl_layer(

@@ -34,7 +34,7 @@
       "step_limit": 1000000,
       "program_type": "relative_loc_simple",
       "debug_program_type": "relative_loc_simple",
-      "alpha": 0,
+      "alpha": 1,
       "n_ghost_locs": 4,
       "differentiable_shield": true,
       "net_arch_shared": [],
