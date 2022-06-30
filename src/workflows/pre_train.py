@@ -32,10 +32,14 @@ def generate_random_images(csv_path, folder, n_images=10):
             "reward_crash": 0,
             "reward_food": 0,
             "reward_time": -0.1,
-            "render": True,
+            "render": False,
             "max_steps": 200,
             "num_maps": 1,
-            "seed": 567
+            "seed": 567,
+            'render_mode': "gray",
+            'height': 240,
+            'width': 240,
+            'downsampling_size': 1
         }
     }
     env_name = config["env_type"]
@@ -67,11 +71,11 @@ def generate_random_images(csv_path, folder, n_images=10):
         env.env.render()
 
 
-        img = env.game.render_rgb()
+        img = env.game.compose_img("gray")
         path = os.path.join(folder, f"img{n:06}.jpeg")
         plt.imsave(path, img)
 
-        tinyGrid = env.my_render()
+        tinyGrid = env.game.compose_img("tinygrid")
         tinyGrid = th.tensor(tinyGrid).unsqueeze(0)
         ground_truth_ghost = get_ground_wall(tinyGrid, PACMAN_COLOR, GHOST_COLOR)
         row = [f"img{n:06}.jpeg"] + ground_truth_ghost.flatten().tolist()
@@ -144,7 +148,7 @@ class Goal_Finding_Dataset(Dataset):
 
 
 
-def train(model, device, train_loader, optimizer, epoch, loss_function):
+def train(model, device, train_loader, optimizer, epoch, loss_function, f_log):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device).squeeze(1)
@@ -154,13 +158,11 @@ def train(model, device, train_loader, optimizer, epoch, loss_function):
 
         loss.backward()
         optimizer.step()
-        print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, (batch_idx+1) * len(data), len(train_loader.dataset),
-                100. * (batch_idx+1) / len(train_loader), loss.item()))
+        f_log.write(f'Train Epoch: {epoch} [{(batch_idx+1) * len(data)}/{len(train_loader.dataset)} ({100. * (batch_idx+1) / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}\n')
 
 
 
-def test(model, device, test_loader, loss_function):
+def test(model, device, test_loader, loss_function, f_log):
     model.eval()
     test_loss = 0
     correct = 0
@@ -180,21 +182,21 @@ def test(model, device, test_loader, loss_function):
             true_negative  += th.logical_and(target.view_as(pred) == 0, pred == 0).sum().item()
             false_positive += th.logical_and(target.view_as(pred) == 0, pred == 1).sum().item()
             false_negative += th.logical_and(target.view_as(pred) == 1, pred == 0).sum().item()
-
+        assert true_positive+true_negative+false_positive+false_negative == 400
     test_loss /= len(test_loader.dataset)
 
     precision = (true_positive * 100)/(true_positive+false_positive) if true_positive+false_positive != 0 else -1
     recall = (true_positive * 100)/(true_positive+false_negative)
-    print(f'Test set: Average loss: {test_loss:.4f}, \n\t\t' +
+    f_log.write(f'Test set: Average loss: {test_loss:.4f}, \n\t\t' +
         f'Accuracy: {correct}/{len(test_loader.dataset) * 4} ({100. * correct / (len(test_loader.dataset) * 4):.0f}%)\n\t\t' +
         f'Precision: {true_positive}/{true_positive+false_positive} ({precision:.0f}%),\n\t\t' +
         f'Recall: {true_positive}/{true_positive+false_negative} ({recall:.0f}%), \n\t\t' +
         f'tp: {true_positive}, tn: {true_negative}, fp: {false_positive}, fn:{false_negative}\n')
+    f_log.flush()
 
-
-def main(csv_file, root_dir, model_folder, n_train, net_class, net_input_size, net_output_size, downsampling_size):
+def main(csv_file, root_dir, model_folder, n_train, net_class, net_input_size, net_output_size, downsampling_size, epochs):
     use_cuda = False
-    epochs = 100
+    # epochs = 10000
     batch_size = 256
     device = th.device("cuda" if use_cuda else "cpu")
     th.manual_seed(0)
@@ -212,9 +214,11 @@ def main(csv_file, root_dir, model_folder, n_train, net_class, net_input_size, n
     model = net_class(input_size=net_input_size, output_size=net_output_size).to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
+    log_path = os.path.join(model_folder, f"observation_model_{n_train}_examples.log")
+    f_log = open(log_path, "w")
     for epoch in range(1, epochs):
-        train(model, device, train_loader, optimizer, epoch, th.nn.BCEWithLogitsLoss())
-        test(model, device, test_loader, th.nn.BCEWithLogitsLoss(reduction='sum'))
+        train(model, device, train_loader, optimizer, epoch, th.nn.BCEWithLogitsLoss(), f_log)
+        test(model, device, test_loader, th.nn.BCEWithLogitsLoss(reduction='sum'), f_log)
     model_path = os.path.join(model_folder, f"observation_model_{n_train}_examples.pt")
     th.save(model.state_dict(), model_path)
 
