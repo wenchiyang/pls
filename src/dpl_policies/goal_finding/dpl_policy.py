@@ -140,7 +140,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         self.observation_type = self.image_encoder.shielding_settings["observation_type"]
         self.alpha = alpha
         self.differentiable_shield = differentiable_shield
-        self.sig = nn.Sigmoid()
+        # self.sig = nn.Sigmoid()
 
 
         with open(self.program_path) as f:
@@ -183,10 +183,10 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                 input_struct=input_struct, query_struct=query_struct
             )
             if self.use_learned_observations:
-                observation_model_path = path.join(self.folder, "../../../data", self.observation_type)
+                observation_model_path = path.join(self.folder, "../../data", self.observation_type)
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
-                self.observation_model = Observation_net(input_size=35*35, output_size=4).to(device)
+                self.observation_model = Observation_net(input_size=35*35, output_size=4).to(device) # TODO: put 35 in config file
                 self.observation_model.load_state_dict(th.load(observation_model_path))
 
         if self.alpha == "learned":
@@ -296,9 +296,9 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             if self.use_learned_observations:
                 output = self.observation_model(x)
                 if self.noisy_observations:
-                    ghosts = self.sig(output)
+                    ghosts = self.observation_model.sigmoid(output)
                 else:
-                    ghosts = (self.sig(output) > 0.5).float()
+                    ghosts = (self.observation_model.sigmoid(output) > 0.5).float()
             else:
                 ghosts = ground_truth_ghost
             object_detect_probs = {

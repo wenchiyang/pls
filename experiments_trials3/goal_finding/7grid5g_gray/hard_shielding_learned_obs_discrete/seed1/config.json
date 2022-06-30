@@ -43,7 +43,7 @@
       "sensor_noise": 0,
       "max_num_rejected_samples": 100000,
       "use_learned_observations": true,
-      "noisy_observations": true,
+      "noisy_observations": false,
       "observation_type": "observation_model_100_examples.pt"
     }
   }
