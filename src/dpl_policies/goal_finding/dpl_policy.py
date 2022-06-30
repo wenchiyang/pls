@@ -323,6 +323,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                         }
                     )
                 safe_next = results["safe_next"]
+                # TODO: VSRL should not depend on PLS. This line is very ad-hoc
                 if not th.any(safe_next.isclose(th.zeros(actions.shape))) or num_rejected_samples > self.max_num_rejected_samples:
                     break
                 else:
