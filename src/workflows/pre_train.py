@@ -71,7 +71,7 @@ def generate_random_images(csv_path, folder, n_images=10):
         env.env.render()
 
 
-        img = env.game.compose_img("gray")
+        img = env.game.compose_img("rgb")
         path = os.path.join(folder, f"img{n:06}.jpeg")
         plt.imsave(path, img)
 
@@ -137,7 +137,9 @@ class Goal_Finding_Dataset(Dataset):
         image_raw = io.imread(img_name)[:240,:240,:]
         image = self.rgb2gray(image_raw)
         image = self.downsampling(image, self.downsampling_size)
-
+        # from matplotlib import pyplot as plt
+        # plt.imshow(image, cmap="gray", vmin=-1, vmax=1)
+        # plt.show()
 
         labels = self.instances.iloc[idx, 1:]
         labels = th.tensor([labels], dtype=th.float32)
