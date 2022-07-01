@@ -315,19 +315,31 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             num_rejected_samples = 0
             while True:
                 actions = distribution.get_actions(deterministic=deterministic)
+                # check if the action is safe
                 with th.no_grad():
-                    results = self.query_safety_layer(
-                        x={
-                            "ghost": ghosts,
-                            "action": th.eye(self.n_actions)[actions],
-                        }
-                    )
-                safe_next = results["safe_next"]
-                # TODO: VSRL should not depend on PLS. This line is very ad-hoc
-                if not th.any(safe_next.isclose(th.zeros(actions.shape))) or num_rejected_samples > self.max_num_rejected_samples:
-                    break
-                else:
-                    num_rejected_samples += 1
+                    vsrl_actions_encoding = th.eye(self.n_actions)[actions][:, 1:]
+                    actions_are_unsafe = th.logical_and(vsrl_actions_encoding, ghosts)
+                    if not th.any(actions_are_unsafe) or num_rejected_samples > self.max_num_rejected_samples:
+                        break
+                    else: # sample another action
+                        num_rejected_samples += 1
+            # num_rejected_samples = 0
+            # while True:
+            #     actions = distribution.get_actions(deterministic=deterministic)
+            #     # check if the action is safe
+            #     with th.no_grad():
+            #         results = self.query_safety_layer(
+            #             x={
+            #                 "ghost": ghosts,
+            #                 "action": th.eye(self.n_actions)[actions],
+            #             }
+            #         )
+            #     safe_next = results["safe_next"]
+            #     # TODO: VSRL should not depend on PLS. This line is very ad-hoc
+            #     if not th.any(safe_next.isclose(th.zeros(actions.shape))) or num_rejected_samples > self.max_num_rejected_samples:
+            #         break
+            #     else:
+            #         num_rejected_samples += 1
             log_prob = distribution.log_prob(actions)
             object_detect_probs["num_rejected_samples"] = num_rejected_samples
             object_detect_probs["alpha"] = 1
