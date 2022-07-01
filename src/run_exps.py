@@ -72,19 +72,25 @@ if __name__ == "__main__":
         ],
         "exps": [
             # "test"
-            "no_shielding",
-            # "hard_shielding",
+            # "no_shielding",
+            # "hard_shielding_perfect_obs",
+            "hard_shielding_learned_obs_discrete_100",
+            "hard_shielding_learned_obs_noisy_100",
+            "hard_shielding_learned_obs_discrete_1000",
+            "hard_shielding_learned_obs_noisy_1000",
+            "hard_shielding_learned_obs_discrete_10000",
+            "hard_shielding_learned_obs_noisy_10000",
             # "alpha_0.1",
             # "alpha_0.3",
             # "alpha_0.5",
             # "alpha_0.7",
             # "alpha_0.9",
             # "alpha_learned"
-            # "vsrl"
+            # "vsrl_perfect_obs"
             ],
         "seeds":
             # ["seed1", "seed2", "seed3", "seed4", "seed5"]
-            ["t1", "t2", "t3", "t4"]
+            ["seed1"]
     }
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -108,5 +114,5 @@ if __name__ == "__main__":
                               hyper["seeds"],
                               )
         exps.append(folder)
-    main_cluster()
-    # run_train()
+    # main_cluster()
+    run_train()
