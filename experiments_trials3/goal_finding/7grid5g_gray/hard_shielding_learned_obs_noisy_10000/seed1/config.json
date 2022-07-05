@@ -20,6 +20,10 @@
     "downsampling_size": 7
   },
 
+  "eval_env_features": {
+    "seed": 111
+  },
+
   "model_features": {
     "name": "no_shielding",
     "params": {
@@ -44,7 +48,7 @@
       "max_num_rejected_samples": 100000,
       "use_learned_observations": true,
       "noisy_observations": true,
-      "observation_type": "observation_model_10000_examples.pt"
+      "observation_type": "observation_model_10000_examples_old.pt"
     }
   }
 }
