@@ -98,7 +98,7 @@ class GoalFinding_DPLPPO(PPO):
         #     )
         # )
         # env.observation_space = observation_space
-        super(GoalFinding_DPLPPO, self).__init__(*args, env, **kwargs)
+        super(GoalFinding_DPLPPO, self).__init__(*args, env=env, **kwargs)
 
     def _setup_model(self) -> None:
         super(GoalFinding_DPLPPO, self)._setup_model()
