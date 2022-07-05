@@ -19,5 +19,5 @@ if __name__ == "__main__":
 
     # pretrain_observation(csv_file, img_folder, model_folder, 10, 10)
     # pretrain_observation(csv_file, img_folder, model_folder, 100, 300)
-    # pretrain_observation(csv_file, img_folder, model_folder, 1000, 300)
+    pretrain_observation(csv_file, img_folder, model_folder, 1000, 300)
     pretrain_observation(csv_file, img_folder, model_folder, 10000, 300)

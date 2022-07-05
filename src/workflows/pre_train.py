@@ -196,6 +196,16 @@ def test(model, device, test_loader, loss_function, f_log):
         f'tp: {true_positive}, tn: {true_negative}, fp: {false_positive}, fn:{false_negative}\n')
     f_log.flush()
 
+def calculate_sample_weights(dataset):
+    keys = ["ghost(up)", "ghost(down)", "ghost(left)", "ghost(right)"]
+    pos_weights = []
+    for key in keys:
+        ones = dataset.instances[key].value_counts()[1]
+        zeros = dataset.instances[key].value_counts()[0]
+        pos_weight = zeros/ones
+        pos_weights.append(pos_weight)
+    return th.tensor(pos_weights)
+
 def main(csv_file, root_dir, model_folder, n_train, net_class, net_input_size, net_output_size, downsampling_size, epochs):
     use_cuda = False
     # epochs = 10000
@@ -215,11 +225,13 @@ def main(csv_file, root_dir, model_folder, n_train, net_class, net_input_size, n
 
     model = net_class(input_size=net_input_size, output_size=net_output_size).to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
+    pos_weight = calculate_sample_weights(dataset_train)
+    loss_function = th.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     log_path = os.path.join(model_folder, f"observation_model_{n_train}_examples.log")
     f_log = open(log_path, "w")
     for epoch in range(1, epochs):
-        train(model, device, train_loader, optimizer, epoch, th.nn.BCEWithLogitsLoss(), f_log)
+        train(model, device, train_loader, optimizer, epoch, loss_function, f_log)
         test(model, device, test_loader, th.nn.BCEWithLogitsLoss(reduction='sum'), f_log)
     model_path = os.path.join(model_folder, f"observation_model_{n_train}_examples.pt")
     th.save(model.state_dict(), model_path)
