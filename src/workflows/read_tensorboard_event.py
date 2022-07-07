@@ -6,9 +6,9 @@ from altair import Column
 import numpy as np
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-domain_goal_finidng = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "goal_finding", "7grid5g"))
-domain_sokoban = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "sokoban", "2box5map"))
-domain_carracing = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", "carracing", "sparse_rewards4"))
+domain_goal_finidng = os.path.join(dir_path, "../..", "experiments_trials3", "goal_finding", "7grid5g")
+domain_sokoban = os.path.join(dir_path, "../..", "experiments_trials3", "sokoban", "2box5map")
+domain_carracing = os.path.join(dir_path, "../..", "experiments_trials3", "carracing", "sparse_rewards4")
 
 # dir_path = "/cw/dtaijupiter/NoCsBack/dtai/wenchi/NeSyProject/experiments_trials3"
 # domain_goal_finidng = os.path.join(dir_path, "goal_finding", "7grid5g")
@@ -63,6 +63,7 @@ TAGS = [
     "rollout/ep_rew_mean",
     "rollout/#violations",
     "safety/num_rejected_samples_max"
+    "safety/ep_abs_safety_shielded"
 ]
 SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
 # SEEDS = ["seed1"]
@@ -106,6 +107,45 @@ def load_step_value(folder, tag, n_step):
     df = load_dataframe(folder, tag)
     value = get_step_value_in_dataframe(df, steps=n_step)
     return value
+
+def extract_values():
+    folder = os.path.join(dir_path, "../..", "experiments_trials3", "goal_finding", "7grid5g_gray")
+    exp_names = [
+        "no_shielding",
+        "hard_shielding_perfect_obs",
+        "hard_shielding_learned_obs_discrete_100",
+        "hard_shielding_learned_obs_discrete_1000",
+        "hard_shielding_learned_obs_discrete_10000",
+        "hard_shielding_learned_obs_noisy_100",
+        "hard_shielding_learned_obs_noisy_1000",
+        "hard_shielding_learned_obs_noisy_10000",
+        "vsrl_learned_obs_discrete_100",
+        "vsrl_learned_obs_discrete_1000",
+        "vsrl_learned_obs_discrete_10000",
+    ]
+    exp_names_bal = [
+        "hard_shielding_learned_obs_discrete_100_bal",
+        "hard_shielding_learned_obs_discrete_1000_bal",
+        "hard_shielding_learned_obs_discrete_10000_bal",
+        "hard_shielding_learned_obs_noisy_100_bal",
+        "hard_shielding_learned_obs_noisy_1000_bal",
+        "hard_shielding_learned_obs_noisy_10000_bal",
+        "vsrl_learned_obs_discrete_100_bal",
+        "vsrl_learned_obs_discrete_1000_bal",
+        "vsrl_learned_obs_discrete_10000_bal",
+    ]
+
+
+    tags = ["rollout/ep_rew_mean", "safety/ep_abs_safety_shielded"]
+
+
+    for exp in exp_names + exp_names_bal:
+    # for exp in ["no_shielding"]:
+        exp_folder = os.path.join(folder, exp, "seed1")
+        v = load_step_value(exp_folder, tags[0], 500_000)
+        print(f"{exp}:\t\t{v}\n")
+
+extract_values()
 
 def load_single_value_rej_vsrl(exp, steps):
     rejs = []
@@ -184,6 +224,10 @@ def draw(dd, fig_path):
     c.show()
 
 def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_title_abbr, figure_height=100):
+    """
+    Plot a safety or reward curve of the experiment of "domain_name/alpha" until "step_limit" steps
+    curve_type: "rollout/ep_rew_mean" or "rollout/#violations"
+    """
     domain = NAMES[domain_name]
     norm = NORMS_REW[domain_name]
     df_list = []
@@ -258,6 +302,9 @@ def safety_optimality_df(domain_name, alphas, n_step):
     return df
 
 def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
+    """
+    Draw a 2D safety-optimality figure of the experiment of "domain_name" at "n_step" steps
+    """
     alphas = ["no_shielding", "alpha_0.1", "alpha_0.3", "alpha_0.5", "alpha_0.7", "alpha_0.9", "hard_shielding"]
     df = safety_optimality_df(domain_name, alphas, n_step)
     x_tick_range = [int(v*10) for v in x_axis_range]
@@ -298,8 +345,6 @@ def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
     fig_path = os.path.join(NAMES[domain_name], f"{domain_name}_safety_return.svg")
     c.save(fig_path)
 
-
-
 def rejected_samples(domain_names):
     dds=[]
     for name in domain_names:
@@ -330,23 +375,13 @@ def rejected_samples(domain_names):
         height=120
     )
     # c.show()
-    fig_path = os.path.abspath(os.path.join(dir_path, "../..", "experiments_trials3", f"rejected_samples.svg"))
+    fig_path = os.path.join(dir_path, "../..", "experiments_trials3", f"rejected_samples.svg")
     c.save(fig_path)
 
-# def load_single_value_rej_vsrl2(exp):
-#     rejs = []
-#     for seed in SEEDS:
-#         folder = os.path.join(exp, "vsrl", seed)
-#         df = load_dataframe(folder, TAGS[2])
-#         df = df.drop(df[df.step > 500000].index)
-#         v2 = df["value"].mean()
-#         rej = normalize_rej(v2)
-#         rejs.append(rej)
-#
-#     avg_rej = np.mean(rejs)
-#     return avg_rej
-
 def get_number_of_rejected_samples(name):
+    """
+    Returns the number of rejected samples of the experiment of "name" at 500k steps
+    """
     domain = NAMES[name]
     rejs = []
     for seed in SEEDS:
@@ -360,6 +395,9 @@ def get_number_of_rejected_samples(name):
     return avg_rej
 
 def get_time_sample_one_action(name, alpha):
+    """
+    Returns the runtime of the experiment of "name/alpha" for 500k steos
+    """
     domain = NAMES[name]
     times = []
     for seed in SEEDS:
@@ -373,13 +411,13 @@ def get_time_sample_one_action(name, alpha):
 
 
 # SEEDS=["seed1"]
-print(get_time_sample_one_action("goal_finding", "hard_shielding"))
-print(get_time_sample_one_action("sokoban", "hard_shielding"))
-print(get_time_sample_one_action("carracing", "hard_shielding"))
-
-print(get_time_sample_one_action("goal_finding", "vsrl"))
-print(get_time_sample_one_action("sokoban", "vsrl"))
-print(get_time_sample_one_action("carracing", "vsrl"))
+# print(get_time_sample_one_action("goal_finding", "hard_shielding"))
+# print(get_time_sample_one_action("sokoban", "hard_shielding"))
+# print(get_time_sample_one_action("carracing", "hard_shielding"))
+#
+# print(get_time_sample_one_action("goal_finding", "vsrl"))
+# print(get_time_sample_one_action("sokoban", "vsrl"))
+# print(get_time_sample_one_action("carracing", "vsrl"))
 
 # print(get_number_of_rejected_samples("goal_finding"))
 # print(get_number_of_rejected_samples("sokoban"))
