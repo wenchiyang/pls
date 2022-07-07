@@ -119,6 +119,7 @@ def extract_values():
         "hard_shielding_learned_obs_noisy_100",
         "hard_shielding_learned_obs_noisy_1000",
         "hard_shielding_learned_obs_noisy_10000",
+        "vsrl_prefect_obs",
         "vsrl_learned_obs_discrete_100",
         "vsrl_learned_obs_discrete_1000",
         "vsrl_learned_obs_discrete_10000",
