@@ -138,13 +138,19 @@ def extract_values():
 
     tags = ["rollout/ep_rew_mean", "safety/ep_abs_safety_shielded"]
 
-
+    print("REWARD")
     for exp in exp_names + exp_names_bal:
     # for exp in ["no_shielding"]:
         exp_folder = os.path.join(folder, exp, "seed1")
         v = load_step_value(exp_folder, tags[0], 500_000)
-        print(f"{exp}:\t\t{v}\n")
-
+        print(f"{exp}:\t\t{v}")
+    print("SAFETY")
+    for exp in exp_names + exp_names_bal:
+    # for exp in ["no_shielding"]:
+        exp_folder = os.path.join(folder, exp, "seed1")
+        v = load_step_value(exp_folder, tags[3], 500_000)
+        print(f"{exp}:\t\t{v}")
+        
 extract_values()
 
 def load_single_value_rej_vsrl(exp, steps):
