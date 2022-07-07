@@ -62,7 +62,7 @@ NEW_TAGS = [
 TAGS = [
     "rollout/ep_rew_mean",
     "rollout/#violations",
-    "safety/num_rejected_samples_max"
+    "safety/num_rejected_samples_max",
     "safety/ep_abs_safety_shielded"
 ]
 SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
@@ -148,9 +148,9 @@ def extract_values():
     for exp in exp_names + exp_names_bal:
     # for exp in ["no_shielding"]:
         exp_folder = os.path.join(folder, exp, "seed1")
-        v = load_step_value(exp_folder, tags[3], 500_000)
+        v = load_step_value(exp_folder, tags[1], 500_000)
         print(f"{exp}:\t\t{v}")
-        
+
 extract_values()
 
 def load_single_value_rej_vsrl(exp, steps):
