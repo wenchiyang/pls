@@ -17,7 +17,7 @@ from workflows.ppo_dpl import setup_env
 #     if "ppo" in learner:
 #         model, env = ppo_load_model_and_env(folder, config, model_at_step)
 #
-from src.dpl_policies.goal_finding.goal_finding_ppo import GoalFinding_DPLPPO
+from dpl_policies.goal_finding.goal_finding_ppo import GoalFinding_DPLPPO
 
 
 def load_model_and_env(folder, config, model_at_step, eval=True):
