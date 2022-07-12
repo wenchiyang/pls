@@ -44,7 +44,8 @@
       "max_num_rejected_samples": 100000,
       "use_learned_observations": null,
       "noisy_observations": null,
-      "observation_type": null
+      "observation_type": null,
+      "improve_observation": false
     }
   }
 }
