@@ -110,6 +110,6 @@ if __name__ == "__main__":
                               hyper["seeds"],
                               )
         exps.append(folder)
-    # main_cluster()
-    run_train()
+    main_cluster()
+    # run_train()
     # run_evaluate()
