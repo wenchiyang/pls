@@ -19,9 +19,6 @@
     "width": 240,
     "downsampling_size": 7
   },
-  "eval_env_features": {
-    "seed": 111
-  },
 
   "model_features": {
     "name": "no_shielding",
@@ -46,8 +43,9 @@
       "sensor_noise": 0,
       "max_num_rejected_samples": 100000,
       "use_learned_observations": true,
-      "noisy_observations": false,
-      "observation_type": "observation_model_100_examples.pt"
+      "noisy_observations": true,
+      "improve_observation": true,
+      "observation_type": "observation_model_1000_examples.pt"
     }
   }
 }
