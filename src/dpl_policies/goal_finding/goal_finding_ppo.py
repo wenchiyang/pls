@@ -219,6 +219,33 @@ class GoalFinding_DPLPPO(PPO):
                         ),
                     )
                     self.logger.record(
+                        "safety/ep_rel_safety_shielded",
+                        safe_mean(
+                            [
+                                ep_info["rel_safety_shielded"]
+                                for ep_info in self.ep_info_buffer
+                            ]
+                        ),
+                    )
+                    self.logger.record(
+                        "safety/ep_rel_safety_base",
+                        safe_mean(
+                            [
+                                ep_info["rel_safety_base"]
+                                for ep_info in self.ep_info_buffer
+                            ]
+                        ),
+                    )
+                    self.logger.record(
+                        "safety/ep_rel_safety_impr",
+                        safe_mean(
+                            [
+                                ep_info["rel_safety_shielded"] - ep_info["rel_safety_base"]
+                                for ep_info in self.ep_info_buffer
+                            ]
+                        ),
+                    )
+                    self.logger.record(
                         "safety/n_risky_states",
                         safe_mean(
                             [
@@ -327,6 +354,8 @@ class GoalFinding_DPLPPO(PPO):
         nums_rejected_samples = []
         abs_safeties_shielded = []  # TODO: can be put in call back
         abs_safeties_base = []
+        rel_safeties_shielded = []
+        rel_safeties_base = []
         n_risky_states = 0
 
         while n_steps < n_rollout_steps:
@@ -356,23 +385,25 @@ class GoalFinding_DPLPPO(PPO):
                 self.policy.logging_per_step(
                     mass, object_detect_probs, base_policy, action_lookup, self.logger
                 )
-                abs_safe_next_shielded, abs_safe_next_base = self.policy.logging_per_episode(
-                    mass, object_detect_probs, base_policy, action_lookup
+                abs_safe_next_shielded, abs_safe_next_base, rel_safe_next_shielded, rel_safe_next_base = self.policy.logging_per_episode(
+                    mass, object_detect_probs, base_policy
                 )
+
                 if object_detect_probs.get("alpha") is not None:
                     alphas.append(object_detect_probs["alpha"])
                 if object_detect_probs.get("num_rejected_samples") is not None:
                     nums_rejected_samples.append(object_detect_probs["num_rejected_samples"])
 
 
-                abs_safe_next_shielded = self.policy.get_step_safety(
-                    mass.probs,
-                    object_detect_probs["ground_truth_ghost"]
-                )
-                abs_safe_next_base = self.policy.get_step_safety(
-                    base_policy,
-                    object_detect_probs["ground_truth_ghost"]
-                )
+                # abs_safe_next_shielded = self.policy.get_step_safety(
+                #     mass.probs,
+                #     object_detect_probs["ground_truth_ghost"]
+                # )
+                # abs_safe_next_base = self.policy.get_step_safety(
+                #     base_policy,
+                #     object_detect_probs["ground_truth_ghost"]
+                # )
+
 
                 # if is in a risky situation
                 if th.any(object_detect_probs["ground_truth_ghost"],dim=1):
@@ -380,6 +411,8 @@ class GoalFinding_DPLPPO(PPO):
 
                 abs_safeties_shielded.append(abs_safe_next_shielded)
                 abs_safeties_base.append(abs_safe_next_base)
+                rel_safeties_shielded.append(rel_safe_next_shielded)
+                rel_safeties_base.append(rel_safe_next_base)
 
             actions = actions.cpu().numpy()
 
@@ -408,9 +441,13 @@ class GoalFinding_DPLPPO(PPO):
                 ep_len = infos[0]["episode"]["l"]
                 ep_abs_safety_shielded = float(min(abs_safeties_shielded))
                 ep_abs_safety_base = float(min(abs_safeties_base))
+                ep_rel_safety_shielded = float(min(rel_safeties_shielded))
+                ep_rel_safety_base = float(min(rel_safeties_base))
 
                 infos[0]["episode"]["abs_safety_shielded"] = ep_abs_safety_shielded
                 infos[0]["episode"]["abs_safety_base"] = ep_abs_safety_base
+                infos[0]["episode"]["rel_safety_shielded"] = ep_rel_safety_shielded
+                infos[0]["episode"]["rel_safety_base"] = ep_rel_safety_base
                 infos[0]["episode"]["n_risky_states"] = n_risky_states
                 if infos[0]["episode"]["violate_constraint"]:
                     self.n_deaths += 1
@@ -426,6 +463,8 @@ class GoalFinding_DPLPPO(PPO):
                     nums_rejected_samples = []
                 abs_safeties_shielded = []
                 abs_safeties_base = []
+                rel_safeties_shielded = []
+                rel_safeties_base = []
                 n_risky_states = 0
 
             self._update_info_buffer(infos)

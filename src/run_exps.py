@@ -1,6 +1,6 @@
 from dask.distributed import Client, LocalCluster, performance_report, SSHCluster
 import os
-from workflows.execute_workflow import train, test
+from workflows.execute_workflow import train, test, evaluate
 import itertools
 
 def run_train():
@@ -19,34 +19,30 @@ def write_to_file(folder):
         f.write(str(dir_path))
         f.write(str(exps))
 
-# def run_evaluate():
-#     folder = os.path.join(dir_path, "experiments_trials",
-#                           # "pacman_test",
-#                           # "pacman_scosGridTraps2",
-#                           # "pacman_smallGrid3",
-#                           # "pacman_smallGrid_new",
-#                           # "sokoban_6x6_new",
-#                           "pacman_5x5_full",
-#                           "ppo",
-#
-#                           )
-#     no = os.path.join(folder, "no_shielding")
-#     soft1 = os.path.join(folder, "soft_shielding")
-#     hard = os.path.join(folder, "hard_shielding")
-#     soft2 = os.path.join(folder, "soft_shielding2")
-#
-#     model_at_step = 100000
-#     mean_reward, n_deaths = evaluate(no, model_at_step=model_at_step, n_test_episodes=500)
-#     print("no:", mean_reward, n_deaths)
-#     # mean_reward, n_deaths = evaluate(soft1, model_at_step=model_at_step, n_test_episodes=500)
-#     # print("soft:", mean_reward, n_deaths)
-#     # mean_reward, n_deaths = evaluate(hard, model_at_step=model_at_step, n_test_episodes=500)
-#     # print("hard:", mean_reward, n_deaths)
-#     # mean_reward, n_deaths = evaluate(soft2, model_at_step=model_at_step, n_test_episodes=500)
-#     # print("soft2:", mean_reward, n_deaths)
-#
-#     # for exp in exps:
-#     #     evaluate(exp)th.argmax(mass.probs,dim=1)
+def run_evaluate():
+    folder = os.path.join(dir_path, "experiments_trials3",
+                          "goal_finding/7grid5g_gray",
+                          "hard_shielding_learned_obs_discrete_100_bal",
+                          "seed1"
+                          )
+    # no = os.path.join(folder, "no_shielding")
+    # soft1 = os.path.join(folder, "soft_shielding")
+    # hard = os.path.join(folder, "hard_shielding")
+    # soft2 = os.path.join(folder, "soft_shielding2")
+
+    # model_at_step = 100000
+    model_at_step = "end"
+    mean_reward, n_deaths = evaluate(folder, model_at_step=model_at_step, n_test_episodes=500)
+    print("no:", mean_reward, n_deaths)
+    # mean_reward, n_deaths = evaluate(soft1, model_at_step=model_at_step, n_test_episodes=500)
+    # print("soft:", mean_reward, n_deaths)
+    # mean_reward, n_deaths = evaluate(hard, model_at_step=model_at_step, n_test_episodes=500)
+    # print("hard:", mean_reward, n_deaths)
+    # mean_reward, n_deaths = evaluate(soft2, model_at_step=model_at_step, n_test_episodes=500)
+    # print("soft2:", mean_reward, n_deaths)
+
+    # for exp in exps:
+    #     evaluate(exp)th.argmax(mass.probs,dim=1)
 
 def main_cluster():
     client = Client("134.58.41.100:8786")
@@ -64,7 +60,7 @@ if __name__ == "__main__":
             # "sokoban/2box10map_long",
             # "goal_finding/smallGrid100map",
             # "goal_finding/7grid5g"
-            "goal_finding/7grid5g_gray"
+            "goal_finding/7grid5g_gray2"
             # "sokoban/2box1map",
             # "sokoban/2box5map",
             # "carracing/onemap"
@@ -72,21 +68,21 @@ if __name__ == "__main__":
         ],
         "exps": [
             # "test"
-            # "no_shielding",
-            # "hard_shielding_perfect_obs",
-            "hard_shielding_learned_obs_discrete_100",
-            "hard_shielding_learned_obs_noisy_100",
-            "hard_shielding_learned_obs_discrete_1000",
-            "hard_shielding_learned_obs_noisy_1000",
-            "hard_shielding_learned_obs_discrete_10000",
-            "hard_shielding_learned_obs_noisy_10000",
-            # "alpha_0.1",
-            # "alpha_0.3",
-            # "alpha_0.5",
-            # "alpha_0.7",
-            # "alpha_0.9",
-            # "alpha_learned"
-            # "vsrl_perfect_obs"
+            "PPO",
+            "PLS_perfect",
+            "PLSnoisy_0.1k",
+            "PLSnoisy_1k",
+            "PLSnoisy_10k",
+            "PLSthres_0.1k",
+            "PLSthres_1k",
+            "PLSthres_10k",
+            "VSRL_perfect",
+            "VSRL_0.1k",
+            "VSRL_1k",
+            "VSRL_10k",
+            "PLSnoisy_imp_0.1k",
+            "PLSnoisy_imp_1k",
+            "PLSnoisy_imp_10k",
             ],
         "seeds":
             # ["seed1", "seed2", "seed3", "seed4", "seed5"]
@@ -116,3 +112,4 @@ if __name__ == "__main__":
         exps.append(folder)
     # main_cluster()
     run_train()
+    # run_evaluate()

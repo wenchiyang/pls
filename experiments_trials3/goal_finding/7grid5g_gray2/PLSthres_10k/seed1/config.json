@@ -1,0 +1,58 @@
+{
+  "workflow_name": "ppo",
+  "raw_logger": "ppo_raw",
+  "info_logger": "ppo_info",
+  "env_type": "GoalFinding-v0",
+
+  "env_features": {
+    "layout": "grid7x7_5_ghosts",
+    "reward_goal": 10,
+    "reward_crash": 0,
+    "reward_food": 0,
+    "reward_time": -0.1,
+    "render": false,
+    "max_steps": 200,
+    "num_maps": 100,
+    "seed": 567,
+    "render_mode": "gray",
+    "height": 240,
+    "width": 240,
+    "downsampling_size": 7
+  },
+  "eval_env_features": {
+    "seed": 111
+  },
+  "model_features": {
+    "name": "no_shielding",
+    "params": {
+      "log_interval": 1,
+      "batch_size": 512,
+      "n_epochs": 15,
+      "n_steps": 2048,
+      "learning_rate": 0.001,
+      "seed": 567,
+      "clip_range": 0.1,
+      "gamma": 0.99,
+      "step_limit": 1000000,
+      "program_type": "relative_loc_simple",
+      "debug_program_type": "relative_loc_simple",
+      "alpha": 1,
+      "n_ghost_locs": 4,
+      "differentiable_shield": true,
+      "net_arch_shared": [],
+      "net_arch_pi": [64, 64],
+      "net_arch_vf": [64, 64],
+      "sensor_noise": 0,
+      "max_num_rejected_samples": 100000,
+      "use_learned_observations": true,
+      "noisy_observations": false,
+      "improve_observation": false,
+      "observation_type": "observation_model_10000_examples.pt"
+    }
+  }
+}
+
+
+
+
+

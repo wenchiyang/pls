@@ -88,7 +88,7 @@ def init_logger(verbose=None, name="policy_gradient", out=None):
 
 def draw(image):
     plt.axis("off")
-    plt.imshow(image, cmap="gray", vmin=0, vmax=1)
+    plt.imshow(image, cmap="gray", vmin=-1, vmax=1)
     plt.show()
 
 

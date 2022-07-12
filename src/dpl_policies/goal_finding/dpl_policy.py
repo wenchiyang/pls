@@ -142,7 +142,8 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         self.differentiable_shield = differentiable_shield
         # self.sig = nn.Sigmoid()
 
-
+        # self.program_path = path.join("experiments_trials3/goal_finding/data/relative_loc_simple.pl")
+        # self.debug_program_path = path.join("experiments_trials3/goal_finding/data/relative_loc_simple.pl")
         with open(self.program_path) as f:
             self.program = f.read()
         with open(self.debug_program_path) as f:
@@ -177,6 +178,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                     "right": 4
                 }}
             cache_path = path.join(self.folder, "../../../data", "dpl_layer.p")
+            # cache_path = path.join("experiments_trials3/goal_finding/data/dpl_layer.p")
             self.dpl_layer = self.get_layer(
                 cache_path,
                 program=self.debug_program, queries=self.queries, evidences=["safe_next"],
@@ -184,6 +186,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             )
             if self.use_learned_observations:
                 observation_model_path = path.join(self.folder, "../../data", self.observation_type)
+                # observation_model_path = path.join("experiments_trials3/goal_finding/7grid5g_gray/data/observation_model_10000_examples.pt")
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
                 self.observation_model = Observation_net(input_size=35*35, output_size=4).to(device) # TODO: put 35 in config file
@@ -205,6 +208,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                                         self.n_ghost_locs + self.n_actions)]}
 
         cache_path = path.join(self.folder, "../../../data", "query_safety_layer.p")
+        # cache_path = path.join("experiments_trials3/goal_finding/data/query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
             cache_path,
             program=self.debug_program, queries=debug_queries, evidences=[],
@@ -236,7 +240,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                 float(object_detect_probs.get("alpha")),
             )
 
-    def logging_per_episode(self, mass, object_detect_probs, base_policy, action_lookup):
+    def logging_per_episode(self, mass, object_detect_probs, base_policy):
         abs_safe_next_shielded = self.get_step_safety(
             mass.probs,
             object_detect_probs["ground_truth_ghost"],
@@ -245,7 +249,15 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             base_policy,
             object_detect_probs["ground_truth_ghost"],
         )
-        return abs_safe_next_shielded, abs_safe_next_base
+        rel_safe_next_shielded = self.get_step_safety(
+            mass.probs,
+            object_detect_probs["ghost"]
+        )
+        rel_safe_next_base = self.get_step_safety(
+            base_policy,
+            object_detect_probs["ghost"]
+        )
+        return abs_safe_next_shielded, abs_safe_next_base, rel_safe_next_shielded, rel_safe_next_base
 
     def get_step_safety(self, policy_distribution, ghost_probs):
         with th.no_grad():
@@ -290,20 +302,26 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         base_actions = distribution.distribution.probs
 
         with th.no_grad():
-            ground_truth_ghost = get_ground_wall(tinygrid, PACMAN_COLOR, GHOST_COLOR)
+            if tinygrid is None:
+                ground_truth_ghost = None
+            else:
+                ground_truth_ghost = get_ground_wall(tinygrid, PACMAN_COLOR, GHOST_COLOR)
             # ghosts = ground_truth_ghost + (self.sensor_noise)*th.randn(ground_truth_ghost.shape)
             # ghosts = th.clamp(ghosts, min=0, max=1)
-            if self.use_learned_observations:
-                output = self.observation_model(x)
-                if self.noisy_observations:
-                    ghosts = self.observation_model.sigmoid(output)
-                else:
-                    ghosts = (self.observation_model.sigmoid(output) > 0.5).float()
+
+
+        if self.use_learned_observations:
+            output = self.observation_model(x)
+            if self.noisy_observations:
+                ghosts = self.observation_model.sigmoid(output)
             else:
-                ghosts = ground_truth_ghost
-            object_detect_probs = {
-                "ground_truth_ghost": ground_truth_ghost,
-            }
+                ghosts = (self.observation_model.sigmoid(output) > 0.5).float()
+        else:
+            ghosts = ground_truth_ghost
+        object_detect_probs = {
+            "ground_truth_ghost": ground_truth_ghost,
+            "ghost": ghosts
+        }
 
         if self.alpha == 0:
             actions = distribution.get_actions(deterministic=deterministic)
@@ -484,5 +502,6 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
         with th.no_grad():
-            _actions, values, log_prob, mass, _  = self.forward(observation, deterministic)
+            tinygrid = None # this is actually not used
+            _actions, values, log_prob, mass, _  = self.forward(observation, tinygrid, deterministic)
             return _actions
