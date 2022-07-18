@@ -1,8 +1,11 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name="pls",
     version="0.0.1",
+    packages=find_packages(
+        where='.'
+    ),
     install_requires=[
         # environment
         "gym",
