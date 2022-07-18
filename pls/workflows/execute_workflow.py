@@ -1,10 +1,10 @@
-from workflows.ppo_dpl import main as ppo_dpl
-from workflows.pre_train import main as pre_train
-from workflows.pre_train import generate_random_images as generate
-from workflows.evaluate import evaluate as evaluate_policy
+from pls.workflows.ppo_dpl import main as ppo_dpl
+from pls.workflows.pre_train import main as pre_train
+from pls.workflows.pre_train import generate_random_images as generate
+from pls.workflows.evaluate import evaluate as evaluate_policy
 import json
 import os
-from observation_nets.observation_nets import Observation_net
+from pls.observation_nets.observation_nets import Observation_net
 import math
 
 
