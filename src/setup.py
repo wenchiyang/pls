@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name="soft_shielding",
+    name="pls",
     version="0.0.1",
     install_requires=[
         # environment
