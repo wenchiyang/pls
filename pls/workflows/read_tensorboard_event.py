@@ -10,7 +10,7 @@ domain_goal_finidng = os.path.join(dir_path, "../..", "experiments_trials3", "go
 domain_sokoban = os.path.join(dir_path, "../..", "experiments_trials3", "sokoban", "2box5map")
 domain_carracing = os.path.join(dir_path, "../..", "experiments_trials3", "carracing", "sparse_rewards4")
 
-# dir_path = "/cw/dtaijupiter/NoCsBack/dtai/wenchi/NeSyProject/experiments_trials3"
+# dir_path = "/cw/dtaijupiter/NoCsBack/dtai/wenchi/pls/experiments_trials3"
 # domain_goal_finidng = os.path.join(dir_path, "goal_finding", "7grid5g")
 # domain_sokoban = os.path.join(dir_path, "sokoban", "2box10map")
 

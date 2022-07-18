@@ -1,5 +1,5 @@
 import os
-from workflows.execute_workflow import pretrain_observation, generate_random_images
+from pls.workflows.execute_workflow import pretrain_observation, generate_random_images
 
 
 

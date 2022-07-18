@@ -21,8 +21,8 @@ from stable_baselines3.common.type_aliases import (
 )
 from stable_baselines3.common.preprocessing import is_image_space
 
-from deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
-from dpl_policies.carracing.util import get_ground_truth_of_grass, is_all_grass, get_ground_truth_of_grass2
+from pls.deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
+from pls.dpl_policies.carracing.util import get_ground_truth_of_grass, is_all_grass, get_ground_truth_of_grass2
 from os import path
 import pickle
 

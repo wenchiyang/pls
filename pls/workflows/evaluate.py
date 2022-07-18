@@ -6,7 +6,7 @@ from stable_baselines3.common.utils import obs_as_tensor
 import numpy as np
 import warnings
 # from ppo_dpl import load_model_and_env as ppo_load_model_and_env
-from workflows.ppo_dpl import setup_env
+from pls.workflows.ppo_dpl import setup_env
 
 
 # def test(folder, model_at_step, n_test_episodes):
@@ -17,7 +17,7 @@ from workflows.ppo_dpl import setup_env
 #     if "ppo" in learner:
 #         model, env = ppo_load_model_and_env(folder, config, model_at_step)
 #
-from dpl_policies.goal_finding.goal_finding_ppo import GoalFinding_DPLPPO
+from pls.dpl_policies.goal_finding.goal_finding_ppo import GoalFinding_DPLPPO
 
 
 def load_model_and_env(folder, config, model_at_step, eval=True):

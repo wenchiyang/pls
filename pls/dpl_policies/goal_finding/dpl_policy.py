@@ -16,11 +16,11 @@ from stable_baselines3.common.type_aliases import (
 from os import path
 import pickle
 from gym.spaces import Box
-from deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
+from pls.deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
 from .util import get_ground_wall
 from matplotlib import pyplot as plt
 from skimage.measure import block_reduce
-from observation_nets.observation_nets import Observation_net
+from pls.observation_nets.observation_nets import Observation_net
 
 WALL_COLOR = 0.25
 GHOST_COLOR = 0.5

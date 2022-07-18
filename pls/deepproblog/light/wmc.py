@@ -2,7 +2,7 @@ from torch import nn
 from collections import defaultdict
 from problog.formula import LogicFormula, LogicDAG
 from problog.ddnnf_formula import DDNNF
-from deepproblog.light.semiring import GraphSemiring
+from pls.deepproblog.light.semiring import GraphSemiring
 import torch as th
 
 class DeepProbLogLayer_Approx(nn.Module):

@@ -15,7 +15,7 @@ from stable_baselines3.common.utils import obs_as_tensor, safe_mean
 from stable_baselines3.common.vec_env import VecEnv
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.buffers import RolloutBuffer
-from .util import safe_max, safe_min
+from pls.dpl_policies.carracing.util import safe_max, safe_min
 
 
 class DPL_RolloutBuffer(RolloutBuffer):

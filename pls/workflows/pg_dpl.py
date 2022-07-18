@@ -13,9 +13,9 @@ from os.path import abspath, join
 import cherry as ch
 import cherry.envs as envs
 
-from dpl_policies.goal_finding.util import create_loggers, myformat
+from pls.dpl_policies.goal_finding.util import create_loggers, myformat
 
-from dpl_policies.goal_finding.goal_finding_pg import DPLSafePolicy, Encoder, PolicyNet
+from pls.dpl_policies.goal_finding.goal_finding_pg import DPLSafePolicy, Encoder, PolicyNet
 
 
 class Logger(envs.Logger):

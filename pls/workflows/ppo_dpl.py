@@ -6,35 +6,35 @@ import carracing_gym
 import torch as th
 from torch import nn
 import os
-from dpl_policies.goal_finding.dpl_policy import (
+from pls.dpl_policies.goal_finding.dpl_policy import (
     GoalFinding_Encoder,
     GoalFinding_Monitor,
     GoalFinding_DPLActorCriticPolicy,
     GoalFinding_Callback,
 )
-from dpl_policies.pacman.dpl_policy import (
+from pls.dpl_policies.pacman.dpl_policy import (
     Pacman_Encoder,
     Pacman_Monitor,
     Pacman_DPLActorCriticPolicy,
     Pacman_Callback,
 )
-from dpl_policies.sokoban.dpl_policy import (
+from pls.dpl_policies.sokoban.dpl_policy import (
     Sokoban_Encoder,
     Sokoban_Monitor,
     Sokoban_DPLActorCriticPolicy,
     Sokoban_Callback
 )
-from dpl_policies.carracing.dpl_policy import (
+from pls.dpl_policies.carracing.dpl_policy import (
     Carracing_Encoder,
     Carracing_Monitor,
     Carracing_DPLActorCriticPolicy,
     Carracing_Callback
 )
 
-from dpl_policies.goal_finding.goal_finding_ppo import GoalFinding_DPLPPO
-from dpl_policies.pacman.pacman_ppo import Pacman_DPLPPO
-from dpl_policies.sokoban.sokoban_ppo import Sokoban_DPLPPO
-from dpl_policies.carracing.carracing_ppo import Carracing_DPLPPO
+from pls.dpl_policies.goal_finding.goal_finding_ppo import GoalFinding_DPLPPO
+from pls.dpl_policies.pacman.pacman_ppo import Pacman_DPLPPO
+from pls.dpl_policies.sokoban.sokoban_ppo import Sokoban_DPLPPO
+from pls.dpl_policies.carracing.carracing_ppo import Carracing_DPLPPO
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import CheckpointCallback
 import math
