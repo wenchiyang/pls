@@ -30,14 +30,13 @@ def pre_train_sokoban(n_train):
     if not os.path.exists(img_folder):
         os.makedirs(img_folder)
 
-    generate_random_images_sokoban(csv_file, img_folder, 10100)
+    # generate_random_images_sokoban(csv_file, img_folder, 10100)
 
     model_folder = os.path.join(dir_path, "../experiments_trials3/sokoban/2box5map_gray/data/")
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
 
-    # pretrain_observation_sokoban(csv_file, img_folder, model_folder, n_train, 300)
-    # pretrain_observation_sokoban(csv_file, img_folder, model_folder, n_train, 300)
+    pretrain_observation_sokoban(csv_file, img_folder, model_folder, n_train, 300)
 
 
 def main_cluster():
