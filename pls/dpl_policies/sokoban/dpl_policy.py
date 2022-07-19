@@ -18,6 +18,7 @@ from pls.deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
 from pls.dpl_policies.sokoban.util import get_ground_truth_of_box, get_ground_truth_of_corners, stuck
 from os import path
 import pickle
+from gym.spaces import Box
 
 WALL_COLOR = th.tensor([0] * 3, dtype=th.float32)
 FLOOR_COLOR = th.tensor([1 / 6] * 3, dtype=th.float32)
@@ -127,8 +128,16 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         image_encoder: Sokoban_Encoder = None,
         alpha=0.5,
         differentiable_shield = True,
+        input_size = 1,
         **kwargs
     ):
+        observation_space = Box(
+            low=-1,
+            high=1,
+            shape=(
+                input_size, input_size
+            )
+        )
         super(Sokoban_DPLActorCriticPolicy, self).__init__(observation_space,action_space, lr_schedule, **kwargs)
         ###############################
 

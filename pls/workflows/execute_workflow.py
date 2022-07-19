@@ -1,6 +1,5 @@
 from pls.workflows.ppo_dpl import main as ppo_dpl
-from pls.workflows.pre_train import main as pre_train
-from pls.workflows.pre_train import generate_random_images as generate
+from pls.workflows.pre_train import pre_train
 from pls.workflows.evaluate import evaluate as evaluate_policy
 import json
 import os
@@ -8,16 +7,23 @@ from pls.observation_nets.observation_nets import Observation_net
 import math
 
 
-def generate_random_images(csv_file, folder, n_images=1000):
-    generate(csv_file, folder, n_images)
+def pretrain_observation_sokoban(csv_file, img_folder, model_folder, n_train, epochs):
+    downsampling_size = 1
+    net_input_size = math.ceil(112 / downsampling_size) ** 2
+    keys = ["box(up)", "box(down)", "box(left)", "box(right)", "corner(up)", "corner(down)", "corner(left)", "corner(right)"]
 
-def pretrain_observation(csv_file, img_folder, model_folder, n_train, epochs):
+    pre_train(csv_file=csv_file, root_dir=img_folder, model_folder=model_folder, n_train=n_train,
+                 net_class=Observation_net, net_input_size=net_input_size, net_output_size=8,
+                 downsampling_size=downsampling_size, epochs=epochs, keys=keys)
+
+def pretrain_observation_gf(csv_file, img_folder, model_folder, n_train, epochs):
     downsampling_size = 7
     net_input_size = math.ceil(240 / downsampling_size) ** 2
+    keys = ["ghost(up)", "ghost(down)", "ghost(left)", "ghost(right)"]
 
     pre_train(csv_file=csv_file, root_dir=img_folder, model_folder=model_folder, n_train=n_train,
               net_class=Observation_net, net_input_size=net_input_size, net_output_size=4,
-              downsampling_size=downsampling_size, epochs=epochs)
+              downsampling_size=downsampling_size, epochs=epochs, keys=keys)
 
 def test(folder):
     path = os.path.join(folder, "config.json")
