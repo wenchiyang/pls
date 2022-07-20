@@ -234,7 +234,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 # observation_model_path = path.join("experiments_trials3/goal_finding/7grid5g_gray/data/observation_model_10000_examples.pt")
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
-                self.observation_model = Observation_net(input_size=35*35, output_size=4).to(device) # TODO: put 35 in config file
+                self.observation_model = Observation_net(input_size=self.input_size*self.input_size, output_size=8).to(device)
                 self.observation_model.load_state_dict(th.load(observation_model_path))
 
         if self.alpha == "learned":

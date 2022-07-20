@@ -48,6 +48,6 @@ def main_cluster():
     results = client.gather(futures)
 
 if __name__ == "__main__":
-    main_cluster()
-    # pre_train_sokoban()
+    # main_cluster()
+    pre_train_sokoban(100)
 
