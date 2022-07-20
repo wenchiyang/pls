@@ -60,9 +60,9 @@ if __name__ == "__main__":
             # "sokoban/2box10map_long",
             # "goal_finding/smallGrid100map",
             # "goal_finding/7grid5g"
-            "goal_finding/7grid5g_gray2"
+            # "goal_finding/7grid5g_gray2"
             # "sokoban/2box1map",
-            # "sokoban/2box5map_gray",
+            "sokoban/2box5map_gray",
             # "carracing/onemap"
             # "carracing/sparse_rewards4"
         ],
@@ -109,6 +109,6 @@ if __name__ == "__main__":
                               hyper["seeds"],
                               )
         exps.append(folder)
-    # main_cluster()
-    run_train()
+    main_cluster()
+    # run_train()
     # run_evaluate()
