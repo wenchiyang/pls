@@ -104,22 +104,22 @@ class GoalFinding_Monitor(Monitor):
 class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
     def __init__(
         self,
-            observation_space: gym.spaces.Space,
-            action_space: gym.spaces.Space,
-            lr_schedule: Schedule,
-            image_encoder: GoalFinding_Encoder = None,
-            alpha = 0.5,
-            differentiable_shield = True,
-            input_size = 1,
-            **kwargs
+        observation_space: gym.spaces.Space,
+        action_space: gym.spaces.Space,
+        lr_schedule: Schedule,
+        image_encoder: GoalFinding_Encoder = None,
+        alpha = 0.5,
+        differentiable_shield = True,
+        input_size = 1,
+        **kwargs
     ):
         observation_space = Box(
-                low=-1,
-                high=1,
-                shape=(
-                    input_size, input_size
-                )
+            low=-1,
+            high=1,
+            shape=(
+                input_size, input_size
             )
+        )
         super(GoalFinding_DPLActorCriticPolicy, self).__init__(observation_space, action_space, lr_schedule, **kwargs)
         ###############################
         self.image_encoder = image_encoder
@@ -494,7 +494,6 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             log_prob = distribution.log_prob(actions)
             values = self.value_net(latent_vf)
             return values, log_prob, distribution.entropy()
-
 
         _, values, _, mass, _ = self.forward(obs, tinygrid=tinygrid)
         log_prob = mass.log_prob(actions)

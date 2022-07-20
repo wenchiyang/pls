@@ -20,18 +20,20 @@ from os import path
 import pickle
 from gym.spaces import Box
 
-WALL_COLOR = th.tensor([0] * 3, dtype=th.float32)
-FLOOR_COLOR = th.tensor([1 / 6] * 3, dtype=th.float32)
-BOX_TARGET_COLOR = th.tensor([2 / 6] * 3, dtype=th.float32)
-BOX_ON_TARGET_COLOR = th.tensor([3 / 6] * 3, dtype=th.float32)
-BOX_COLOR = th.tensor([4 / 6] * 3, dtype=th.float32)
+from pls.observation_nets.observation_nets import Observation_net
 
-PLAYER_COLOR = th.tensor([5 / 6] * 3, dtype=th.float32)
-PLAYER_ON_TARGET_COLOR = th.tensor([1] * 3, dtype=th.float32)
+WALL_COLOR = th.tensor([0], dtype=th.float32)
+FLOOR_COLOR = th.tensor([1 / 6], dtype=th.float32)
+BOX_TARGET_COLOR = th.tensor([2 / 6], dtype=th.float32)
+BOX_ON_TARGET_COLOR = th.tensor([3 / 6], dtype=th.float32)
+BOX_COLOR = th.tensor([4 / 6], dtype=th.float32)
 
-PLAYER_COLORS = th.tensor(([5 / 6] * 3, [1] * 3))
-BOX_COLORS = th.tensor(([3 / 6] * 3, [4 / 6] * 3))
-OBSTABLE_COLORS = th.tensor(([0] * 3, [3 / 6] * 3, [4 / 6] * 3))
+PLAYER_COLOR = th.tensor([5 / 6], dtype=th.float32)
+PLAYER_ON_TARGET_COLOR = th.tensor([1], dtype=th.float32)
+
+PLAYER_COLORS = th.tensor(([5 / 6], [1]))
+BOX_COLORS = th.tensor(([3 / 6], [4 / 6]))
+OBSTABLE_COLORS = th.tensor(([0], [3 / 6], [4 / 6]))
 
 
 NEIGHBORS_RELATIVE_LOCS_BOX = [
@@ -48,6 +50,14 @@ NEIGHBORS_RELATIVE_LOCS_CORNER = [
     (0, 2),
 ]  # DO NOT CHANGE THE ORDER
 
+def box_stuck_in_corner(tinygrid):
+    s = stuck(
+        input=tinygrid,
+        box_color=BOX_COLOR,
+        obsacle_colors=OBSTABLE_COLORS
+    )
+    return s
+
 class Sokoban_Encoder(nn.Module):
     def __init__(self, input_size, n_actions, shielding_settings, program_path, debug_program_path, folder):
         super(Sokoban_Encoder, self).__init__()
@@ -58,8 +68,9 @@ class Sokoban_Encoder(nn.Module):
         self.program_path = program_path
         self.debug_program_path = debug_program_path
         self.folder = folder
-        self.sensor_noise = shielding_settings["sensor_noise"]
-        self.max_num_rejected_samples = shielding_settings["max_num_rejected_samples"]
+        self.shielding_settings = shielding_settings
+        # self.sensor_noise = shielding_settings["sensor_noise"]
+        # self.max_num_rejected_samples = shielding_settings["max_num_rejected_samples"]
 
     def forward(self, x):
         xx = th.flatten(x, 1)
@@ -86,19 +97,13 @@ class Sokoban_Monitor(Monitor):
             self.needs_reset = True
             ep_rew = sum(self.rewards)
             ep_len = len(self.rewards)
-            violate_constraint = stuck(
-                input=th.from_numpy(observation)[None,:,:,:],
-                box_colors=BOX_COLOR,
-                obsacle_colors=OBSTABLE_COLORS
-            )
-            # if violate_constraint:
-            #     print("dd")
+
             ep_info = {
                 "r": round(ep_rew, 6),
                 "l": ep_len,
                 "t": round(time.time() - self.t_start, 6),
                 "last_r": reward,
-                "violate_constraint": violate_constraint,
+                # "violate_constraint": violate_constraint,
                 "is_success": info["all_boxes_on_target"]
                 # "abs_safety_shielded": ep_abs_safety_shielded,
                 # "abs_safety_base": ep_abs_safety_base
@@ -128,7 +133,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         image_encoder: Sokoban_Encoder = None,
         alpha=0.5,
         differentiable_shield = True,
-        input_size = 1,
+        input_size=1,
         **kwargs
     ):
         observation_space = Box(
@@ -151,15 +156,32 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         self.program_path = self.image_encoder.program_path
         self.debug_program_path = self.image_encoder.debug_program_path
         self.folder = self.image_encoder.folder
-        self.sensor_noise = self.image_encoder.sensor_noise
+        self.sensor_noise = self.image_encoder.shielding_settings["sensor_noise"]
+        self.max_num_rejected_samples = self.image_encoder.shielding_settings["max_num_rejected_samples"]
+        self.use_learned_observations = self.image_encoder.shielding_settings["use_learned_observations"]
+        self.noisy_observations = self.image_encoder.shielding_settings["noisy_observations"]
+        self.observation_type = self.image_encoder.shielding_settings["observation_type"]
         self.alpha = alpha
         self.differentiable_shield = differentiable_shield
-        self.max_num_rejected_samples = self.image_encoder.max_num_rejected_samples
 
         with open(self.program_path) as f:
             self.program = f.read()
         with open(self.debug_program_path) as f:
             self.debug_program = f.read()
+
+        ##### SOFT SHILDENG WITH GROUND TRUTH ####
+        # IMPORTANT: THE ORDER OF QUERIES IS THE ORDER OF THE OUTPUT
+        self.queries = [
+           "safe_action(no_op)",
+           "safe_action(push_up)",
+           "safe_action(push_down)",
+           "safe_action(push_left)",
+           "safe_action(push_right)",
+           "safe_action(move_up)",
+           "safe_action(move_down)",
+           "safe_action(move_left)",
+           "safe_action(move_right)"
+       ][: self.n_actions]
 
         # if self.detect_boxes:
         #     self.box_layer = nn.Sequential(
@@ -177,23 +199,6 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         #         nn.Sigmoid(),
         #     )
 
-
-        self.evidences = ["safe_next"]
-        # IMPORTANT: THE ORDER OF QUERIES IS THE ORDER OF THE OUTPUT
-        self.queries = [
-            "safe_action(no_op)",
-            "safe_action(push_up)",
-            "safe_action(push_down)",
-            "safe_action(push_left)",
-            "safe_action(push_right)",
-            "safe_action(move_up)",
-            "safe_action(move_down)",
-            "safe_action(move_left)",
-            "safe_action(move_right)"
-        ][: self.n_actions]
-
-
-
         if self.alpha == 0:
             # NO shielding
             pass
@@ -206,17 +211,31 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 "action": [i for i in range(self.n_box_locs + self.n_corner_locs,
                                             self.n_box_locs + self.n_corner_locs + self.n_actions)],
             }
-            action_lst = ['no_op', 'push_up', 'push_down', 'push_left', 'push_right', 'move_up', 'move_down',
-                          'move_left', 'move_right']
+            query_struct = {
+                "safe_action": {
+                    "no_op": 0,
+                    "push_up": 1,
+                    "push_down": 2,
+                    "push_left": 3,
+                    "push_right": 4
+                }}
 
-            query_struct = {"safe_action": dict(zip(action_lst[:self.n_actions], range(self.n_actions)))}
-
+            # action_lst = ['no_op', 'push_up', 'push_down', 'push_left', 'push_right', 'move_up', 'move_down',
+            #               'move_left', 'move_right']
+            # query_struct = {"safe_action": dict(zip(action_lst[:self.n_actions], range(self.n_actions)))}
             cache_path = path.join(self.folder, "../../../data", "dpl_layer.p")
             self.dpl_layer = self.get_layer(
                 cache_path,
-                program=self.program, queries=self.queries, evidences=["safe_next"],
+                program=self.debug_program, queries=self.queries, evidences=["safe_next"],
                 input_struct=input_struct, query_struct=query_struct
             )
+            if self.use_learned_observations:
+                observation_model_path = path.join(self.folder, "../../data", self.observation_type)
+                # observation_model_path = path.join("experiments_trials3/goal_finding/7grid5g_gray/data/observation_model_10000_examples.pt")
+                use_cuda = False
+                device = th.device("cuda" if use_cuda else "cpu")
+                self.observation_model = Observation_net(input_size=35*35, output_size=4).to(device) # TODO: put 35 in config file
+                self.observation_model.load_state_dict(th.load(observation_model_path))
 
         if self.alpha == "learned":
             self.alpha_net = nn.Sequential(
@@ -226,7 +245,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                     nn.Sigmoid(),
                 )
 
-        # For all settings, calculate "safe_next"
+
         debug_queries = ["safe_next"]
         debug_query_struct = {"safe_next": 0}
         debug_input_struct = {
@@ -239,13 +258,12 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         cache_path = path.join(self.folder, "../../../data", "query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
             cache_path,
-            program=self.program,
+            program=self.debug_program,
             queries=debug_queries,
             evidences=[],
             input_struct=debug_input_struct,
             query_struct=debug_query_struct
         )
-
         self._build(lr_schedule)
 
     def get_layer(self, cache_path, program, queries, evidences, input_struct, query_struct):
@@ -270,7 +288,17 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             object_detect_probs["ground_truth_box"],
             object_detect_probs["ground_truth_corner"],
         )
-        return abs_safe_next_shielded, abs_safe_next_base
+        rel_safe_next_shielded = self.get_step_safety(
+            mass.probs,
+            object_detect_probs["box"],
+            object_detect_probs["corner"],
+        )
+        rel_safe_next_base = self.get_step_safety(
+            base_policy,
+            object_detect_probs["box"],
+            object_detect_probs["corner"],
+        )
+        return abs_safe_next_shielded, abs_safe_next_base, rel_safe_next_shielded, rel_safe_next_base
     def logging_per_step(self, mass, object_detect_probs, base_policy, action_lookup, logger):
         for act in range(self.action_space.n):
             logger.record(
@@ -294,7 +322,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             )
             return abs_safe_next["safe_next"]
 
-    def forward(self, x, deterministic: bool = False):
+    def forward(self, x, tinygrid, deterministic: bool = False):
         """
         Forward pass in all the networks (actor and critic)
 
@@ -312,22 +340,35 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         base_actions = distribution.distribution.probs
 
         with th.no_grad():
-            ground_truth_box = get_ground_truth_of_box(
-                input=x, agent_colors=PLAYER_COLORS, box_colors=BOX_COLORS,
-            )
-            ground_truth_corner = get_ground_truth_of_corners(
-                input=x, agent_colors=PLAYER_COLORS, obsacle_colors=OBSTABLE_COLORS, floor_color=FLOOR_COLOR,
-            )
+            if tinygrid is None:
+                ground_truth_box, ground_truth_corner = None, None
+            else:
+                ground_truth_box = get_ground_truth_of_box(
+                    input=tinygrid, agent_colors=PLAYER_COLORS, box_colors=BOX_COLORS,
+                )
+                ground_truth_corner = get_ground_truth_of_corners(
+                    input=tinygrid, agent_colors=PLAYER_COLORS, obsacle_colors=OBSTABLE_COLORS, floor_color=FLOOR_COLOR,
+                )
+        if self.use_learned_observations:
+            output = self.observation_model(x)
+            if self.noisy_observations:
+                boxes_and_corners = self.observation_model.sigmoid(output)
+                boxes = boxes_and_corners[:, :self.n_box_locs]
+                corners = boxes_and_corners[:, self.n_box_locs:]
+            else:
+                boxes_and_corners = (self.observation_model.sigmoid(output) > 0.5).float()
+                boxes = boxes_and_corners[:, :self.n_box_locs]
+                corners = boxes_and_corners[:, self.n_box_locs:]
+        else:
+            boxes = ground_truth_box
+            corners = ground_truth_corner
 
-            boxes = ground_truth_box + (self.sensor_noise) * th.randn(ground_truth_box.shape)
-            boxes = th.clamp(boxes, min=0, max=1)
-            corners = ground_truth_corner + (self.sensor_noise) * th.randn(ground_truth_corner.shape)
-            corners = th.clamp(corners, min=0, max=1)
-
-            object_detect_probs = {
-                "ground_truth_box": ground_truth_box,
-                "ground_truth_corner": ground_truth_corner,
-            }
+        object_detect_probs = {
+            "ground_truth_box": ground_truth_box,
+            "ground_truth_corner": ground_truth_corner,
+            "box": boxes,
+            "corner": corners
+        }
 
         if self.alpha == 0:
             actions = distribution.get_actions(deterministic=deterministic)
@@ -335,24 +376,28 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             object_detect_probs["alpha"] = 0
             return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
 
-        if not self.differentiable_shield and self.alpha == 1:
+        if not self.differentiable_shield and self.alpha == 1: # VSRL
             num_rejected_samples = 0
             while True:
                 actions = distribution.get_actions(deterministic=deterministic)
+                # check if the action is safe
                 with th.no_grad():
-                    # Using problog to model check
-                    results = self.query_safety_layer(
-                        x={
-                            "box": boxes,
-                            "corner": corners,
-                            "action": th.eye(self.n_actions)[actions],
-                        }
-                    )
-                safe_next = results["safe_next"]
-                if not th.any(safe_next.isclose(th.zeros(actions.shape))) or num_rejected_samples > self.max_num_rejected_samples:
-                    break
-                else:
-                    num_rejected_samples += 1
+                    vsrl_actions_encoding = th.eye(self.n_actions)[actions][:, 1:]
+                    unsafe_actions = th.logical_and(boxes, corners)
+                    actions_are_unsafe = th.logical_and(vsrl_actions_encoding, unsafe_actions)
+                    # # Using problog to model check
+                    # results = self.query_safety_layer(
+                    #     x={
+                    #         "box": boxes,
+                    #         "corner": corners,
+                    #         "action": th.eye(self.n_actions)[actions],
+                    #     }
+                    # )
+                    # safe_next = results["safe_next"]
+                    if not th.any(actions_are_unsafe) or num_rejected_samples > self.max_num_rejected_samples:
+                        break
+                    else: # sample another action
+                        num_rejected_samples += 1
             log_prob = distribution.log_prob(actions)
             object_detect_probs["num_rejected_samples"] = num_rejected_samples
             object_detect_probs["alpha"] = 1
@@ -366,7 +411,6 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                     "action": base_actions,
                 }
             )
-
             if self.alpha == "learned":
                 alpha = self.alpha_net(obs)
                 object_detect_probs["alpha"] = alpha
@@ -386,6 +430,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 raise NotImplemented
             else:
                 alpha = self.alpha
+
         object_detect_probs["alpha"] = alpha
         safeast_actions = results["safe_action"]
         actions = alpha * safeast_actions + (1 - alpha) * base_actions
@@ -435,7 +480,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
     #     )
 
     def evaluate_actions(
-        self, obs: th.Tensor, actions: th.Tensor
+        self, obs: th.Tensor, tinygrid: th.Tensor, actions: th.Tensor
     ) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
         """
         Evaluate actions according to the current policy,
@@ -446,7 +491,6 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         :return: estimated value, log likelihood of taking those actions
             and entropy of the action distribution.
         """
-
         if not self.differentiable_shield and self.alpha == 1:
             obs = self.image_encoder(obs)
             features = self.extract_features(obs)
@@ -454,14 +498,16 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             distribution = self._get_action_dist_from_latent(latent_pi)
             log_prob = distribution.log_prob(actions)
             values = self.value_net(latent_vf)
-
             return values, log_prob, distribution.entropy()
 
-        _, values, _, mass, _ = self.forward(obs)
+        _, values, _, mass, _ = self.forward(obs, tinygrid=tinygrid)
         log_prob = mass.log_prob(actions)
         return values, log_prob, mass.entropy()
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
         with th.no_grad():
-            _actions, values, log_prob, mass, _  = self.forward(observation, deterministic)
+            tinygrid = None # this is actually not used
+            _actions, values, log_prob, mass, _  = self.forward(observation, tinygrid, deterministic)
             return _actions
+
+

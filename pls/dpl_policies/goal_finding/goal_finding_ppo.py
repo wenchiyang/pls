@@ -24,7 +24,7 @@ GHOST_COLOR = 0.5
 PACMAN_COLOR = 0.75
 FOOD_COLOR = 1
 
-class GoalFinding_RolloutBufferSamples(NamedTuple):
+class RolloutBufferSamples_TinyGrid(NamedTuple):
     observations: th.Tensor
     tinygrids: th.Tensor
     actions: th.Tensor
@@ -33,20 +33,20 @@ class GoalFinding_RolloutBufferSamples(NamedTuple):
     advantages: th.Tensor
     returns: th.Tensor
 
-class GoalFinding_RolloutBuffer(RolloutBuffer):
+class RolloutBuffer_TinyGrid(RolloutBuffer):
     def __init__(self, *args, tinygrid_space, **kwargs):
         self.tinygrid_shape = get_obs_shape(tinygrid_space)
-        super(GoalFinding_RolloutBuffer, self).__init__(*args, **kwargs)
+        super(RolloutBuffer_TinyGrid, self).__init__(*args, **kwargs)
 
     def reset(self) -> None:
-        super(GoalFinding_RolloutBuffer, self).reset()
+        super(RolloutBuffer_TinyGrid, self).reset()
         self.tinygrids = np.zeros((self.buffer_size, self.n_envs) + self.tinygrid_shape, dtype=np.float32)
 
     def add(self, *args, tinygrid, **kwargs) -> None:
         self.tinygrids[self.pos] = np.array(tinygrid).copy()
-        super(GoalFinding_RolloutBuffer, self).add(*args, **kwargs)
+        super(RolloutBuffer_TinyGrid, self).add(*args, **kwargs)
 
-    def get(self, batch_size: Optional[int] = None) -> Generator[GoalFinding_RolloutBufferSamples, None, None]:
+    def get(self, batch_size: Optional[int] = None) -> Generator[RolloutBufferSamples_TinyGrid, None, None]:
         assert self.full, ""
         indices = np.random.permutation(self.buffer_size * self.n_envs)
         # Prepare the data
@@ -75,7 +75,7 @@ class GoalFinding_RolloutBuffer(RolloutBuffer):
             yield self._get_samples(indices[start_idx : start_idx + batch_size])
             start_idx += batch_size
 
-    def _get_samples(self, batch_inds: np.ndarray, env: Optional[VecNormalize] = None) -> GoalFinding_RolloutBufferSamples:
+    def _get_samples(self, batch_inds: np.ndarray, env: Optional[VecNormalize] = None) -> RolloutBufferSamples_TinyGrid:
         data = (
             self.observations[batch_inds],
             self.tinygrids[batch_inds],
@@ -85,20 +85,12 @@ class GoalFinding_RolloutBuffer(RolloutBuffer):
             self.advantages[batch_inds].flatten(),
             self.returns[batch_inds].flatten(),
         )
-        return GoalFinding_RolloutBufferSamples(*tuple(map(self.to_torch, data)))
+        return RolloutBufferSamples_TinyGrid(*tuple(map(self.to_torch, data)))
 
 
 class GoalFinding_DPLPPO(PPO):
-    def __init__(self, *args, env, **kwargs):
-        # observation_space = Box(
-        #     low=-1,
-        #     high=1,
-        #     shape=(
-        #         35, 35
-        #     )
-        # )
-        # env.observation_space = observation_space
-        super(GoalFinding_DPLPPO, self).__init__(*args, env=env, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(GoalFinding_DPLPPO, self).__init__(*args, **kwargs)
 
     def _setup_model(self) -> None:
         super(GoalFinding_DPLPPO, self)._setup_model()
@@ -109,7 +101,7 @@ class GoalFinding_DPLPPO(PPO):
                 7,7
             )
         )
-        self.rollout_buffer = GoalFinding_RolloutBuffer(
+        self.rollout_buffer = RolloutBuffer_TinyGrid(
             self.n_steps,
             self.observation_space,
             self.action_space,

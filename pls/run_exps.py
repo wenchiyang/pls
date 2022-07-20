@@ -62,27 +62,26 @@ if __name__ == "__main__":
             # "goal_finding/7grid5g"
             "goal_finding/7grid5g_gray2"
             # "sokoban/2box1map",
-            # "sokoban/2box5map",
+            # "sokoban/2box5map_gray",
             # "carracing/onemap"
             # "carracing/sparse_rewards4"
         ],
         "exps": [
-            # "test"
             "PPO",
-            "PLS_perfect",
-            "PLSnoisy_0.1k",
-            "PLSnoisy_1k",
-            "PLSnoisy_10k",
-            "PLSthres_0.1k",
-            "PLSthres_1k",
-            "PLSthres_10k",
-            "VSRL_perfect",
-            "VSRL_0.1k",
-            "VSRL_1k",
-            "VSRL_10k",
-            "PLSnoisy_imp_0.1k",
-            "PLSnoisy_imp_1k",
-            "PLSnoisy_imp_10k",
+            # "PLS_perfect",
+            # "PLSnoisy_0.1k",
+            # "PLSnoisy_1k",
+            # "PLSnoisy_10k",
+            # "PLSthres_0.1k",
+            # "PLSthres_1k",
+            # "PLSthres_10k",
+            # "VSRL_perfect",
+            # "VSRL_0.1k",
+            # "VSRL_1k",
+            # "VSRL_10k",
+            # "PLSnoisy_imp_0.1k",
+            # "PLSnoisy_imp_1k",
+            # "PLSnoisy_imp_10k",
             ],
         "seeds":
             # ["seed1", "seed2", "seed3", "seed4", "seed5"]
@@ -110,6 +109,6 @@ if __name__ == "__main__":
                               hyper["seeds"],
                               )
         exps.append(folder)
-    main_cluster()
-    # run_train()
+    # main_cluster()
+    run_train()
     # run_evaluate()

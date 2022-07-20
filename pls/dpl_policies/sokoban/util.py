@@ -106,17 +106,10 @@ def get_ground_truth_of_corners(
     floor_color
 ):
 
-    input2 = input[:, :, :, 0]
-    agent_colors2 = agent_colors[:, 0]
-    floor_color2 = floor_color[0]
-    obsacle_colors2 = obsacle_colors[:, 0]
-
-    centers1 = th.isclose(input2, agent_colors2[0], atol=1e-03).nonzero()[:, 1:]
-    centers2 = th.isclose(input2, agent_colors2[1], atol=1e-03).nonzero()[:, 1:]
+    centers1 = th.isclose(input, agent_colors[0], atol=1e-03).nonzero()[:, 1:]
+    centers2 = th.isclose(input, agent_colors[1], atol=1e-03).nonzero()[:, 1:]
     centers = th.cat((centers1, centers2))
-
-    # r_limit2, c_limit2 = input2[0].size()[:2]
-    padded_input2 = th.nn.functional.pad(input2, (2,2,2,2), "constant", 0) # pad the grid with 1 dimension with "0" (WALL_COLOR)
+    padded_input = th.nn.functional.pad(input, (2,2,2,2), "constant", 0) # pad the grid with 1 dimension with "0" (WALL_COLOR)
     padded_centers = centers + th.tensor([2,2]) # shift centers
     neighbor_centers =  th.stack(
         (
@@ -126,7 +119,7 @@ def get_ground_truth_of_corners(
                     padded_centers + th.tensor((-3,  0)), # forward
                     padded_centers + th.tensor((-2,  1)), # side
                     padded_centers + th.tensor((-2, -1))  # side
-                 ),dim=1
+                ),dim=1
             ),
             th.stack(
                 (
@@ -155,18 +148,18 @@ def get_ground_truth_of_corners(
 
         ), dim=1)
 
-    neighbor_values = padded_input2[
-        th.arange(input2.size(0))[:,None,None],
+    neighbor_values = padded_input[
+        th.arange(input.size(0))[:,None,None],
         neighbor_centers[:, :, :, 0],
         neighbor_centers[:, :, :, 1]]
 
-    neighbor_values[:, :, 0] = th.isclose(neighbor_values[:, :, 0], floor_color2, atol=1e-03)
+    neighbor_values[:, :, 0] = th.isclose(neighbor_values[:, :, 0], floor_color, atol=1e-03)
     neighbor_values[:, :, 1:] = th.any(
         th.stack(
             (
-                th.isclose(neighbor_values[:, :, 1:], obsacle_colors2[0], atol=1e-03),
-                th.isclose(neighbor_values[:, :, 1:], obsacle_colors2[1], atol=1e-03),
-                th.isclose(neighbor_values[:, :, 1:], obsacle_colors2[2], atol=1e-03)
+                th.isclose(neighbor_values[:, :, 1:], obsacle_colors[0], atol=1e-03),
+                th.isclose(neighbor_values[:, :, 1:], obsacle_colors[1], atol=1e-03),
+                th.isclose(neighbor_values[:, :, 1:], obsacle_colors[2], atol=1e-03)
             ), dim=0
         ), dim=0
     )
@@ -183,36 +176,29 @@ def get_ground_truth_of_corners(
 
 def stuck(
         input,
-        box_colors,
+        box_color,
         obsacle_colors
 ):
-    input2 = input[:, :, :, 0]
-    box_color2 = box_colors[0]
-    obsacle_colors2 = obsacle_colors[:, 0]
-    centers1 = th.isclose(input2, box_color2, atol=1e-03).nonzero()[:, 1:]
-    if centers1.nelement() == 0:
+    # box_color = box_colors
+    centers = th.isclose(input, box_color, atol=1e-03).nonzero()[:, 1:]
+    if centers.nelement() == 0:
         return False
-    centers = centers1
 
     neighbors = th.stack(
         (
-            input2[th.arange(input2.size(0)), centers[:, 0] - 1, centers[:, 1]],
-            input2[th.arange(input2.size(0)), centers[:, 0] + 1, centers[:, 1]],
-            input2[th.arange(input2.size(0)), centers[:, 0], centers[:, 1] - 1],
-            input2[th.arange(input2.size(0)), centers[:, 0], centers[:, 1] + 1],
+            input[th.arange(input.size(0)), centers[:, 0] - 1, centers[:, 1]],
+            input[th.arange(input.size(0)), centers[:, 0] + 1, centers[:, 1]],
+            input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] - 1],
+            input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] + 1],
         ), dim=1)
-    res2 = th.any(
+    box_surrendings = th.any(
         th.stack(
             (
-                th.isclose(neighbors, obsacle_colors2[0], atol=1e-03).float(),
-                th.isclose(neighbors, obsacle_colors2[1], atol=1e-03).float(),
-                th.isclose(neighbors, obsacle_colors2[2], atol=1e-03).float()
+                th.isclose(neighbors, obsacle_colors[0], atol=1e-03).float(),
+                th.isclose(neighbors, obsacle_colors[1], atol=1e-03).float(),
+                th.isclose(neighbors, obsacle_colors[2], atol=1e-03).float()
             ), dim=2)
         , dim=2).float()
-
-    box_surrendings = res2
-
-    # up, down, left, right,
     corners = th.tensor([
         [1, 0, 1, 0], [1, 1, 1, 0], [1, 0, 1, 1], [1, 1, 1, 1], # up, left
         [1, 0, 0, 1], [1, 1, 0, 1], # up, right
@@ -224,7 +210,6 @@ def stuck(
         if th.any(th.all((box_surrendings[i] == corners), dim=1)):
             box_in_corner = True
 
-            # box_in_corner2 = th.any(th.all((box_surrendings[1] == corners), dim=1))
     return box_in_corner
 
 def get_ground_truth_of_box(
@@ -232,28 +217,25 @@ def get_ground_truth_of_box(
     agent_colors,
     box_colors
 ):
-    input2 = input[:,:,:,0]
-    agent_colors2 = agent_colors[:, 0]
-    box_colors2 = box_colors[:, 0]
-    centers1 = th.isclose(input2, agent_colors2[0], atol=1e-03).nonzero()[:, 1:]
-    centers2 = th.isclose(input2, agent_colors2[1], atol=1e-03).nonzero()[:, 1:]
+    centers1 = th.isclose(input, agent_colors[0], atol=1e-03).nonzero()[:, 1:]
+    centers2 = th.isclose(input, agent_colors[1], atol=1e-03).nonzero()[:, 1:]
     centers = th.cat((centers1, centers2))
 
     neighbors = th.stack(
         (
-            input2[th.arange(input2.size(0)), centers[:, 0] - 1, centers[:, 1]],
-            input2[th.arange(input2.size(0)), centers[:, 0] + 1, centers[:, 1]],
-            input2[th.arange(input2.size(0)), centers[:, 0], centers[:, 1] - 1],
-            input2[th.arange(input2.size(0)), centers[:, 0], centers[:, 1] + 1]
+            input[th.arange(input.size(0)), centers[:, 0] - 1, centers[:, 1]],
+            input[th.arange(input.size(0)), centers[:, 0] + 1, centers[:, 1]],
+            input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] - 1],
+            input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] + 1]
         ), dim=1)
-    res2 = th.any(
+    res = th.any(
         th.stack(
             (
-            th.isclose(neighbors, box_colors2[0], atol=1e-03).float(),
-            th.isclose(neighbors, box_colors2[1], atol=1e-03).float()
+                th.isclose(neighbors, box_colors[0], atol=1e-03).float(),
+                th.isclose(neighbors, box_colors[1], atol=1e-03).float()
             ), dim=2)
         , dim=2).float()
 
 
-    return res2
+    return res
 

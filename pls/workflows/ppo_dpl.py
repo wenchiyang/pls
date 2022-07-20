@@ -91,6 +91,9 @@ def setup_env(folder, config, eval=False):
             "n_corner_locs": config["model_features"]["params"]["n_corner_locs"],
             "sensor_noise": config["model_features"]["params"]["sensor_noise"],
             "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
+            "use_learned_observations": config["model_features"]["params"]["use_learned_observations"],
+            "noisy_observations": config["model_features"]["params"]["noisy_observations"],
+            "observation_type": config["model_features"]["params"]["observation_type"],
         }
 
         env = Sokoban_Monitor(
