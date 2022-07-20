@@ -17,7 +17,10 @@
     "render_mode": "tiny_rgb_array",
     "action_size": 5,
     "difficulty": "medium",
-    "split": "2box5map"
+    "split": "2box5map",
+    "height": 7,
+    "width": 7,
+    "downsampling_size": 1
   },
 
   "model_features": {
@@ -42,7 +45,11 @@
       "net_arch_pi": [128],
       "net_arch_vf": [128],
       "sensor_noise": 0,
-      "max_num_rejected_samples": 100000
+      "max_num_rejected_samples": 100000,
+      "use_learned_observations": null,
+      "noisy_observations": null,
+      "observation_type": null,
+      "improve_observation": false
     }
   }
 }

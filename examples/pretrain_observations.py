@@ -22,7 +22,7 @@ def pre_train_gf():
     # # pretrain_observation(csv_file, img_folder, model_folder, 10000)
 
 
-def pre_train_sokoban():
+def pre_train_sokoban(n_train):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     img_folder = os.path.join(dir_path, "../pls/data/sokoban")
     csv_file = os.path.join(img_folder, "labels.csv")
@@ -36,18 +36,18 @@ def pre_train_sokoban():
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
 
-    pretrain_observation_sokoban(csv_file, img_folder, model_folder, n_train=1000, epochs=300)
+    pretrain_observation_sokoban(csv_file, img_folder, model_folder, n_train=n_train, epochs=300)
 
 
-# def main_cluster():
-#     client = Client("134.58.41.100:8786")
-#
-#     # with performance_report(filename="dask-report.html"):
-#     ## some dask computation
-#     futures = client.map(pre_train_sokoban, [1000, 10000])
-#     results = client.gather(futures)
+def main_cluster():
+    client = Client("134.58.41.100:8786")
+
+    # with performance_report(filename="dask-report.html"):
+    ## some dask computation
+    futures = client.map(pre_train_sokoban, [100, 1000, 10000])
+    results = client.gather(futures)
 
 if __name__ == "__main__":
-    # main_cluster()
-    pre_train_sokoban()
+    main_cluster()
+    # pre_train_sokoban()
 

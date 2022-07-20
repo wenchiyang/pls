@@ -8,7 +8,7 @@ import math
 
 
 def pretrain_observation_sokoban(csv_file, img_folder, model_folder, n_train, epochs):
-    downsampling_size = 1
+    downsampling_size = 4
     net_input_size = math.ceil(112 / downsampling_size) ** 2
     keys = ["box(up)", "box(down)", "box(left)", "box(right)", "corner(up)", "corner(down)", "corner(left)", "corner(right)"]
 
