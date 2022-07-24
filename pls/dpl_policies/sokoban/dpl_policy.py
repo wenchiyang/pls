@@ -164,6 +164,10 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         self.alpha = alpha
         self.differentiable_shield = differentiable_shield
 
+
+        # TODO to load the model
+        self.program_path = path.join('/Users/wenchi/PycharmProjects/pls/pls/workflows/../../experiments_trials3/sokoban/2box5map_gray/PLS_perfect/seed1/../../../data/sokoban_corner2.pl')
+        self.debug_program_path = path.join('/Users/wenchi/PycharmProjects/pls/pls/workflows/../../experiments_trials3/sokoban/2box5map_gray/PLS_perfect/seed1/../../../data/sokoban_corner2.pl')
         with open(self.program_path) as f:
             self.program = f.read()
         with open(self.debug_program_path) as f:
@@ -224,6 +228,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             #               'move_left', 'move_right']
             # query_struct = {"safe_action": dict(zip(action_lst[:self.n_actions], range(self.n_actions)))}
             cache_path = path.join(self.folder, "../../../data", "dpl_layer.p")
+            # cache_path = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/2box5map_gray/data", "dpl_layer.p")
             self.dpl_layer = self.get_layer(
                 cache_path,
                 program=self.debug_program, queries=self.queries, evidences=["safe_next"],
@@ -231,7 +236,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             )
             if self.use_learned_observations:
                 observation_model_path = path.join(self.folder, "../../data", self.observation_type)
-                # observation_model_path = path.join("experiments_trials3/goal_finding/7grid5g_gray/data/observation_model_10000_examples.pt")
+                observation_model_path = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/2box5map_gray/data/observation_model_10000_examples.pt")
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
                 self.observation_model = Observation_net(input_size=self.input_size*self.input_size, output_size=8).to(device)
@@ -256,6 +261,8 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                                         self.n_box_locs + self.n_corner_locs + self.n_actions)]
         }
         cache_path = path.join(self.folder, "../../../data", "query_safety_layer.p")
+        # cache_path = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/2box5map_gray/data", "query_safety_layer.p")
+
         self.query_safety_layer = self.get_layer(
             cache_path,
             program=self.debug_program,
@@ -504,9 +511,9 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         log_prob = mass.log_prob(actions)
         return values, log_prob, mass.entropy()
 
-    def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
+    def _predict(self, observation: th.Tensor, deterministic: bool = False, tinygrid = None) -> th.Tensor:
         with th.no_grad():
-            tinygrid = None # this is actually not used
+            # tinygrid = None # this is actually not used
             _actions, values, log_prob, mass, _  = self.forward(observation, tinygrid, deterministic)
             return _actions
 
