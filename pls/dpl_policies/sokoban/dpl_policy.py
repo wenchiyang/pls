@@ -166,8 +166,8 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
 
 
         # TODO to load the model
-        self.program_path = path.join('/Users/wenchi/PycharmProjects/pls/pls/workflows/../../experiments_trials3/sokoban/2box5map_gray/PLS_perfect/seed1/../../../data/sokoban_corner2.pl')
-        self.debug_program_path = path.join('/Users/wenchi/PycharmProjects/pls/pls/workflows/../../experiments_trials3/sokoban/2box5map_gray/PLS_perfect/seed1/../../../data/sokoban_corner2.pl')
+        # self.program_path = path.join('/Users/wenchi/PycharmProjects/pls/pls/workflows/../../experiments_trials3/sokoban/2box5map_gray/PLS_perfect/seed1/../../../data/sokoban_corner2.pl')
+        # self.debug_program_path = path.join('/Users/wenchi/PycharmProjects/pls/pls/workflows/../../experiments_trials3/sokoban/2box5map_gray/PLS_perfect/seed1/../../../data/sokoban_corner2.pl')
         with open(self.program_path) as f:
             self.program = f.read()
         with open(self.debug_program_path) as f:
@@ -236,7 +236,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             )
             if self.use_learned_observations:
                 observation_model_path = path.join(self.folder, "../../data", self.observation_type)
-                observation_model_path = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/2box5map_gray/data/observation_model_10000_examples.pt")
+                # observation_model_path = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/2box5map_gray/data/observation_model_10000_examples.pt")
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
                 self.observation_model = Observation_net(input_size=self.input_size*self.input_size, output_size=8).to(device)
