@@ -13,7 +13,7 @@
     "reward_last": 0,
     "dim_room": [7, 7],
     "num_boxes": 2,
-    "render": true,
+    "render": false,
     "render_mode": "gray_array",
     "action_size": 5,
     "difficulty": "medium",
