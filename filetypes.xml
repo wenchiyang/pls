@@ -1,6 +1,7 @@
 <application>
   <component name="FileTypeManager" version="18">
     <extensionMap>
+      <mapping ext="lay" type="PLAIN_TEXT" />
       <mapping ext="0" type="PLAIN_TEXT" />
       <mapping ext="p" type="PLAIN_TEXT" />
     </extensionMap>
