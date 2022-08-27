@@ -62,8 +62,8 @@ if __name__ == "__main__":
         ],
         "exps": [
             "PPO",
-            # "PLS_perfect",
-            # "VSRL_perfect",
+            "PLSperfect",
+            "VSRLperfect",
             ],
         "seeds":
             # ["PPO", "PLS", "seed3", "seed4", "seed5"]
