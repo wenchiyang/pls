@@ -37,7 +37,8 @@ def test(folder):
 
 
 def train(folder):
-    path = os.path.join(folder, "config.json")
+    cwd = os.path.join(os.path.dirname(__file__), "../..")
+    path = os.path.join(cwd, folder, "config.json")
     with open(path) as json_data_file:
         config = json.load(json_data_file)
 
