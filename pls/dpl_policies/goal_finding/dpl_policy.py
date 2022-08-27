@@ -200,10 +200,9 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         self.net_input_dim = net_input_dim
         self.n_actions = 5
         self.tinygrid_dim = shielding_params["tinygrid_dim"]
-        self.folder = folder
+        self.folder = path.join(path.dirname(__file__), "../../..", folder)
         self.program_path = path.join(self.folder, "../../../data", shielding_params["program_type"]+".pl")
 
-        print(path.abspath(self.program_path))
         if self.program_path:
             with open(self.program_path) as f:
                 self.program = f.read()

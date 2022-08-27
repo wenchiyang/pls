@@ -26,7 +26,8 @@ def pretrain_observation_gf(csv_file, img_folder, model_folder, n_train, epochs)
               downsampling_size=downsampling_size, epochs=epochs, keys=keys)
 
 def test(folder):
-    path = os.path.join(folder, "config.json")
+    cwd = os.path.join(os.path.dirname(__file__), "../..")
+    path = os.path.join(cwd, folder, "config.json")
     with open(path) as json_data_file:
         config = json.load(json_data_file)
     config["model_features"]["params"]["step_limit"] = 1
