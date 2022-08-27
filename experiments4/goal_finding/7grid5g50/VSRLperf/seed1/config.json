@@ -19,7 +19,7 @@
   },
 
   "model_features": {
-    "name": "VSRL_perf",
+    "name": "VSRL",
     "shield_params": {
       "n_ghost_locs": 4,
       "alpha": 1,

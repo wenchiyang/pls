@@ -62,8 +62,8 @@ if __name__ == "__main__":
         ],
         "exps": [
             "PPO",
-            "PLS_perfect",
-            "VSRL_perfect",
+            # "PLS_perfect",
+            # "VSRL_perfect",
             ],
         "seeds":
             # ["PPO", "PLS", "seed3", "seed4", "seed5"]
@@ -84,7 +84,7 @@ if __name__ == "__main__":
         hyper["domains"] = hyper_parameters["domains"][combination[1]]
         hyper["exps"] = hyper_parameters["exps"][combination[2]]
         hyper["seeds"] = hyper_parameters["seeds"][combination[3]]
-        folder = os.path.join("..",
+        folder = os.path.join(
                               hyper["exp_folders"],
                               hyper["domains"],
                               hyper["exps"],
@@ -92,6 +92,6 @@ if __name__ == "__main__":
                               )
         exps.append(folder)
     # main_cluster()
-    main_cluster_test()
-    # run_train()
+    # main_cluster_test()
+    run_test()
     # run_evaluate()

@@ -3,14 +3,14 @@
   "env_type": "GoalFinding-v0",
 
   "env_features": {
-    "layout": "small",
+    "layout": "grid7x7_5_ghosts",
     "reward_goal": 10,
     "reward_crash": 0,
     "reward_food": 0,
     "reward_time": -0.1,
     "render": false,
     "max_steps": 200,
-    "num_maps": 1,
+    "num_maps": 50,
     "seed": 567,
     "render_mode": "gray",
     "height": 240,
@@ -20,7 +20,7 @@
 
 
   "model_features": {
-    "name": "PPO_perf",
+    "name": "PPO",
     "shield_params": {
       "n_ghost_locs": 4,
       "alpha": 0,
