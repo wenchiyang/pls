@@ -3,6 +3,7 @@ import os
 from pls.workflows.execute_workflow import train, test, evaluate
 import itertools
 
+
 def run_train():
     for exp in exps:
         train(exp)
@@ -20,11 +21,7 @@ def write_to_file(folder):
         f.write(str(exps))
 
 def run_evaluate():
-    folder = os.path.join(dir_path, "experiments_trials3",
-                          "goal_finding/7grid5g_gray",
-                          "hard_shielding_learned_obs_discrete_100_bal",
-                          "seed1"
-                          )
+    folder = exps[0]
     # no = os.path.join(folder, "no_shielding")
     # soft1 = os.path.join(folder, "soft_shielding")
     # hard = os.path.join(folder, "hard_shielding")
@@ -32,65 +29,49 @@ def run_evaluate():
 
     # model_at_step = 100000
     model_at_step = "end"
-    mean_reward, n_deaths = evaluate(folder, model_at_step=model_at_step, n_test_episodes=500)
+    mean_reward, n_deaths = evaluate(folder, model_at_step=model_at_step, n_test_episodes=100)
     print("no:", mean_reward, n_deaths)
-    # mean_reward, n_deaths = evaluate(soft1, model_at_step=model_at_step, n_test_episodes=500)
-    # print("soft:", mean_reward, n_deaths)
-    # mean_reward, n_deaths = evaluate(hard, model_at_step=model_at_step, n_test_episodes=500)
-    # print("hard:", mean_reward, n_deaths)
-    # mean_reward, n_deaths = evaluate(soft2, model_at_step=model_at_step, n_test_episodes=500)
-    # print("soft2:", mean_reward, n_deaths)
-
-    # for exp in exps:
-    #     evaluate(exp)th.argmax(mass.probs,dim=1)
 
 def main_cluster():
     client = Client("134.58.41.100:8786")
 
-    # with performance_report(filename="dask-report.html"):
     ## some dask computation
     futures = client.map(train, exps)
+    results = client.gather(futures)
+
+def main_cluster_test():
+    client = Client("134.58.41.100:8786")
+
+    ## some dask computation
+    futures = client.map(test, exps)
     results = client.gather(futures)
 
 
 if __name__ == "__main__":
     hyper_parameters = {
-        "exp_folders": ["experiments_trials3"],
+        "exp_folders": ["experiments4"],
         "domains": [
             # "sokoban/2box10map_long",
             # "goal_finding/smallGrid100map",
-            # "goal_finding/7grid5g"
+            "goal_finding/7grid5g"
             # "goal_finding/7grid5g_gray2"
             # "sokoban/2box5map",
-            "sokoban/2box5map_gray",
+            # "sokoban/2box5map_gray",
             # "carracing/onemap"
             # "carracing/sparse_rewards4"
         ],
         "exps": [
-            # "no_shielding"
             "PPO",
             "PLS_perfect",
-            "PLSnoisy_0.1k",
-            "PLSnoisy_1k",
-            "PLSnoisy_10k",
-            "PLSthres_0.1k",
-            "PLSthres_1k",
-            "PLSthres_10k",
             "VSRL_perfect",
-            "VSRL_0.1k",
-            "VSRL_1k",
-            "VSRL_10k",
-            # "PLSnoisy_imp_0.1k",
-            # "PLSnoisy_imp_1k",
-            # "PLSnoisy_imp_10k",
             ],
         "seeds":
-            # ["seed1", "seed2", "seed3", "seed4", "seed5"]
+            # ["PPO", "PLS", "seed3", "seed4", "seed5"]
             ["seed1"]
     }
 
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    dir_path = os.path.abspath(os.path.join(dir_path, ".."))
+    # dir_path = os.path.dirname(os.path.realpath(__file__))
+    # dir_path = os.path.abspath(os.path.join(dir_path, ".."))
 
     lengths = list(map(len, list(hyper_parameters.values())))
     lists_of_indices = list(map(lambda l: list(range(l)), lengths))
@@ -103,7 +84,7 @@ if __name__ == "__main__":
         hyper["domains"] = hyper_parameters["domains"][combination[1]]
         hyper["exps"] = hyper_parameters["exps"][combination[2]]
         hyper["seeds"] = hyper_parameters["seeds"][combination[3]]
-        folder = os.path.join(dir_path,
+        folder = os.path.join("..",
                               hyper["exp_folders"],
                               hyper["domains"],
                               hyper["exps"],
@@ -111,5 +92,6 @@ if __name__ == "__main__":
                               )
         exps.append(folder)
     # main_cluster()
-    run_train()
+    main_cluster_test()
+    # run_train()
     # run_evaluate()

@@ -2,7 +2,7 @@ import gym
 import torch as th
 from torch import nn
 import numpy as np
-from typing import Union, Tuple
+from typing import Union, Tuple, Dict, Optional
 from torch.distributions import Categorical
 import time
 from stable_baselines3.common.callbacks import ConvertCallback
@@ -21,6 +21,7 @@ from .util import get_ground_wall
 from matplotlib import pyplot as plt
 from skimage.measure import block_reduce
 from pls.observation_nets.observation_nets import Observation_net
+from random import random
 
 WALL_COLOR = 0.25
 GHOST_COLOR = 0.5
@@ -29,36 +30,62 @@ FOOD_COLOR = 1
 
 
 class GoalFinding_Encoder(nn.Module):
-    # def __init__(self, input_size, downsampling_size, n_actions, shielding_settings, program_path, debug_program_path, folder):
-    def __init__(self, input_size, n_actions, shielding_settings, program_path, debug_program_path,
-                 folder):
+    def __init__(self):
         super(GoalFinding_Encoder, self).__init__()
-        self.input_size = input_size
-        self.n_ghost_locs = shielding_settings["n_ghost_locs"]
-        self.n_actions = n_actions
-        self.program_path = program_path
-        self.debug_program_path = debug_program_path
-        self.folder = folder
-        self.shielding_settings = shielding_settings
-        # self.sensor_noise = shielding_settings["sensor_noise"]
-        # self.max_num_rejected_samples = shielding_settings["max_num_rejected_samples"]
-
-    # def downsampling(self, x):
-    #     dz = block_reduce(x, block_size=(1, self.downsampling_size, self.downsampling_size), func=np.mean)
-    #     dz = th.tensor(dz)
-    #     # plt.imshow(dz, cmap="gray", vmin=-1, vmax=1)
-    #     # plt.show()
-    #     return dz
-
 
     def forward(self, x):
-        # x = self.downsampling(x)
         xx = th.flatten(x, 1)
         return xx
 
 class GoalFinding_Callback(ConvertCallback):
     def __init__(self, callback):
         super(GoalFinding_Callback, self).__init__(callback)
+    def on_step(self) -> bool:
+        logger = self.locals["self"].logger
+        mass = self.locals["mass"]
+        action_lookup = self.locals["action_lookup"]
+        object_detect_probs = self.locals["object_detect_probs"]
+        base_policy = self.locals["base_policy"]
+        policy = self.locals["self"].policy
+        for act in range(self.locals["self"].action_space.n):
+            logger.record(
+                f"policy/shielded {action_lookup[act]}",
+                float(mass.probs[0][act]),
+            )
+        if object_detect_probs.get("alpha") is not None:
+            logger.record(
+                f"safety/alpha",
+                float(object_detect_probs.get("alpha")),
+            )
+        abs_safe_next_shielded = policy.get_step_safety(
+            mass.probs,
+            object_detect_probs["ground_truth_ghost"],
+        )
+        abs_safe_next_base = policy.get_step_safety(
+            base_policy,
+            object_detect_probs["ground_truth_ghost"],
+        )
+        rel_safe_next_shielded = policy.get_step_safety(
+            mass.probs,
+            object_detect_probs["ghost"]
+        )
+        rel_safe_next_base = policy.get_step_safety(
+            base_policy,
+            object_detect_probs["ghost"]
+        )
+
+        self.locals["abs_safeties_shielded"].append(abs_safe_next_shielded)
+        self.locals["abs_safeties_base"].append(abs_safe_next_base)
+        self.locals["rel_safeties_shielded"].append(rel_safe_next_shielded)
+        self.locals["rel_safeties_base"].append(rel_safe_next_base)
+
+        if object_detect_probs.get("alpha") is not None:
+            self.locals["alphas"].append(object_detect_probs["alpha"])
+        if object_detect_probs.get("num_rejected_samples") is not None:
+            self.locals["nums_rejected_samples"].append(object_detect_probs["num_rejected_samples"])
+        # if is in a risky situation
+        if th.any(object_detect_probs["ground_truth_ghost"], dim=1):
+            self.locals["n_risky_states"] += 1
 
 class GoalFinding_Monitor(Monitor):
     def __init__(self, *args, **kwargs):
@@ -72,6 +99,19 @@ class GoalFinding_Monitor(Monitor):
     def step(self, action: Union[np.ndarray, int]) -> GymStepReturn:
         if self.needs_reset:
             raise RuntimeError("Tried to step environment that needs reset")
+        # if action == 1 or action == 2:
+        #     eps = random()
+        #     if eps < 0.1:
+        #         action = 3
+        #     elif eps > 0.9:
+        #         action = 4
+        # elif action == 3 or action == 4:
+        #     eps = random()
+        #     if eps < 0.1:
+        #         action = 1
+        #     elif eps > 0.9:
+        #         action = 2
+
         observation, reward, done, info = self.env.step(action)
         self.rewards.append(reward)
 
@@ -100,6 +140,37 @@ class GoalFinding_Monitor(Monitor):
             # info["is_success"] = True  # Idk what this should be
         self.total_steps += 1
         return observation, reward, done, info
+    # def step(self, action: Union[np.ndarray, int]) -> GymStepReturn:
+    #     if self.needs_reset:
+    #         raise RuntimeError("Tried to step environment that needs reset")
+    #     observation, reward, done, info = self.env.step(action)
+    #     self.rewards.append(reward)
+    #
+    #     if done:
+    #         self.needs_reset = True
+    #         ep_rew = sum(self.rewards)
+    #         ep_len = len(self.rewards)
+    #
+    #         ep_info = {
+    #             "r": round(ep_rew, 6),
+    #             "l": ep_len,
+    #             "t": round(time.time() - self.t_start, 6),
+    #             "last_r": reward,
+    #             "violate_constraint": not info["maxsteps_used"] and not info["is_success"],
+    #             "is_success": info["is_success"]
+    #         }
+    #         for key in self.info_keywords:
+    #             ep_info[key] = info[key]
+    #         self.episode_returns.append(ep_rew)
+    #         self.episode_lengths.append(ep_len)
+    #         self.episode_times.append(time.time() - self.t_start)
+    #         ep_info.update(self.current_reset_info)
+    #         if self.results_writer:
+    #             self.results_writer.write_row(ep_info)
+    #         info["episode"] = ep_info
+    #         # info["is_success"] = True  # Idk what this should be
+    #     self.total_steps += 1
+    #     return observation, reward, done, info
 
 class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
     def __init__(
@@ -108,110 +179,80 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         action_space: gym.spaces.Space,
         lr_schedule: Schedule,
         image_encoder: GoalFinding_Encoder = None,
-        alpha = 0.5,
-        differentiable_shield = True,
-        input_size = 1,
+        shielding_params = None,
+        net_input_dim = 1,
+        folder = None,
         **kwargs
     ):
         observation_space = Box(
             low=-1,
             high=1,
             shape=(
-                input_size, input_size
+                net_input_dim, net_input_dim
             )
         )
         super(GoalFinding_DPLActorCriticPolicy, self).__init__(observation_space, action_space, lr_schedule, **kwargs)
         ###############################
         self.image_encoder = image_encoder
-        self.input_size = self.image_encoder.input_size
+        self.n_ghost_locs = shielding_params["n_ghost_locs"]
+        self.alpha = shielding_params["alpha"]
+        self.differentiable_shield = shielding_params["differentiable_shield"]
+        self.net_input_dim = net_input_dim
+        self.n_actions = 5
+        self.tinygrid_dim = shielding_params["tinygrid_dim"]
+        self.folder = folder
+        self.program_path = path.join(self.folder, "../../../data", shielding_params["program_type"]+".pl")
+        if self.program_path:
+            with open(self.program_path) as f:
+                self.program = f.read()
 
 
-
-        self.n_ghost_locs = self.image_encoder.n_ghost_locs
-
-        self.n_actions = self.image_encoder.n_actions
-        self.program_path = self.image_encoder.program_path
-        self.debug_program_path = self.image_encoder.debug_program_path
-        self.folder = self.image_encoder.folder
-        self.sensor_noise = self.image_encoder.shielding_settings["sensor_noise"]
-        self.max_num_rejected_samples = self.image_encoder.shielding_settings["max_num_rejected_samples"]
-        self.use_learned_observations = self.image_encoder.shielding_settings["use_learned_observations"]
-        self.noisy_observations = self.image_encoder.shielding_settings["noisy_observations"]
-        self.observation_type = self.image_encoder.shielding_settings["observation_type"]
-        self.alpha = alpha
-        self.differentiable_shield = differentiable_shield
-        # self.sig = nn.Sigmoid()
-
-        # self.program_path = path.join("experiments_trials3/goal_finding/data/relative_loc_simple.pl")
-        # self.debug_program_path = path.join("experiments_trials3/goal_finding/data/relative_loc_simple.pl")
-        with open(self.program_path) as f:
-            self.program = f.read()
-        with open(self.debug_program_path) as f:
-            self.debug_program = f.read()
-
-
-        ##### SOFT SHILDENG WITH GROUND TRUTH ####
-        self.queries = [
-                   "safe_action(stay)",
-                   "safe_action(up)",
-                   "safe_action(down)",
-                   "safe_action(left)",
-                   "safe_action(right)",
-               ][: self.n_actions]
-
-        if self.alpha == 0:
-            # NO shielding
+        if self.alpha == 0: # Baseline
             pass
-        else:
-            # HARD shielding and SOFT shielding
+        elif self.differentiable_shield: # PLS
+            self.use_learned_observations = shielding_params["use_learned_observations"]
+            self.noisy_observations = shielding_params["noisy_observations"] if self.use_learned_observations else None
+            self.observation_type = shielding_params["observation_type"] if self.use_learned_observations else None
+        else: # VSRL
+            self.vsrl_use_renormalization = shielding_params["vsrl_use_renormalization"]
+            if not self.vsrl_use_renormalization:
+                self.max_num_rejected_samples = shielding_params["max_num_rejected_samples"]
+            self.use_learned_observations = shielding_params["use_learned_observations"]
+            self.noisy_observations = shielding_params["noisy_observations"] if self.use_learned_observations else None
+            self.observation_type = shielding_params["observation_type"] if self.use_learned_observations else None
+
+
+
+        if self.alpha == 0: # NO shielding
+            pass
+        else: # HARD shielding and SOFT shielding
+            self.queries = ["safe_action(stay)", "safe_action(up)", "safe_action(down)",
+                            "safe_action(left)", "safe_action(right)"][: self.n_actions]
             input_struct = {
                 "ghost": [i for i in range(self.n_ghost_locs)],
-                "action": [i for i in range(self.n_ghost_locs,
-                                            self.n_ghost_locs + self.n_actions)]
+                "action": [i for i in range(self.n_ghost_locs, self.n_ghost_locs + self.n_actions)]
             }
-            query_struct = {
-                "safe_action": {
-                    "stay": 0,
-                    "up": 1,
-                    "down": 2,
-                    "left": 3,
-                    "right": 4
-                }}
-            cache_path = path.join(self.folder, "../../../data", "dpl_layer.p")
-            # cache_path = path.join("experiments_trials3/goal_finding/data/dpl_layer.p")
+            query_struct = {"safe_action": {"stay": 0, "up": 1, "down": 2, "left": 3, "right": 4}}
             self.dpl_layer = self.get_layer(
-                cache_path,
-                program=self.debug_program, queries=self.queries, evidences=["safe_next"],
+                path.join(self.folder, "../../../data", "dpl_layer.p"),
+                program=self.program, queries=self.queries, evidences=["safe_next"],
                 input_struct=input_struct, query_struct=query_struct
             )
             if self.use_learned_observations:
-                observation_model_path = path.join(self.folder, "../../data", self.observation_type)
-                # observation_model_path = path.join("experiments_trials3/goal_finding/7grid5g_gray/data/observation_model_10000_examples.pt")
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
-                self.observation_model = Observation_net(input_size=self.input_size*self.input_size, output_size=4).to(device) # TODO: put 35 in config file
-                self.observation_model.load_state_dict(th.load(observation_model_path))
-
-        if self.alpha == "learned":
-            self.alpha_net = nn.Sequential(
-                    nn.Linear(self.input_size*self.input_size, 128),
-                    nn.ReLU(),
-                    nn.Linear(128, 1),
-                    nn.Sigmoid(),
-                )
+                self.observation_model = Observation_net(input_size=self.input_size*self.input_size, output_size=4).to(device)
+                self.observation_model.load_state_dict(th.load(observation_model_path = path.join(self.folder, "../../data", self.observation_type)))
 
         debug_queries = ["safe_next"]
         debug_query_struct = {"safe_next": 0}
         debug_input_struct = {
             "ghost": [i for i in range(self.n_ghost_locs)],
-            "action": [i for i in range(self.n_ghost_locs,
-                                        self.n_ghost_locs + self.n_actions)]}
-
-        cache_path = path.join(self.folder, "../../../data", "query_safety_layer.p")
-        # cache_path = path.join("experiments_trials3/goal_finding/data/query_safety_layer.p")
+            "action": [i for i in range(self.n_ghost_locs, self.n_ghost_locs + self.n_actions)]
+        }
         self.query_safety_layer = self.get_layer(
-            cache_path,
-            program=self.debug_program, queries=debug_queries, evidences=[],
+            path.join(self.folder, "../../../data", "query_safety_layer.p"),
+            program=self.program, queries=debug_queries, evidences=[],
             input_struct=debug_input_struct, query_struct=debug_query_struct
         )
 
@@ -228,37 +269,6 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         pickle.dump(layer, open(cache_path, "wb"))
         return layer
 
-    def logging_per_step(self, mass, object_detect_probs, base_policy, action_lookup, logger):
-        for act in range(self.action_space.n):
-            logger.record(
-                f"policy/shielded {action_lookup[act]}",
-                float(mass.probs[0][act]),
-            )
-        if object_detect_probs.get("alpha") is not None:
-            logger.record(
-                f"safety/alpha",
-                float(object_detect_probs.get("alpha")),
-            )
-
-    def logging_per_episode(self, mass, object_detect_probs, base_policy):
-        abs_safe_next_shielded = self.get_step_safety(
-            mass.probs,
-            object_detect_probs["ground_truth_ghost"],
-        )
-        abs_safe_next_base = self.get_step_safety(
-            base_policy,
-            object_detect_probs["ground_truth_ghost"],
-        )
-        rel_safe_next_shielded = self.get_step_safety(
-            mass.probs,
-            object_detect_probs["ghost"]
-        )
-        rel_safe_next_base = self.get_step_safety(
-            base_policy,
-            object_detect_probs["ghost"]
-        )
-        return abs_safe_next_shielded, abs_safe_next_base, rel_safe_next_shielded, rel_safe_next_base
-
     def get_step_safety(self, policy_distribution, ghost_probs):
         with th.no_grad():
             abs_safe_next = self.query_safety_layer(
@@ -269,21 +279,6 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             )
             return abs_safe_next["safe_next"]
 
-    # def evaluate_safety_shielded(self, obs: th.Tensor):
-    #     with th.no_grad():
-    #         _, _, _, mass, (object_detect_probs, base_policy) = self.forward(obs)
-    #         if self.shield and not self.detect_walls:
-    #             return self.get_step_safety(
-    #                 mass.probs,
-    #                 object_detect_probs["ground_truth_ghost"],
-    #                 # object_detect_probs["ground_truth_wall"],
-    #             )
-    #         else:
-    #             return self.get_step_safety(
-    #                 mass.probs,
-    #                 object_detect_probs["ground_truth_ghost"],
-    #                 object_detect_probs["ground_truth_wall"],
-    #             )
     def forward(self, x, tinygrid, deterministic: bool = False):
         """
         Forward pass in all the networks (actor and critic)
@@ -302,67 +297,70 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         base_actions = distribution.distribution.probs
 
         with th.no_grad():
-            if tinygrid is None:
-                ground_truth_ghost = None
-            else:
-                ground_truth_ghost = get_ground_wall(tinygrid, PACMAN_COLOR, GHOST_COLOR)
-            # ghosts = ground_truth_ghost + (self.sensor_noise)*th.randn(ground_truth_ghost.shape)
-            # ghosts = th.clamp(ghosts, min=0, max=1)
+            ground_truth_ghost = get_ground_wall(tinygrid, PACMAN_COLOR, GHOST_COLOR) if tinygrid is not None else None
 
-
-        if self.use_learned_observations:
-            output = self.observation_model(x)
+        if self.alpha != 0 and self.use_learned_observations:
             if self.noisy_observations:
-                ghosts = self.observation_model.sigmoid(output)
+                ghosts = self.observation_model.sigmoid(self.observation_model(x))
             else:
-                ghosts = (self.observation_model.sigmoid(output) > 0.5).float()
+                ghosts = (self.observation_model.sigmoid(self.observation_model(x)) > 0.5).float()
         else:
             ghosts = ground_truth_ghost
+
         object_detect_probs = {
             "ground_truth_ghost": ground_truth_ghost,
             "ghost": ghosts
         }
 
-        if self.alpha == 0:
+        if self.alpha == 0: # PPO
             actions = distribution.get_actions(deterministic=deterministic)
             log_prob = distribution.log_prob(actions)
             object_detect_probs["alpha"] = 0
             return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
 
-        if not self.differentiable_shield and self.alpha == 1: # VSRL
-            num_rejected_samples = 0
-            while True:
-                actions = distribution.get_actions(deterministic=deterministic)
-                # check if the action is safe
+        if not self.differentiable_shield: # VSRL
+            if not self.vsrl_use_renormalization:
+                if self.alpha != 0:
+                    raise NotImplemented
+                #====== VSRL rejection sampling =========
+                num_rejected_samples = 0
                 with th.no_grad():
-                    vsrl_actions_encoding = th.eye(self.n_actions)[actions][:, 1:]
-                    actions_are_unsafe = th.logical_and(vsrl_actions_encoding, ghosts)
-                    if not th.any(actions_are_unsafe) or num_rejected_samples > self.max_num_rejected_samples:
-                        break
-                    else: # sample another action
-                        num_rejected_samples += 1
-            # num_rejected_samples = 0
-            # while True:
-            #     actions = distribution.get_actions(deterministic=deterministic)
-            #     # check if the action is safe
-            #     with th.no_grad():
-            #         results = self.query_safety_layer(
-            #             x={
-            #                 "ghost": ghosts,
-            #                 "action": th.eye(self.n_actions)[actions],
-            #             }
-            #         )
-            #     safe_next = results["safe_next"]
-            #     # TODO: VSRL should not depend on PLS. This line is very ad-hoc
-            #     if not th.any(safe_next.isclose(th.zeros(actions.shape))) or num_rejected_samples > self.max_num_rejected_samples:
-            #         break
-            #     else:
-            #         num_rejected_samples += 1
-            log_prob = distribution.log_prob(actions)
-            object_detect_probs["num_rejected_samples"] = num_rejected_samples
-            object_detect_probs["alpha"] = 1
-            return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
+                    while True:
+                        actions = distribution.get_actions(deterministic=deterministic) # sample an action
+                        # check if the action is safe
+                        vsrl_actions_encoding = th.eye(self.n_actions)[actions][:, 1:]
+                        actions_are_unsafe = th.logical_and(vsrl_actions_encoding, ghosts)
+                        if not th.any(actions_are_unsafe) or num_rejected_samples > self.max_num_rejected_samples:
+                            break
+                        else: # sample another action
+                            num_rejected_samples += 1
+                log_prob = distribution.log_prob(actions)
+                object_detect_probs["num_rejected_samples"] = num_rejected_samples
+                object_detect_probs["alpha"] = 1
+                return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
+            else:
+                # ====== VSRL with mask =========
+                with th.no_grad():
+                    num_rejected_samples = 0
+                    acc = th.ones((ghosts.size()[0], 1)) # extra dimension for action "stay"
+                    mask = th.cat((acc, ~ghosts.bool()), 1).bool()
+                    masked_distr = distribution.distribution.probs * mask
+                    safe_normalization_const = th.sum(masked_distr, dim=1)
+                    safeast_actions = masked_distr / safe_normalization_const
 
+                    alpha = self.alpha
+                    actions = alpha * safeast_actions + (1 - alpha) * base_actions
+
+                    mass = Categorical(probs=actions)
+                    if not deterministic:
+                        actions = mass.sample()
+                    else:
+                        actions = th.argmax(mass.probs, dim=1)
+
+                log_prob = distribution.log_prob(actions)
+                object_detect_probs["num_rejected_samples"] = num_rejected_samples
+                object_detect_probs["alpha"] = alpha
+                return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
         if self.differentiable_shield:
             results = self.dpl_layer(
@@ -371,38 +369,21 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                     "action": base_actions,
                 }
             )
-            if self.alpha == "learned":
-                alpha = self.alpha_net(obs)
-                object_detect_probs["alpha"] = alpha
+            safeast_actions = results["safe_action"]
+
+            alpha = self.alpha
+            actions = alpha * safeast_actions + (1 - alpha) * base_actions
+
+            # TODO: This is incorrect? This should be the shielded policy distribution (of type CategoricalDistribution)
+            mass = Categorical(probs=actions)
+            if not deterministic:
+                actions = mass.sample()
             else:
-                alpha = self.alpha
-        else:
-            with th.no_grad():
-                results = self.dpl_layer(
-                    x={
-                        "ghost": ghosts,
-                        "action": base_actions,
-                    }
-                )
+                actions = th.argmax(mass.probs, dim=1)
 
-            if self.alpha == "learned":
-                raise NotImplemented
-            else:
-                alpha = self.alpha
-
-        object_detect_probs["alpha"] = alpha
-        safeast_actions = results["safe_action"]
-        actions = alpha * safeast_actions + (1 - alpha) * base_actions
-
-        # TODO: This is incorrect? This should be the shielded policy distrivution (of type CategoricalDistribution)
-        mass = Categorical(probs=actions)
-        if not deterministic:
-            actions = mass.sample()
-        else:
-            actions = th.argmax(mass.probs,dim=1)
-        log_prob = mass.log_prob(actions)
-
-        return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
+            log_prob = mass.log_prob(actions)
+            object_detect_probs["alpha"] = alpha
+            return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
 
     def no_shielding(self, distribution, values, x, deterministic):
@@ -486,7 +467,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         :return: estimated value, log likelihood of taking those actions
             and entropy of the action distribution.
         """
-        if not self.differentiable_shield and self.alpha == 1:
+        if not self.differentiable_shield:
             obs = self.image_encoder(obs)
             features = self.extract_features(obs)
             latent_pi, latent_vf = self.mlp_extractor(features)
@@ -499,8 +480,60 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
         log_prob = mass.log_prob(actions)
         return values, log_prob, mass.entropy()
 
-    def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
+
+
+
+    def _predict(self, observation: th.Tensor, tinygrid: th.Tensor, deterministic: bool = False) -> th.Tensor:
         with th.no_grad():
-            tinygrid = None # this is actually not used
-            _actions, values, log_prob, mass, _  = self.forward(observation, tinygrid, deterministic)
+            _actions, _, _, _, _  = self.forward(observation, tinygrid, deterministic)
             return _actions
+
+    def predict(
+            self,
+            observation: Union[np.ndarray, Dict[str, np.ndarray]],
+            state: Optional[Tuple[np.ndarray, ...]] = None,
+            episode_start: Optional[np.ndarray] = None,
+            deterministic: bool = False,
+    ) -> Tuple[np.ndarray, Optional[Tuple[np.ndarray, ...]]]:
+        """
+        Get the policy action from an observation (and optional hidden state).
+        Includes sugar-coating to handle different observations (e.g. normalizing images).
+
+        :param observation: the input observation
+        :param state: The last hidden states (can be None, used in recurrent policies)
+        :param episode_start: The last masks (can be None, used in recurrent policies)
+            this correspond to beginning of episodes,
+            where the hidden states of the RNN must be reset.
+        :param deterministic: Whether or not to return deterministic actions.
+        :return: the model's action and the next hidden state
+            (used in recurrent policies)
+        """
+        # TODO (GH/1): add support for RNN policies
+        # if state is None:
+        #     state = self.initial_state
+        # if episode_start is None:
+        #     episode_start = [False for _ in range(self.n_envs)]
+        # Switch to eval mode (this affects batch norm / dropout)
+        self.set_training_mode(False)
+
+        observation, vectorized_env = self.obs_to_tensor(observation)
+
+        with th.no_grad():
+            actions = self._predict(observation, tinygrid=state, deterministic=deterministic)
+        # Convert to numpy
+        actions = actions.cpu().numpy()
+
+        if isinstance(self.action_space, gym.spaces.Box):
+            if self.squash_output:
+                # Rescale to proper domain when using squashing
+                actions = self.unscale_action(actions)
+            else:
+                # Actions could be on arbitrary scale, so clip the actions to avoid
+                # out of bound error (e.g. if sampling from a Gaussian distribution)
+                actions = np.clip(actions, self.action_space.low, self.action_space.high)
+
+        # Remove batch dimension if needed
+        if not vectorized_env:
+            actions = actions[0]
+
+        return actions

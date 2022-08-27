@@ -29,7 +29,11 @@ def test(folder):
     path = os.path.join(folder, "config.json")
     with open(path) as json_data_file:
         config = json.load(json_data_file)
-        print(config["arg"])
+    config["model_features"]["params"]["step_limit"] = 1
+    learner = config["workflow_name"]
+    if "ppo" in learner:
+        ppo_dpl(folder, config)
+
 
 def train(folder):
     path = os.path.join(folder, "config.json")
@@ -48,7 +52,7 @@ def evaluate(folder, model_at_step, n_test_episodes):
 
     learner = config["workflow_name"]
     if "ppo" in learner:
-        evaluate_policy(folder, model_at_step, n_test_episodes)
+        return evaluate_policy(folder, model_at_step, n_test_episodes)
 
 
 # def predict_states(folder):

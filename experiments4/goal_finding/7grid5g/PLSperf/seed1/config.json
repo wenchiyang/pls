@@ -1,0 +1,48 @@
+{
+  "workflow_name": "ppo",
+  "env_type": "GoalFinding-v0",
+
+  "env_features": {
+    "layout": "grid7x7_5_ghosts",
+    "reward_goal": 10,
+    "reward_crash": 0,
+    "reward_food": 0,
+    "reward_time": -0.1,
+    "render": false,
+    "max_steps": 200,
+    "num_maps": 1,
+    "seed": 567,
+    "render_mode": "gray",
+    "height": 240,
+    "width": 240,
+    "downsampling_size": 7
+  },
+
+  "model_features": {
+    "name": "PLS_perf",
+    "shield_params": {
+      "n_ghost_locs": 4,
+      "alpha": 1,
+      "differentiable_shield": true,
+      "program_type": "relative_loc_simple",
+      "tinygrid_dim": 7,
+      "use_learned_observations": false
+    },
+    "params": {
+      "log_interval": 1,
+      "batch_size": 512,
+      "n_epochs": 15,
+      "n_steps": 2048,
+      "learning_rate": 0.001,
+      "seed": 567,
+      "clip_range": 0.1,
+      "gamma": 0.99,
+      "step_limit": 500000,
+      "net_arch_shared": [],
+      "net_arch_pi": [128],
+      "net_arch_vf": [128]
+    }
+  }
+}
+
+

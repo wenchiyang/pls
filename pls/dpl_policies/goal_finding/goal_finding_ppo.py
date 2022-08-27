@@ -98,7 +98,7 @@ class GoalFinding_DPLPPO(PPO):
             low=0,
             high=1,
             shape=(
-                7,7
+                self.policy.tinygrid_dim, self.policy.tinygrid_dim
             )
         )
         self.rollout_buffer = RolloutBuffer_TinyGrid(
@@ -342,13 +342,18 @@ class GoalFinding_DPLPPO(PPO):
             self.policy.reset_noise(env.num_envs)
 
         callback.on_rollout_start()
+
+
+        ####### on_episode_start #######
         alphas = []
         nums_rejected_samples = []
-        abs_safeties_shielded = []  # TODO: can be put in call back
+        abs_safeties_shielded = []
         abs_safeties_base = []
         rel_safeties_shielded = []
         rel_safeties_base = []
         n_risky_states = 0
+        ##############################
+        action_lookup = env.envs[0].get_action_lookup()
 
         while n_steps < n_rollout_steps:
             if (
@@ -372,39 +377,6 @@ class GoalFinding_DPLPPO(PPO):
                     mass,
                     (object_detect_probs, base_policy),
                 ) = self.policy.forward(obs_tensor, tinygrid)
-                action_lookup = env.envs[0].get_action_lookup()
-
-                self.policy.logging_per_step(
-                    mass, object_detect_probs, base_policy, action_lookup, self.logger
-                )
-                abs_safe_next_shielded, abs_safe_next_base, rel_safe_next_shielded, rel_safe_next_base = self.policy.logging_per_episode(
-                    mass, object_detect_probs, base_policy
-                )
-
-                if object_detect_probs.get("alpha") is not None:
-                    alphas.append(object_detect_probs["alpha"])
-                if object_detect_probs.get("num_rejected_samples") is not None:
-                    nums_rejected_samples.append(object_detect_probs["num_rejected_samples"])
-
-
-                # abs_safe_next_shielded = self.policy.get_step_safety(
-                #     mass.probs,
-                #     object_detect_probs["ground_truth_ghost"]
-                # )
-                # abs_safe_next_base = self.policy.get_step_safety(
-                #     base_policy,
-                #     object_detect_probs["ground_truth_ghost"]
-                # )
-
-
-                # if is in a risky situation
-                if th.any(object_detect_probs["ground_truth_ghost"],dim=1):
-                    n_risky_states += 1
-
-                abs_safeties_shielded.append(abs_safe_next_shielded)
-                abs_safeties_base.append(abs_safe_next_base)
-                rel_safeties_shielded.append(rel_safe_next_shielded)
-                rel_safeties_base.append(rel_safe_next_base)
 
             actions = actions.cpu().numpy()
 
@@ -431,34 +403,30 @@ class GoalFinding_DPLPPO(PPO):
 
             if dones:
                 ep_len = infos[0]["episode"]["l"]
-                ep_abs_safety_shielded = float(min(abs_safeties_shielded))
-                ep_abs_safety_base = float(min(abs_safeties_base))
-                ep_rel_safety_shielded = float(min(rel_safeties_shielded))
-                ep_rel_safety_base = float(min(rel_safeties_base))
-
-                infos[0]["episode"]["abs_safety_shielded"] = ep_abs_safety_shielded
-                infos[0]["episode"]["abs_safety_base"] = ep_abs_safety_base
-                infos[0]["episode"]["rel_safety_shielded"] = ep_rel_safety_shielded
-                infos[0]["episode"]["rel_safety_base"] = ep_rel_safety_base
+                ##### on_episide_end ##########
                 infos[0]["episode"]["n_risky_states"] = n_risky_states
+                infos[0]["episode"]["abs_safety_shielded"] = float(min(abs_safeties_shielded))
+                infos[0]["episode"]["abs_safety_base"] = float(min(abs_safeties_base))
+                infos[0]["episode"]["rel_safety_shielded"] = float(min(rel_safeties_shielded))
+                infos[0]["episode"]["rel_safety_base"] = float(min(rel_safeties_base))
                 if infos[0]["episode"]["violate_constraint"]:
                     self.n_deaths += 1
                 if object_detect_probs.get("alpha") is not None:
-                    alpha_min = float(min(alphas))
-                    alpha_max = float(max(alphas))
-                    infos[0]["episode"]["alpha_min"] = alpha_min
-                    infos[0]["episode"]["alpha_max"] = alpha_max
-                    alphas = []
+                    infos[0]["episode"]["alpha_min"] = float(min(alphas))
+                    infos[0]["episode"]["alpha_max"] = float(max(alphas))
                 if object_detect_probs.get("num_rejected_samples") is not None:
                     num_rejected_samples_max = float(max(nums_rejected_samples))
                     infos[0]["episode"]["num_rejected_samples_max"] = num_rejected_samples_max
-                    nums_rejected_samples = []
+                ##############################
+                ##### on_episide_start ##########
+                alphas = []
+                nums_rejected_samples = []
                 abs_safeties_shielded = []
                 abs_safeties_base = []
                 rel_safeties_shielded = []
                 rel_safeties_base = []
                 n_risky_states = 0
-
+                ##############################
             self._update_info_buffer(infos)
             n_steps += 1
 
@@ -479,7 +447,7 @@ class GoalFinding_DPLPPO(PPO):
                         rewards[idx] += self.gamma * terminal_value
 
             rollout_buffer.add(
-                self._last_obs, # TODO tinygrid
+                self._last_obs,
                 actions,
                 rewards,
                 self._last_episode_starts,

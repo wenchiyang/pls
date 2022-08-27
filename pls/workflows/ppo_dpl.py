@@ -52,84 +52,90 @@ def setup_env(folder, config, eval=False):
         cache_root = os.path.join(folder, "../../../../..")
         env_args["cache_root"] = cache_root
     env = gym.make(env_name, **env_args)
-    # env = gym.make(env_name)
 
     if "GoalFinding" in env_name:
         image_encoder_cls = GoalFinding_Encoder
-        shielding_settings = {
-            "n_ghost_locs": config["model_features"]["params"]["n_ghost_locs"],
-            "sensor_noise": config["model_features"]["params"]["sensor_noise"],
-            "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
-            "use_learned_observations": config["model_features"]["params"]["use_learned_observations"],
-            "noisy_observations": config["model_features"]["params"]["noisy_observations"],
-            "observation_type": config["model_features"]["params"]["observation_type"],
-        }
         env = GoalFinding_Monitor(
             env,
             allow_early_resets=False
         )
 
-        custom_callback = None
-        custom_callback = GoalFinding_Callback(custom_callback)
     elif "Pacman" in env_name:
         image_encoder_cls = Pacman_Encoder
-        shielding_settings = {
-            "n_ghost_locs": config["model_features"]["params"]["n_ghost_locs"],
-            "sensor_noise": config["model_features"]["params"]["sensor_noise"],
-            "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
-        }
+        # shielding_settings = {
+        #     "n_ghost_locs": config["model_features"]["params"]["n_ghost_locs"],
+        #     "sensor_noise": config["model_features"]["params"]["sensor_noise"],
+        #     "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
+        # }
         env = Pacman_Monitor(
             env,
             allow_early_resets=False
         )
-        custom_callback = None
-        custom_callback = Pacman_Callback(custom_callback)
+
     elif "Sokoban" in env_name or "Boxoban" in env_name:
         image_encoder_cls = Sokoban_Encoder
-        shielding_settings = {
-            "n_box_locs": config["model_features"]["params"]["n_box_locs"],
-            "n_corner_locs": config["model_features"]["params"]["n_corner_locs"],
-            "sensor_noise": config["model_features"]["params"]["sensor_noise"],
-            "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
-            "use_learned_observations": config["model_features"]["params"]["use_learned_observations"],
-            "noisy_observations": config["model_features"]["params"]["noisy_observations"],
-            "observation_type": config["model_features"]["params"]["observation_type"],
-        }
+        # shielding_settings = {
+        #     "n_box_locs": config["model_features"]["params"]["n_box_locs"],
+        #     "n_corner_locs": config["model_features"]["params"]["n_corner_locs"],
+        #     "sensor_noise": config["model_features"]["params"]["sensor_noise"],
+        #     "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
+        #     "use_learned_observations": config["model_features"]["params"]["use_learned_observations"],
+        #     "noisy_observations": config["model_features"]["params"]["noisy_observations"],
+        #     "observation_type": config["model_features"]["params"]["observation_type"],
+        # }
 
         env = Sokoban_Monitor(
             env,
             allow_early_resets=False
         )
-        custom_callback = None
-        custom_callback = Sokoban_Callback(custom_callback)
+
 
     elif "Car" in env_name:
         image_encoder_cls = Carracing_Encoder
-        shielding_settings = {
-            "n_grass_locs": config["model_features"]["params"]["n_grass_locs"],
-            "sensor_noise": config["model_features"]["params"]["sensor_noise"],
-            "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"]
-        }
+        # shielding_settings = {
+        #     "n_grass_locs": config["model_features"]["params"]["n_grass_locs"],
+        #     "sensor_noise": config["model_features"]["params"]["sensor_noise"],
+        #     "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"]
+        # }
         env = Carracing_Monitor(
             env,
             vio_len = config["monitor_features"]["vio_len"],
             allow_early_resets=False
         )
-        custom_callback = None
-        custom_callback = Carracing_Callback(custom_callback)
 
-    return env, image_encoder_cls, shielding_settings, custom_callback
+
+    return env, image_encoder_cls
 
 
 def main(folder, config):
     """
     Runs policy gradient with deep problog
     """
-    #####   Read from config   #############
-
-
     #####   Initialize loggers   #############
     new_logger = configure(folder, ["log", "tensorboard"])
+
+    #####   Initialize env   #############
+    env, image_encoder_cls = setup_env(folder, config)
+
+    env_name = config["env_type"]
+    custom_callback = None
+    if "GoalFinding" in env_name:
+        model_cls = GoalFinding_DPLPPO
+        policy_cls = GoalFinding_DPLActorCriticPolicy
+        custom_callback = GoalFinding_Callback(custom_callback)
+    elif "Pacman" in env_name:
+        model_cls = Pacman_DPLPPO
+        policy_cls = Pacman_DPLActorCriticPolicy
+        custom_callback = Pacman_Callback(custom_callback)
+    elif "Sokoban" in env_name or "Boxoban" in env_name:
+        model_cls = Sokoban_DPLPPO
+        policy_cls = Sokoban_DPLActorCriticPolicy
+        custom_callback = Sokoban_Callback(custom_callback)
+    elif "Car" in env_name :
+        model_cls = Carracing_DPLPPO
+        policy_cls = Carracing_DPLActorCriticPolicy
+        custom_callback = Carracing_Callback(custom_callback)
+
 
     #####   Configure network   #############
     net_arch = config["model_features"]["params"]["net_arch_shared"] + [
@@ -138,54 +144,9 @@ def main(folder, config):
             vf=config["model_features"]["params"]["net_arch_vf"],
         )
     ]
+    image_encoder = image_encoder_cls()
+    net_input_dim = math.ceil(config["env_features"]["height"] / config["env_features"]["downsampling_size"])
 
-    #####   Initialize env   #############
-    program_path = os.path.join(folder, "../../../data", f'{config["model_features"]["params"]["program_type"]}.pl')
-    debug_program_path = os.path.join(folder, "../../../data", f'{config["model_features"]["params"]["debug_program_type"]}.pl')
-
-    env, image_encoder_cls, shielding_settings, custom_callback = setup_env(
-        folder, config
-    )
-
-    # grid_size = env.grid_size
-    # height = env.grid_height
-    # width = env.grid_weight
-    # color_channels = env.color_channels
-    # n_pixels = (height * grid_size) * (width * grid_size) * color_channels
-    # -----------
-    # height = config["model_features"]["encoder_params"]["height"]
-    # width = config["model_features"]["encoder_params"]["width"]
-    # downsampling_size = config["model_features"]["encoder_params"]["downsampling_size"]
-    height = config["env_features"]["height"]
-    width = config["env_features"]["width"]
-    downsampling_size = config["env_features"]["downsampling_size"]
-
-    net_input_dim = math.ceil(height / downsampling_size)
-
-    n_pixels = net_input_dim
-
-    n_actions = env.action_size
-    env_name = config["env_type"]
-    if "GoalFinding" in env_name:
-        model_cls = GoalFinding_DPLPPO
-        policy_cls = GoalFinding_DPLActorCriticPolicy
-    elif "Pacman" in env_name:
-        model_cls = Pacman_DPLPPO
-        policy_cls = Pacman_DPLActorCriticPolicy
-    elif "Sokoban" in env_name or "Boxoban" in env_name:
-        model_cls = Sokoban_DPLPPO
-        policy_cls = Sokoban_DPLActorCriticPolicy
-    elif "Car" in env_name :
-        model_cls = Carracing_DPLPPO
-        policy_cls = Carracing_DPLActorCriticPolicy
-
-
-    # image_encoder = image_encoder_cls(
-    #     n_pixels, downsampling_size, n_actions, shielding_settings, program_path, debug_program_path, folder
-    # )
-    image_encoder = image_encoder_cls(
-        n_pixels, n_actions, shielding_settings, program_path, debug_program_path, folder
-    )
     model = model_cls(
         policy_cls,
         env=env,
@@ -199,12 +160,12 @@ def main(folder, config):
         tensorboard_log=folder,
         policy_kwargs={
             "image_encoder": image_encoder,
-            "alpha": config["model_features"]["params"]["alpha"],
-            "differentiable_shield": config["model_features"]["params"]["differentiable_shield"],
+            "shielding_params": config["model_features"]["shield_params"],
             "net_arch": net_arch,
             "activation_fn": nn.ReLU,
             "optimizer_class": th.optim.Adam,
-            "input_size": n_pixels
+            "net_input_dim": net_input_dim,
+            "folder": folder
         },
         verbose=0,
         seed=config["model_features"]["params"]["seed"],
@@ -213,7 +174,6 @@ def main(folder, config):
 
     model.set_random_seed(config["model_features"]["params"]["seed"])
     model.set_logger(new_logger)
-
 
     intermediate_model_path = os.path.join(folder, "model_checkpoints")
     checkpoint_callback = CheckpointCallback(save_freq=1e4, save_path=intermediate_model_path)
