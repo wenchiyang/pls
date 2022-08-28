@@ -177,7 +177,7 @@ def main(folder, config):
     model.set_random_seed(config["model_features"]["params"]["seed"])
     model.set_logger(new_logger)
 
-    intermediate_model_path = os.path.join(folder, "model_checkpoints")
+    intermediate_model_path = os.path.join(folder_path, "model_checkpoints")
     checkpoint_callback = CheckpointCallback(save_freq=1e4, save_path=intermediate_model_path)
 
 
