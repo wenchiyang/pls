@@ -111,8 +111,10 @@ def main(folder, config):
     """
     Runs policy gradient with deep problog
     """
+    cwd = os.path.dirname(__file__)
+    folder_path = os.path.join(cwd, "../..", folder)
     #####   Initialize loggers   #############
-    new_logger = configure(folder, ["log", "tensorboard"])
+    new_logger = configure(folder_path, ["log", "tensorboard"])
 
     #####   Initialize env   #############
     env, image_encoder_cls = setup_env(folder, config)
@@ -157,7 +159,7 @@ def main(folder, config):
         n_epochs=config["model_features"]["params"]["n_epochs"],
         gamma=config["model_features"]["params"]["gamma"],
         clip_range=config["model_features"]["params"]["clip_range"],
-        tensorboard_log=folder,
+        tensorboard_log=folder_path,
         policy_kwargs={
             "image_encoder": image_encoder,
             "shielding_params": config["model_features"]["shield_params"],
@@ -165,7 +167,7 @@ def main(folder, config):
             "activation_fn": nn.ReLU,
             "optimizer_class": th.optim.Adam,
             "net_input_dim": net_input_dim,
-            "folder": folder
+            "folder": folder_path
         },
         verbose=0,
         seed=config["model_features"]["params"]["seed"],
@@ -182,7 +184,7 @@ def main(folder, config):
     model.learn(
         total_timesteps=config["model_features"]["params"]["step_limit"],
         callback=[custom_callback, checkpoint_callback])
-    model.save(os.path.join(folder, "model"))
+    model.save(os.path.join(folder_path, "model"))
 
 
 
