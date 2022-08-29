@@ -1,6 +1,6 @@
 {
   "workflow_name": "ppo",
-  "env_type": "Pacman-v0",
+  "env_type": "GoalFinding-v0",
 
   "env_features": {
     "layout": "small",
@@ -38,10 +38,10 @@
       "seed": 567,
       "clip_range": 0.1,
       "gamma": 0.99,
-      "step_limit": 500000,
+      "step_limit": 5000000,
       "net_arch_shared": [],
-      "net_arch_pi": [128],
-      "net_arch_vf": [128]
+      "net_arch_pi": [64, 64],
+      "net_arch_vf": [64, 64]
     }
   }
 }
