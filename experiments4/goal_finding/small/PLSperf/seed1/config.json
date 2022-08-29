@@ -25,7 +25,7 @@
       "alpha": 1,
       "differentiable_shield": true,
       "program_type": "relative_loc_simple",
-      "tinygrid_dim": v,
+      "tinygrid_dim": 15,
       "use_learned_observations": false
     },
     "params": {
