@@ -15,7 +15,7 @@
     "render_mode": "gray",
     "height": 482,
     "width": 482,
-    "downsampling_size": 7,
+    "downsampling_size": 10,
     "background": "bg_small.jpg"
   },
 
@@ -33,8 +33,8 @@
       "log_interval": 1,
       "batch_size": 1024,
       "n_epochs": 15,
-      "n_steps": 8192,
-      "learning_rate": 0.001,
+      "n_steps": 4096,
+      "learning_rate": 0.0001,
       "seed": 567,
       "clip_range": 0.1,
       "gamma": 0.99,
