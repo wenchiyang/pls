@@ -50,6 +50,7 @@ def setup_env(folder, config, eval=False):
         env_args = config["env_features"]
     if "Boxoban" in env_name:
         cache_root = os.path.join(folder, "../../../../..")
+        cache_root = os.path.abspath(cache_root)
         env_args["cache_root"] = cache_root
     env = gym.make(env_name, **env_args)
 
