@@ -1,6 +1,6 @@
 {
   "workflow_name": "ppo",
-  "env_type": "GoalFinding-v0",
+  "env_type": "Pacman-v0",
 
   "env_features": {
     "layout": "small",
