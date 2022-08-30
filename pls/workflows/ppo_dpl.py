@@ -62,11 +62,6 @@ def setup_env(folder, config, eval=False):
 
     elif "Pacman" in env_name:
         image_encoder_cls = Pacman_Encoder
-        # shielding_settings = {
-        #     "n_ghost_locs": config["model_features"]["params"]["n_ghost_locs"],
-        #     "sensor_noise": config["model_features"]["params"]["sensor_noise"],
-        #     "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
-        # }
         env = Pacman_Monitor(
             env,
             allow_early_resets=False

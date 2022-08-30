@@ -240,6 +240,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
                 input_struct=input_struct, query_struct=query_struct
             )
             if self.use_learned_observations:
+                # TODO
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
                 self.observation_model = Observation_net(input_size=self.input_size*self.input_size, output_size=4).to(device)
@@ -301,6 +302,7 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             ground_truth_ghost = get_ground_wall(tinygrid, PACMAN_COLOR, GHOST_COLOR) if tinygrid is not None else None
 
         if self.alpha != 0 and self.use_learned_observations:
+            # TODO
             if self.noisy_observations:
                 ghosts = self.observation_model.sigmoid(self.observation_model(x))
             else:
@@ -387,74 +389,74 @@ class GoalFinding_DPLActorCriticPolicy(ActorCriticPolicy):
             return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
 
-    def no_shielding(self, distribution, values, x, deterministic):
-        actions = distribution.get_actions(deterministic=deterministic)
-        log_prob = distribution.log_prob(actions)
-        with th.no_grad():
-            ground_truth_ghost = get_ground_wall(x, PACMAN_COLOR, GHOST_COLOR)
-            # ground_truth_wall = get_ground_wall(x, PACMAN_COLOR, WALL_COLOR)
-
-            base_actions = distribution.distribution.probs
-
-            object_detect_probs = {
-                "ground_truth_ghost": ground_truth_ghost,
-                "ground_truth_wall": None, #ground_truth_wall
-            }
-
-        return (
-            actions,
-            values,
-            log_prob,
-            distribution.distribution,
-            [object_detect_probs, base_actions],
-        )
-
-    def soft_shielding(self, distribution, values, obs, x, deterministic):
-        with th.no_grad():
-            ground_truth_ghost = get_ground_wall(x, PACMAN_COLOR, GHOST_COLOR)
-
-        ghosts = self.ghost_layer(obs) if self.detect_ghosts else ground_truth_ghost
-
-        base_actions = distribution.distribution.probs
-
-        results = self.dpl_layer(
-            x={
-                "ghost": ghosts,
-                "action": base_actions,
-                "free_action": base_actions,
-            }
-        )
-
-        actions = results["safe_action"]
-
-        mass = Categorical(probs=actions)
-        if not deterministic:
-            actions = mass.sample()
-        else:
-            actions = th.argmax(mass.probs,dim=1)
-        log_prob = mass.log_prob(actions)
-
-        with th.no_grad():
-            if self.detect_walls:
-                object_detect_probs = {
-                    "prob_ghost_prior": ghosts,
-                    "prob_wall_prior": None, #walls,
-                    "prob_ghost_posterior": ghosts,
-                    "prob_wall_posterior": None, #results["wall"],
-                    "ground_truth_ghost": ground_truth_ghost,
-                    "ground_truth_wall": None, #ground_truth_wall,
-                }
-            else:
-                object_detect_probs = {
-                    "prob_ghost_prior": ghosts,
-                    "prob_wall_prior": None,
-                    "prob_ghost_posterior": ghosts,
-                    "prob_wall_posterior": None,
-                    "ground_truth_ghost": ground_truth_ghost,
-                    "ground_truth_wall": None,
-                }
-
-        return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
+    # def no_shielding(self, distribution, values, x, deterministic):
+    #     actions = distribution.get_actions(deterministic=deterministic)
+    #     log_prob = distribution.log_prob(actions)
+    #     with th.no_grad():
+    #         ground_truth_ghost = get_ground_wall(x, PACMAN_COLOR, GHOST_COLOR)
+    #         # ground_truth_wall = get_ground_wall(x, PACMAN_COLOR, WALL_COLOR)
+    #
+    #         base_actions = distribution.distribution.probs
+    #
+    #         object_detect_probs = {
+    #             "ground_truth_ghost": ground_truth_ghost,
+    #             "ground_truth_wall": None, #ground_truth_wall
+    #         }
+    #
+    #     return (
+    #         actions,
+    #         values,
+    #         log_prob,
+    #         distribution.distribution,
+    #         [object_detect_probs, base_actions],
+    #     )
+    #
+    # def soft_shielding(self, distribution, values, obs, x, deterministic):
+    #     with th.no_grad():
+    #         ground_truth_ghost = get_ground_wall(x, PACMAN_COLOR, GHOST_COLOR)
+    #
+    #     ghosts = self.ghost_layer(obs) if self.detect_ghosts else ground_truth_ghost
+    #
+    #     base_actions = distribution.distribution.probs
+    #
+    #     results = self.dpl_layer(
+    #         x={
+    #             "ghost": ghosts,
+    #             "action": base_actions,
+    #             "free_action": base_actions,
+    #         }
+    #     )
+    #
+    #     actions = results["safe_action"]
+    #
+    #     mass = Categorical(probs=actions)
+    #     if not deterministic:
+    #         actions = mass.sample()
+    #     else:
+    #         actions = th.argmax(mass.probs,dim=1)
+    #     log_prob = mass.log_prob(actions)
+    #
+    #     with th.no_grad():
+    #         if self.detect_walls:
+    #             object_detect_probs = {
+    #                 "prob_ghost_prior": ghosts,
+    #                 "prob_wall_prior": None, #walls,
+    #                 "prob_ghost_posterior": ghosts,
+    #                 "prob_wall_posterior": None, #results["wall"],
+    #                 "ground_truth_ghost": ground_truth_ghost,
+    #                 "ground_truth_wall": None, #ground_truth_wall,
+    #             }
+    #         else:
+    #             object_detect_probs = {
+    #                 "prob_ghost_prior": ghosts,
+    #                 "prob_wall_prior": None,
+    #                 "prob_ghost_posterior": ghosts,
+    #                 "prob_wall_posterior": None,
+    #                 "ground_truth_ghost": ground_truth_ghost,
+    #                 "ground_truth_wall": None,
+    #             }
+    #
+    #     return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
     def evaluate_actions(
         self, obs: th.Tensor, tinygrid: th.Tensor, actions: th.Tensor

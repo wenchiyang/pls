@@ -340,10 +340,10 @@ class GoalFinding_DPLPPO(PPO):
         # Sample new weights for the state dependent exploration
         if self.use_sde:
             self.policy.reset_noise(env.num_envs)
+        render_mode = env.envs[0].render_mode
+
 
         callback.on_rollout_start()
-
-
         ####### on_episode_start #######
         alphas = []
         nums_rejected_samples = []

@@ -5,7 +5,26 @@ import matplotlib.pyplot as plt
 import os
 import torch as th
 from pathlib import Path
+import numpy as np
 
+def safe_max(arr) :
+    """
+    Compute the mean of an array if there is at least one element.
+    For empty array, return NaN. It is used for logging only.
+
+    :param arr:
+    :return:
+    """
+    return np.nan if len(arr) == 0 else np.max(arr)
+def safe_min(arr) :
+    """
+    Compute the mean of an array if there is at least one element.
+    For empty array, return NaN. It is used for logging only.
+
+    :param arr:
+    :return:
+    """
+    return np.nan if len(arr) == 0 else np.min(arr)
 
 def myformat(tensor):
     s = str(tensor)
@@ -69,7 +88,7 @@ def init_logger(verbose=None, name="policy_gradient", out=None):
 
 def draw(image):
     plt.axis("off")
-    plt.imshow(image, cmap="gray", vmin=0, vmax=1)
+    plt.imshow(image, cmap="gray", vmin=-1, vmax=1)
     plt.show()
 
 
@@ -90,9 +109,10 @@ def initial_log(name, args):
     logger.info(f"Render:           {args['render']}")
 
 
+
+# FOR TINYGRID INPUT
 def get_ground_wall(input, center_color, detect_color):
     centers = (input == center_color).nonzero()[:, 1:]
-
     neighbors = th.stack(
         (
             input[th.arange(input.size(0)), centers[:, 0] - 1 , centers[:, 1]],
