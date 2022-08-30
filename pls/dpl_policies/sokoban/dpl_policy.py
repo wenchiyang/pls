@@ -59,26 +59,71 @@ def box_stuck_in_corner(tinygrid):
     return s
 
 class Sokoban_Encoder(nn.Module):
-    def __init__(self, input_size, n_actions, shielding_settings, program_path, debug_program_path, folder):
+    def __init__(self):
         super(Sokoban_Encoder, self).__init__()
-        self.input_size = input_size
-        self.n_box_locs = shielding_settings["n_box_locs"]
-        self.n_corner_locs = shielding_settings["n_corner_locs"]
-        self.n_actions = n_actions
-        self.program_path = program_path
-        self.debug_program_path = debug_program_path
-        self.folder = folder
-        self.shielding_settings = shielding_settings
-        # self.sensor_noise = shielding_settings["sensor_noise"]
-        # self.max_num_rejected_samples = shielding_settings["max_num_rejected_samples"]
 
     def forward(self, x):
         xx = th.flatten(x, 1)
         return xx
 
+
 class Sokoban_Callback(ConvertCallback):
     def __init__(self, callback):
         super(Sokoban_Callback, self).__init__(callback)
+    def on_step(self) -> bool:
+        logger = self.locals["self"].logger
+        mass = self.locals["mass"]
+        action_lookup = self.locals["action_lookup"]
+        object_detect_probs = self.locals["object_detect_probs"]
+        base_policy = self.locals["base_policy"]
+        policy = self.locals["self"].policy
+        for act in range(self.locals["self"].action_space.n):
+            logger.record(
+                f"policy/shielded {action_lookup[act]}",
+                float(mass.probs[0][act]),
+            )
+        if object_detect_probs.get("alpha") is not None:
+            logger.record(
+                f"safety/alpha",
+                float(object_detect_probs.get("alpha")),
+            )
+        abs_safe_next_shielded = policy.get_step_safety(
+            mass.probs,
+            object_detect_probs["ground_truth_box"],
+            object_detect_probs["ground_truth_corner"],
+        )
+        abs_safe_next_base = policy.get_step_safety(
+            base_policy,
+            object_detect_probs["ground_truth_box"],
+            object_detect_probs["ground_truth_corner"],
+        )
+        rel_safe_next_shielded = policy.get_step_safety(
+            mass.probs,
+            object_detect_probs["box"],
+            object_detect_probs["corner"],
+        )
+        rel_safe_next_base = policy.get_step_safety(
+            base_policy,
+            object_detect_probs["box"],
+            object_detect_probs["corner"],
+        )
+
+        self.locals["abs_safeties_shielded"].append(abs_safe_next_shielded)
+        self.locals["abs_safeties_base"].append(abs_safe_next_base)
+        self.locals["rel_safeties_shielded"].append(rel_safe_next_shielded)
+        self.locals["rel_safeties_base"].append(rel_safe_next_base)
+
+        if object_detect_probs.get("alpha") is not None:
+            self.locals["alphas"].append(object_detect_probs["alpha"])
+        if object_detect_probs.get("num_rejected_samples") is not None:
+            self.locals["nums_rejected_samples"].append(object_detect_probs["num_rejected_samples"])
+        # if in a risky situation
+        if th.any(th.logical_and(object_detect_probs["ground_truth_box"], object_detect_probs["ground_truth_corner"])):
+            self.locals["n_risky_states"] += 1
+            risky_action = 1 + th.logical_and(object_detect_probs["ground_truth_box"], object_detect_probs["ground_truth_corner"]).squeeze().nonzero()
+            # if th.any(actions == risky_action):
+            #     self.locals["n_deaths"] += 1
+            # TODO: count n_deaths
 
 class Sokoban_Monitor(Monitor):
     def __init__(self, *args, **kwargs):
@@ -98,15 +143,14 @@ class Sokoban_Monitor(Monitor):
             ep_rew = sum(self.rewards)
             ep_len = len(self.rewards)
 
+            # violate_constraint = box_stuck_in_corner(tinygrid)
             ep_info = {
                 "r": round(ep_rew, 6),
                 "l": ep_len,
                 "t": round(time.time() - self.t_start, 6),
                 "last_r": reward,
-                # "violate_constraint": violate_constraint,
+                "violate_constraint": info["box_at_corner"],
                 "is_success": info["all_boxes_on_target"]
-                # "abs_safety_shielded": ep_abs_safety_shielded,
-                # "abs_safety_base": ep_abs_safety_base
             }
             for key in self.info_keywords:
                 ep_info[key] = info[key]
@@ -131,61 +175,35 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         action_space: gym.spaces.Space,
         lr_schedule: Schedule,
         image_encoder: Sokoban_Encoder = None,
-        alpha=0.5,
-        differentiable_shield = True,
-        input_size=1,
+        shielding_params = None,
+        net_input_dim = 1,
+        folder = None,
         **kwargs
     ):
         observation_space = Box(
             low=-1,
             high=1,
             shape=(
-                input_size, input_size
+                net_input_dim, net_input_dim
             )
         )
         super(Sokoban_DPLActorCriticPolicy, self).__init__(observation_space,action_space, lr_schedule, **kwargs)
         ###############################
 
         self.image_encoder = image_encoder
-        self.input_size = self.image_encoder.input_size
+        self.n_box_locs = shielding_params["n_box_locs"]
+        self.n_corner_locs = shielding_params["n_corner_locs"]
+        self.alpha = shielding_params["alpha"]
+        self.differentiable_shield = shielding_params["differentiable_shield"]
+        self.net_input_dim = net_input_dim
+        self.n_actions = 5
+        self.tinygrid_dim = shielding_params["tinygrid_dim"]
+        self.folder = path.join(path.dirname(__file__), "../../..", folder)
+        self.program_path = path.join(self.folder, "../../../data", shielding_params["program_type"]+".pl")
 
-        self.n_box_locs = self.image_encoder.n_box_locs
-        self.n_corner_locs = self.image_encoder.n_corner_locs
-
-        self.n_actions = self.image_encoder.n_actions
-        self.program_path = self.image_encoder.program_path
-        self.debug_program_path = self.image_encoder.debug_program_path
-        self.folder = self.image_encoder.folder
-        self.sensor_noise = self.image_encoder.shielding_settings["sensor_noise"]
-        self.max_num_rejected_samples = self.image_encoder.shielding_settings["max_num_rejected_samples"]
-        self.use_learned_observations = self.image_encoder.shielding_settings["use_learned_observations"]
-        self.noisy_observations = self.image_encoder.shielding_settings["noisy_observations"]
-        self.observation_type = self.image_encoder.shielding_settings["observation_type"]
-        self.alpha = alpha
-        self.differentiable_shield = differentiable_shield
-
-
-        # TODO to load the model
-        # self.program_path = path.join('/Users/wenchi/PycharmProjects/pls/pls/workflows/../../experiments_trials3/sokoban/2box5map_gray/PLS_perfect/seed1/../../../data/sokoban_corner2.pl')
-        # self.debug_program_path = path.join('/Users/wenchi/PycharmProjects/pls/pls/workflows/../../experiments_trials3/sokoban/2box5map_gray/PLS_perfect/seed1/../../../data/sokoban_corner2.pl')
-        with open(self.program_path) as f:
-            self.program = f.read()
-        with open(self.debug_program_path) as f:
-            self.debug_program = f.read()
-
-        ##### SOFT SHILDENG WITH GROUND TRUTH ####
-        # IMPORTANT: THE ORDER OF QUERIES IS THE ORDER OF THE OUTPUT
-        self.queries = [
-           "safe_action(no_op)",
-           "safe_action(push_up)",
-           "safe_action(push_down)",
-           "safe_action(push_left)",
-           "safe_action(push_right)",
-           "safe_action(move_up)",
-           "safe_action(move_down)",
-           "safe_action(move_left)",
-           "safe_action(move_right)"
-       ][: self.n_actions]
+        if self.program_path:
+            with open(self.program_path) as f:
+                self.program = f.read()
 
         # if self.detect_boxes:
         #     self.box_layer = nn.Sequential(
@@ -203,74 +221,66 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         #         nn.Sigmoid(),
         #     )
 
-        if self.alpha == 0:
-            # NO shielding
+        if self.alpha == 0: # Baseline
             pass
-        else:
-            # HARD shielding and SOFT shielding
+        elif self.differentiable_shield: # PLS
+            self.use_learned_observations = shielding_params["use_learned_observations"]
+            self.noisy_observations = shielding_params["noisy_observations"] if self.use_learned_observations else None
+            self.observation_type = shielding_params["observation_type"] if self.use_learned_observations else None
+        else: # VSRL
+            self.vsrl_use_renormalization = shielding_params["vsrl_use_renormalization"]
+            if not self.vsrl_use_renormalization:
+                self.max_num_rejected_samples = shielding_params["max_num_rejected_samples"]
+            self.use_learned_observations = shielding_params["use_learned_observations"]
+            self.noisy_observations = shielding_params["noisy_observations"] if self.use_learned_observations else None
+            self.observation_type = shielding_params["observation_type"] if self.use_learned_observations else None
+
+
+
+        if self.alpha == 0: # NO shielding
+            pass
+        else: # HARD shielding and SOFT shielding
+            # IMPORTANT: THE ORDER OF QUERIES IS THE ORDER OF THE OUTPUT
+            self.queries = ["safe_action(no_op)", "safe_action(push_up)", "safe_action(push_down)",
+                            "safe_action(push_left)", "safe_action(push_right)", "safe_action(move_up)",
+                            "safe_action(move_down)", "safe_action(move_left)", "safe_action(move_right)"
+                           ][: self.n_actions]
             input_struct = {
                 "box": [i for i in range(self.n_box_locs)],
-                "corner": [i for i in range(self.n_box_locs,
-                                            self.n_box_locs + self.n_corner_locs)],
+                "corner": [i for i in range(self.n_box_locs, self.n_box_locs + self.n_corner_locs)],
                 "action": [i for i in range(self.n_box_locs + self.n_corner_locs,
                                             self.n_box_locs + self.n_corner_locs + self.n_actions)],
             }
-            query_struct = {
-                "safe_action": {
-                    "no_op": 0,
-                    "push_up": 1,
-                    "push_down": 2,
-                    "push_left": 3,
-                    "push_right": 4
-                }}
-
-            # action_lst = ['no_op', 'push_up', 'push_down', 'push_left', 'push_right', 'move_up', 'move_down',
-            #               'move_left', 'move_right']
-            # query_struct = {"safe_action": dict(zip(action_lst[:self.n_actions], range(self.n_actions)))}
-            cache_path = path.join(self.folder, "../../../data", "dpl_layer.p")
-            # cache_path = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/2box5map_gray/data", "dpl_layer.p")
+            query_struct = {"safe_action": { "no_op": 0, "push_up": 1,
+                                             "push_down": 2, "push_left": 3, "push_right": 4}}
             self.dpl_layer = self.get_layer(
-                cache_path,
-                program=self.debug_program, queries=self.queries, evidences=["safe_next"],
+                path.join(self.folder, "../../../data", "dpl_layer.p"),
+                program=self.program, queries=self.queries, evidences=["safe_next"],
                 input_struct=input_struct, query_struct=query_struct
             )
             if self.use_learned_observations:
+                # TODO
                 observation_model_path = path.join(self.folder, "../../data", self.observation_type)
-                # observation_model_path = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/2box5map_gray/data/observation_model_10000_examples.pt")
+                observation_model_path = path.join(
+                    "/experiments_trials3/sokoban/2box5map_gray3/data/observation_model_10000_examples.pt")
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
                 self.observation_model = Observation_net(input_size=self.input_size*self.input_size, output_size=8).to(device)
                 self.observation_model.load_state_dict(th.load(observation_model_path))
 
-        if self.alpha == "learned":
-            self.alpha_net = nn.Sequential(
-                    nn.Linear(self.input_size, 128),
-                    nn.ReLU(),
-                    nn.Linear(128, 1),
-                    nn.Sigmoid(),
-                )
-
-
         debug_queries = ["safe_next"]
         debug_query_struct = {"safe_next": 0}
         debug_input_struct = {
             "box": [i for i in range(self.n_box_locs)],
-            "corner": [i for i in range(self.n_box_locs,
-                                        self.n_box_locs + self.n_corner_locs)],
+            "corner": [i for i in range(self.n_box_locs, self.n_box_locs + self.n_corner_locs)],
             "action": [i for i in range(self.n_box_locs + self.n_corner_locs,
                                         self.n_box_locs + self.n_corner_locs + self.n_actions)]
         }
-        cache_path = path.join(self.folder, "../../../data", "query_safety_layer.p")
-        # cache_path = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/2box5map_gray/data", "query_safety_layer.p")
-
         self.query_safety_layer = self.get_layer(
-            cache_path,
-            program=self.debug_program,
-            queries=debug_queries,
-            evidences=[],
-            input_struct=debug_input_struct,
-            query_struct=debug_query_struct
-        )
+            path.join(self.folder, "../../../data", "query_safety_layer.p"),
+            program=self.program, queries=debug_queries, evidences=[],
+            input_struct=debug_input_struct, query_struct=debug_query_struct)
+
         self._build(lr_schedule)
 
     def get_layer(self, cache_path, program, queries, evidences, input_struct, query_struct):
@@ -284,40 +294,6 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         pickle.dump(layer, open(cache_path, "wb"))
         return layer
 
-    def logging_per_episode(self, mass, object_detect_probs, base_policy, action_lookup):
-        abs_safe_next_shielded = self.get_step_safety(
-            mass.probs,
-            object_detect_probs["ground_truth_box"],
-            object_detect_probs["ground_truth_corner"],
-        )
-        abs_safe_next_base = self.get_step_safety(
-            base_policy,
-            object_detect_probs["ground_truth_box"],
-            object_detect_probs["ground_truth_corner"],
-        )
-        rel_safe_next_shielded = self.get_step_safety(
-            mass.probs,
-            object_detect_probs["box"],
-            object_detect_probs["corner"],
-        )
-        rel_safe_next_base = self.get_step_safety(
-            base_policy,
-            object_detect_probs["box"],
-            object_detect_probs["corner"],
-        )
-        return abs_safe_next_shielded, abs_safe_next_base, rel_safe_next_shielded, rel_safe_next_base
-    def logging_per_step(self, mass, object_detect_probs, base_policy, action_lookup, logger):
-        for act in range(self.action_space.n):
-            logger.record(
-                f"policy/shielded {action_lookup[act]}",
-                float(mass.probs[0][act]),
-            )
-        if object_detect_probs.get("alpha") is not None:
-            logger.record(
-                f"safety/alpha",
-                float(object_detect_probs.get("alpha")),
-            )
-
     def get_step_safety(self, policy_distribution, box_probs, corner_probs):
         with th.no_grad():
             abs_safe_next = self.query_safety_layer(
@@ -328,6 +304,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 }
             )
             return abs_safe_next["safe_next"]
+
 
     def forward(self, x, tinygrid, deterministic: bool = False):
         """
@@ -347,16 +324,15 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         base_actions = distribution.distribution.probs
 
         with th.no_grad():
-            if tinygrid is None:
-                ground_truth_box, ground_truth_corner = None, None
-            else:
-                ground_truth_box = get_ground_truth_of_box(
-                    input=tinygrid, agent_colors=PLAYER_COLORS, box_colors=BOX_COLORS,
-                )
-                ground_truth_corner = get_ground_truth_of_corners(
-                    input=tinygrid, agent_colors=PLAYER_COLORS, obsacle_colors=OBSTABLE_COLORS, floor_color=FLOOR_COLOR,
-                )
-        if self.use_learned_observations:
+            ground_truth_box = get_ground_truth_of_box(
+                input=tinygrid, agent_colors=PLAYER_COLORS, box_colors=BOX_COLORS,
+            ) if tinygrid is not None else None
+            ground_truth_corner = get_ground_truth_of_corners(
+                input=tinygrid, agent_colors=PLAYER_COLORS, obsacle_colors=OBSTABLE_COLORS, floor_color=FLOOR_COLOR,
+            ) if tinygrid is not None else None
+
+        if self.alpha != 0 and self.use_learned_observations:
+            # TODO
             output = self.observation_model(x)
             if self.noisy_observations:
                 boxes_and_corners = self.observation_model.sigmoid(output)
@@ -377,38 +353,59 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             "corner": corners
         }
 
-        if self.alpha == 0:
+        if self.alpha == 0: # PPO
             actions = distribution.get_actions(deterministic=deterministic)
             log_prob = distribution.log_prob(actions)
             object_detect_probs["alpha"] = 0
             return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
 
-        if not self.differentiable_shield and self.alpha == 1: # VSRL
-            num_rejected_samples = 0
-            while True:
-                actions = distribution.get_actions(deterministic=deterministic)
-                # check if the action is safe
+        if not self.differentiable_shield: # VSRL
+            if not self.vsrl_use_renormalization:
+                if self.alpha != 0:
+                    raise NotImplemented
+                #====== VSRL rejection sampling =========
+                num_rejected_samples = 0
                 with th.no_grad():
-                    vsrl_actions_encoding = th.eye(self.n_actions)[actions][:, 1:]
-                    unsafe_actions = th.logical_and(boxes, corners)
-                    actions_are_unsafe = th.logical_and(vsrl_actions_encoding, unsafe_actions)
-                    # # Using problog to model check
-                    # results = self.query_safety_layer(
-                    #     x={
-                    #         "box": boxes,
-                    #         "corner": corners,
-                    #         "action": th.eye(self.n_actions)[actions],
-                    #     }
-                    # )
-                    # safe_next = results["safe_next"]
-                    if not th.any(actions_are_unsafe) or num_rejected_samples > self.max_num_rejected_samples:
-                        break
-                    else: # sample another action
-                        num_rejected_samples += 1
-            log_prob = distribution.log_prob(actions)
-            object_detect_probs["num_rejected_samples"] = num_rejected_samples
-            object_detect_probs["alpha"] = 1
-            return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
+                    while True:
+                        actions = distribution.get_actions(deterministic=deterministic) # sample an action
+                        # check if the action is safe
+                        vsrl_actions_encoding = th.eye(self.n_actions)[actions][:, 1:]
+                        actions_are_unsafe = th.logical_and(vsrl_actions_encoding, ghosts)
+                        if not th.any(actions_are_unsafe) or num_rejected_samples > self.max_num_rejected_samples:
+                            break
+                        else: # sample another action
+                            num_rejected_samples += 1
+                log_prob = distribution.log_prob(actions)
+                object_detect_probs["num_rejected_samples"] = num_rejected_samples
+                object_detect_probs["alpha"] = 1
+                return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
+            else:
+                # ====== VSRL with mask =========
+                with th.no_grad(): #TODO: urgent
+                    num_rejected_samples = 0
+                    acc = th.ones((ghosts.size()[0], 1)) # extra dimension for action "stay"
+                    mask = th.cat((acc, ~ghosts.bool()), 1).bool()
+                    masked_distr = distribution.distribution.probs * mask
+                    safe_normalization_const = th.sum(masked_distr, dim=1)
+                    safeast_actions = masked_distr / safe_normalization_const
+
+
+                    # vsrl_actions_encoding = th.eye(self.n_actions)[actions][:, 1:]
+                    # unsafe_actions = th.logical_and(boxes, corners)
+                    # actions_are_unsafe = th.logical_and(vsrl_actions_encoding, unsafe_actions)
+
+                    alpha = self.alpha
+                    actions = alpha * safeast_actions + (1 - alpha) * base_actions
+
+                    mass = Categorical(probs=actions)
+                    if not deterministic:
+                        actions = mass.sample()
+                    else:
+                        actions = th.argmax(mass.probs, dim=1)
+                log_prob = distribution.log_prob(actions)
+                object_detect_probs["num_rejected_samples"] = num_rejected_samples
+                object_detect_probs["alpha"] = alpha
+                return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
         if self.differentiable_shield:
             results = self.dpl_layer(
@@ -418,73 +415,22 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                     "action": base_actions,
                 }
             )
-            if self.alpha == "learned":
-                alpha = self.alpha_net(obs)
-                object_detect_probs["alpha"] = alpha
+            safeast_actions = results["safe_action"]
+
+            alpha = self.alpha
+            actions = alpha * safeast_actions + (1 - alpha) * base_actions
+
+            # TODO: This is incorrect? This should be the shielded policy distribution (of type CategoricalDistribution)
+            mass = Categorical(probs=actions)
+            if not deterministic:
+                actions = mass.sample()
             else:
-                alpha = self.alpha
-        else:
-            with th.no_grad():
-                results = self.dpl_layer(
-                    x={
-                        "box": boxes,
-                        "corner": corners,
-                        "action": base_actions,
-                    }
-                )
+                actions = th.argmax(mass.probs,dim=1)
 
-            if self.alpha == "learned":
-                raise NotImplemented
-            else:
-                alpha = self.alpha
+            log_prob = mass.log_prob(actions)
+            object_detect_probs["alpha"] = alpha
+            return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
-        object_detect_probs["alpha"] = alpha
-        safeast_actions = results["safe_action"]
-        actions = alpha * safeast_actions + (1 - alpha) * base_actions
-
-
-        mass = Categorical(probs=actions)
-        if not deterministic:
-            actions = mass.sample()
-        else:
-            actions = th.argmax(mass.probs,dim=1)
-        log_prob = mass.log_prob(actions)
-
-
-
-        return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
-
-
-    # def no_shielding(self, distribution, values, x, deterministic):
-    #     actions = distribution.get_actions(deterministic=deterministic)
-    #     log_prob = distribution.log_prob(actions)
-    #     with th.no_grad():
-    #         ground_truth_box = get_ground_truth_of_box(
-    #             input=x,
-    #             agent_colors=PLAYER_COLORS,
-    #             box_colors=BOX_COLORS,
-    #         )
-    #         ground_truth_corner = get_ground_truth_of_corners(
-    #             input=x,
-    #             agent_colors=PLAYER_COLORS,
-    #             obsacle_colors=OBSTABLE_COLORS,
-    #             floor_color=FLOOR_COLOR,
-    #         )
-    #
-    #         base_actions = distribution.distribution.probs
-    #
-    #         object_detect_probs = {
-    #             "ground_truth_box": ground_truth_box,
-    #             "ground_truth_corner": ground_truth_corner,
-    #         }
-    #
-    #     return (
-    #         actions,
-    #         values,
-    #         log_prob,
-    #         distribution.distribution,
-    #         [object_detect_probs, base_actions],
-    #     )
 
     def evaluate_actions(
         self, obs: th.Tensor, tinygrid: th.Tensor, actions: th.Tensor
@@ -498,7 +444,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         :return: estimated value, log likelihood of taking those actions
             and entropy of the action distribution.
         """
-        if not self.differentiable_shield and self.alpha == 1:
+        if not self.differentiable_shield:
             obs = self.image_encoder(obs)
             features = self.extract_features(obs)
             latent_pi, latent_vf = self.mlp_extractor(features)
@@ -513,8 +459,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False, tinygrid = None) -> th.Tensor:
         with th.no_grad():
-            # tinygrid = None # this is actually not used
-            _actions, values, log_prob, mass, _  = self.forward(observation, tinygrid, deterministic)
+            _actions, _, _, _, _  = self.forward(observation, tinygrid, deterministic)
             return _actions
 
 
