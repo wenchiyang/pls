@@ -16,9 +16,8 @@ def pretrain_observation_sokoban(csv_file, img_folder, model_folder, n_train, ep
                  net_class=Observation_net, net_input_size=net_input_size, net_output_size=8,
                  downsampling_size=downsampling_size, epochs=epochs, keys=keys)
 
-def pretrain_observation_gf(csv_file, img_folder, model_folder, n_train, epochs):
-    downsampling_size = 7
-    net_input_size = math.ceil(240 / downsampling_size) ** 2
+def pretrain_observation_gf(csv_file, img_folder, model_folder, image_dim, downsampling_size, n_train, epochs):
+    net_input_size = math.ceil(image_dim / downsampling_size) ** 2
     keys = ["ghost(up)", "ghost(down)", "ghost(left)", "ghost(right)"]
 
     pre_train(csv_file=csv_file, root_dir=img_folder, model_folder=model_folder, n_train=n_train,

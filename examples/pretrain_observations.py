@@ -25,7 +25,11 @@ def pre_train_gf(n_train):
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
 
-    pretrain_observation_gf(csv_file=csv_file, img_folder=img_folder, model_folder=model_folder, n_train=n_train, epochs=300)
+    image_dim = 482
+    downsampling_size = 4
+    pretrain_observation_gf(csv_file=csv_file, img_folder=img_folder, model_folder=model_folder,
+                            image_dim=image_dim, downsampling_size=downsampling_size,
+                            n_train=n_train, epochs=300)
     # pretrain_observation(csv_file, img_folder, model_folder, 1000, 300)
     # # pretrain_observation(csv_file, img_folder, model_folder, 10000)
 
