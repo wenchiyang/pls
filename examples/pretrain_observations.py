@@ -53,8 +53,8 @@ def main_cluster():
 
     # with performance_report(filename="dask-report.html"):
     ## some dask computation
-    futures = client.map(generate_gf)
-    results = client.gather(futures)
+    futures = client.submit(generate_gf)
+    # results = client.gather(futures)
 
 if __name__ == "__main__":
     # pre_train_sokoban(100)
