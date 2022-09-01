@@ -21,7 +21,7 @@ def pre_train_gf(n_train):
     if not os.path.exists(img_folder):
         os.makedirs(img_folder)
 
-    model_folder = os.path.join(dir_path, "../experiments_trials3/goal_finding/7grid5g/data/")
+    model_folder = os.path.join(dir_path, "../experiments_trials3/goal_finding/small/data/")
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
 
