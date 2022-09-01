@@ -85,7 +85,9 @@ class Pacman_Callback(ConvertCallback):
             self.locals["nums_rejected_samples"].append(object_detect_probs["num_rejected_samples"])
         # if is in a risky situation
         if th.any(object_detect_probs["ground_truth_ghost"], dim=1):
-            self.locals["n_risky_states"] += 1
+            self.locals["n_risky_states"].append(1)
+        else:
+            self.locals["n_risky_states"].append(0)
 
 class Pacman_Monitor(Monitor):
     def __init__(self, *args, **kwargs):

@@ -347,7 +347,7 @@ class Sokoban_DPLPPO(PPO):
         abs_safeties_base = []
         rel_safeties_shielded = []
         rel_safeties_base = []
-        n_risky_states = 0
+        n_risky_states = []
         ##############################
         action_lookup = env.envs[0].get_action_lookup()
 
@@ -425,12 +425,7 @@ class Sokoban_DPLPPO(PPO):
             if dones:
                 ep_len = infos[0]["episode"]["l"]
                 ##### on_episide_end ##########
-                ep_abs_safety_shielded = float(min(abs_safeties_shielded))
-                ep_abs_safety_base = float(min(abs_safeties_base))
-                ep_rel_safety_shielded = float(min(rel_safeties_shielded))
-                ep_rel_safety_base = float(min(rel_safeties_base))
-                ##### on_episide_end ##########
-                infos[0]["episode"]["n_risky_states"] = n_risky_states
+                infos[0]["episode"]["n_risky_states"] = float(sum(n_risky_states))
                 infos[0]["episode"]["abs_safety_shielded"] = float(min(abs_safeties_shielded))
                 infos[0]["episode"]["abs_safety_base"] = float(min(abs_safeties_base))
                 infos[0]["episode"]["rel_safety_shielded"] = float(min(rel_safeties_shielded))
@@ -451,7 +446,7 @@ class Sokoban_DPLPPO(PPO):
                 abs_safeties_base = []
                 rel_safeties_shielded = []
                 rel_safeties_base = []
-                n_risky_states = 0
+                n_risky_states = []
                 ##############################
             self._update_info_buffer(infos)
             n_steps += 1

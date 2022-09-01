@@ -2,7 +2,7 @@ import gym
 import torch as th
 from torch import nn
 import numpy as np
-from typing import Union, Tuple
+from typing import Union, Tuple, Dict, Optional
 from torch.distributions import Categorical
 import time
 from stable_baselines3.common.callbacks import ConvertCallback
@@ -119,11 +119,9 @@ class Sokoban_Callback(ConvertCallback):
             self.locals["nums_rejected_samples"].append(object_detect_probs["num_rejected_samples"])
         # if in a risky situation
         if th.any(th.logical_and(object_detect_probs["ground_truth_box"], object_detect_probs["ground_truth_corner"])):
-            self.locals["n_risky_states"] += 1
-            risky_action = 1 + th.logical_and(object_detect_probs["ground_truth_box"], object_detect_probs["ground_truth_corner"]).squeeze().nonzero()
-            # if th.any(actions == risky_action):
-            #     self.locals["n_deaths"] += 1
-            # TODO: count n_deaths
+            self.locals["n_risky_states"].append(1)
+        else:
+            self.locals["n_risky_states"].append(0)
 
 class Sokoban_Monitor(Monitor):
     def __init__(self, *args, **kwargs):
@@ -201,7 +199,9 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         self.folder = path.join(path.dirname(__file__), "../../..", folder)
         self.program_path = path.join(self.folder, "../../../data", shielding_params["program_type"]+".pl")
 
+
         if self.program_path:
+            self.program_path = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/sokoban_corner2.pl")
             with open(self.program_path) as f:
                 self.program = f.read()
 
@@ -253,8 +253,9 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             }
             query_struct = {"safe_action": { "no_op": 0, "push_up": 1,
                                              "push_down": 2, "push_left": 3, "push_right": 4}}
+            pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/dpl_layer.p")
             self.dpl_layer = self.get_layer(
-                path.join(self.folder, "../../../data", "dpl_layer.p"),
+                pp, #path.join(self.folder, "../../../data", "dpl_layer.p"),
                 program=self.program, queries=self.queries, evidences=["safe_next"],
                 input_struct=input_struct, query_struct=query_struct
             )
@@ -276,8 +277,9 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             "action": [i for i in range(self.n_box_locs + self.n_corner_locs,
                                         self.n_box_locs + self.n_corner_locs + self.n_actions)]
         }
+        pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
-            path.join(self.folder, "../../../data", "query_safety_layer.p"),
+            pp, #path.join(self.folder, "../../../data", "query_safety_layer.p"),
             program=self.program, queries=debug_queries, evidences=[],
             input_struct=debug_input_struct, query_struct=debug_query_struct)
 
@@ -369,8 +371,9 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                     while True:
                         actions = distribution.get_actions(deterministic=deterministic) # sample an action
                         # check if the action is safe
-                        vsrl_actions_encoding = th.eye(self.n_actions)[actions][:, 1:]
-                        actions_are_unsafe = th.logical_and(vsrl_actions_encoding, ghosts)
+                        vsrl_actions_encoding = th.eye(self.n_actions)[actions][:, 1:] # TODO
+                        risky_actions = th.logical_and(object_detect_probs["ground_truth_box"], object_detect_probs["ground_truth_corner"])
+                        actions_are_unsafe = th.logical_and(vsrl_actions_encoding, risky_actions)
                         if not th.any(actions_are_unsafe) or num_rejected_samples > self.max_num_rejected_samples:
                             break
                         else: # sample another action
@@ -381,18 +384,14 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
             else:
                 # ====== VSRL with mask =========
-                with th.no_grad(): #TODO: urgent
+                with th.no_grad():
                     num_rejected_samples = 0
-                    acc = th.ones((ghosts.size()[0], 1)) # extra dimension for action "stay"
-                    mask = th.cat((acc, ~ghosts.bool()), 1).bool()
+                    risky_actions = th.logical_and(object_detect_probs["ground_truth_box"], object_detect_probs["ground_truth_corner"])
+                    acc = th.ones((risky_actions.size()[0], 1)) # extra dimension for action "stay"
+                    mask = th.cat((acc, ~risky_actions.bool()), 1).bool()
                     masked_distr = distribution.distribution.probs * mask
                     safe_normalization_const = th.sum(masked_distr, dim=1)
                     safeast_actions = masked_distr / safe_normalization_const
-
-
-                    # vsrl_actions_encoding = th.eye(self.n_actions)[actions][:, 1:]
-                    # unsafe_actions = th.logical_and(boxes, corners)
-                    # actions_are_unsafe = th.logical_and(vsrl_actions_encoding, unsafe_actions)
 
                     alpha = self.alpha
                     actions = alpha * safeast_actions + (1 - alpha) * base_actions
@@ -462,4 +461,52 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             _actions, _, _, _, _  = self.forward(observation, tinygrid, deterministic)
             return _actions
 
+    def predict(
+            self,
+            observation: Union[np.ndarray, Dict[str, np.ndarray]],
+            state: Optional[Tuple[np.ndarray, ...]] = None,
+            episode_start: Optional[np.ndarray] = None,
+            deterministic: bool = False,
+    ) -> Tuple[np.ndarray, Optional[Tuple[np.ndarray, ...]]]:
+        """
+        Get the policy action from an observation (and optional hidden state).
+        Includes sugar-coating to handle different observations (e.g. normalizing images).
 
+        :param observation: the input observation
+        :param state: The last hidden states (can be None, used in recurrent policies)
+        :param episode_start: The last masks (can be None, used in recurrent policies)
+            this correspond to beginning of episodes,
+            where the hidden states of the RNN must be reset.
+        :param deterministic: Whether or not to return deterministic actions.
+        :return: the model's action and the next hidden state
+            (used in recurrent policies)
+        """
+        # TODO (GH/1): add support for RNN policies
+        # if state is None:
+        #     state = self.initial_state
+        # if episode_start is None:
+        #     episode_start = [False for _ in range(self.n_envs)]
+        # Switch to eval mode (this affects batch norm / dropout)
+        self.set_training_mode(False)
+
+        observation, vectorized_env = self.obs_to_tensor(observation)
+
+        with th.no_grad():
+            actions = self._predict(observation, tinygrid=state, deterministic=deterministic)
+        # Convert to numpy
+        actions = actions.cpu().numpy()
+
+        if isinstance(self.action_space, gym.spaces.Box):
+            if self.squash_output:
+                # Rescale to proper domain when using squashing
+                actions = self.unscale_action(actions)
+            else:
+                # Actions could be on arbitrary scale, so clip the actions to avoid
+                # out of bound error (e.g. if sampling from a Gaussian distribution)
+                actions = np.clip(actions, self.action_space.low, self.action_space.high)
+
+        # Remove batch dimension if needed
+        if not vectorized_env:
+            actions = actions[0]
+
+        return actions
