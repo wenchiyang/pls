@@ -139,19 +139,21 @@ def generate_random_images_gf(csv_path, folder, n_images=10):
     config = {
         "env_type": "GoalFinding-v0",
         "env_features":{
-            "layout": "grid7x7_5_ghosts",
+            "layout": "small",
             "reward_goal": 10,
             "reward_crash": 0,
             "reward_food": 0,
             "reward_time": -0.1,
             "render": False,
-            "max_steps": 200,
-            "num_maps": 1,
+            "max_steps": 2000,
+            "num_maps": 0,
             "seed": 567,
             'render_mode': "gray",
-            'height': 240,
-            'width': 240,
-            'downsampling_size': 1
+            "height": 482,
+            "width": 482,
+            "downsampling_size": 1,
+            "background": "bg_small.jpg"
+
         }
     }
     env_name = config["env_type"]
@@ -164,11 +166,13 @@ def generate_random_images_gf(csv_path, folder, n_images=10):
         layout = sample_layout(
             env.layout.width,
             env.layout.height,
-            env.env.num_agents,
-            env.env.num_food,
+            30, #env.env.num_agents,
+            30, #env.env.num_food,
             env.env.non_wall_positions,
             env.env.wall_positions,
-            env.env.all_edges)
+            env.env.all_edges,
+            check_valid=False
+        )
         env.env.game = env.rules.newGame(
             layout,
             env.env.pacman,
@@ -178,6 +182,7 @@ def generate_random_images_gf(csv_path, folder, n_images=10):
             env.env.catchExceptions,
             env.env.symX,
             env.env.symY,
+            env.env.background
         )
         env.game.start_game()
         env.env.render()

@@ -3,6 +3,15 @@ from pls.workflows.pre_train import generate_random_images_gf, generate_random_i
 from pls.workflows.execute_workflow import pretrain_observation_gf, pretrain_observation_sokoban
 from dask.distributed import Client
 
+def generate_gf():
+    # dir_path = os.path.dirname(os.path.realpath(__file__))
+    # img_folder = os.path.join(dir_path, "../pls/data/gf_small")
+    img_folder = "/cw/dtaijupiter/NoCsBack/dtai/wenchi/pls/pls/data/gf_small"
+    csv_file = os.path.join(img_folder, "labels.csv")
+    if not os.path.exists(img_folder):
+        os.makedirs(img_folder)
+    generate_random_images_gf(csv_file, img_folder, 10)
+
 def pre_train_gf():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     img_folder = os.path.join(dir_path, "../pls/data/gftmp")
@@ -13,9 +22,9 @@ def pre_train_gf():
 
     # generate_random_images_gf(csv_file, img_folder, 10)
 
-    model_folder = os.path.join(dir_path, "../experiments_trials3/goal_finding/7grid5g_gray/data/")
-    if not os.path.exists(model_folder):
-        os.makedirs(model_folder)
+    # model_folder = os.path.join(dir_path, "../experiments_trials3/goal_finding/7grid5g_gray/data/")
+    # if not os.path.exists(model_folder):
+    #     os.makedirs(model_folder)
 
     # # pretrain_observation_gf(csv_file, img_folder, model_folder, 100, 300)
     # pretrain_observation(csv_file, img_folder, model_folder, 1000, 300)
@@ -44,10 +53,11 @@ def main_cluster():
 
     # with performance_report(filename="dask-report.html"):
     ## some dask computation
-    futures = client.map(pre_train_sokoban, [100, 1000, 10000])
+    futures = client.map(generate_gf)
     results = client.gather(futures)
 
 if __name__ == "__main__":
-    # main_cluster()
-    pre_train_sokoban(100)
+    # pre_train_sokoban(100)
+    # generate_gf()
+    main_cluster()
 
