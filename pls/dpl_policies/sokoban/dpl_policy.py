@@ -201,7 +201,8 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
 
 
         if self.program_path:
-            self.program_path = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/sokoban_corner2.pl")
+            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/sokoban_corner2.pl")
+            # self.program_path = pp
             with open(self.program_path) as f:
                 self.program = f.read()
 
@@ -253,9 +254,9 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             }
             query_struct = {"safe_action": { "no_op": 0, "push_up": 1,
                                              "push_down": 2, "push_left": 3, "push_right": 4}}
-            pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/dpl_layer.p")
+            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/dpl_layer.p")
             self.dpl_layer = self.get_layer(
-                pp, #path.join(self.folder, "../../../data", "dpl_layer.p"),
+                path.join(self.folder, "../../../data", "dpl_layer.p"),
                 program=self.program, queries=self.queries, evidences=["safe_next"],
                 input_struct=input_struct, query_struct=query_struct
             )
@@ -277,9 +278,9 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             "action": [i for i in range(self.n_box_locs + self.n_corner_locs,
                                         self.n_box_locs + self.n_corner_locs + self.n_actions)]
         }
-        pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/query_safety_layer.p")
+        # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
-            pp, #path.join(self.folder, "../../../data", "query_safety_layer.p"),
+            path.join(self.folder, "../../../data", "query_safety_layer.p"),
             program=self.program, queries=debug_queries, evidences=[],
             input_struct=debug_input_struct, query_struct=debug_query_struct)
 
