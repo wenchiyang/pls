@@ -153,7 +153,6 @@ def generate_random_images_gf(csv_path, folder, n_images=10):
             "width": 482,
             "downsampling_size": 1,
             "background": "bg_small.jpg"
-
         }
     }
     env_name = config["env_type"]
@@ -305,7 +304,7 @@ def test(model, device, test_loader, loss_function, f_log):
     test_loss /= len(test_loader.dataset)
 
     precision = (true_positive * 100)/(true_positive+false_positive) if true_positive+false_positive != 0 else -1
-    recall = (true_positive * 100)/(true_positive+false_negative)
+    recall = (true_positive * 100)/(true_positive+false_negative) if true_positive+false_negative != 0 else -1
     f_log.write(f'Test set: Average loss: {test_loss:.4f}, \n\t\t' +
         f'Accuracy: {correct}/{len(test_loader.dataset) * target.size()[1]} ({100. * correct / (len(test_loader.dataset) * target.size()[1]):.0f}%)\n\t\t' +
         f'Precision: {true_positive}/{true_positive+false_positive} ({precision:.0f}%),\n\t\t' +
