@@ -204,7 +204,7 @@ def generate_random_images_gf(csv_path, folder, n_images=10):
 
 class Goal_Finding_Dataset(Dataset):
     """Goal Finding dataset."""
-    def __init__(self, csv_file, root_dir, downsampling_size,
+    def __init__(self, csv_file, root_dir, image_dim, downsampling_size,
                  train=False,
                  transform=None, n_train=400, n_test=100):
         """
@@ -216,6 +216,7 @@ class Goal_Finding_Dataset(Dataset):
         """
         self.n_train = n_train
         self.n_test = n_test
+        self.image_dim = image_dim
         self.downsampling_size = downsampling_size
         if train:
             self.instances = pd.read_csv(csv_file)[:self.n_train]
@@ -250,7 +251,7 @@ class Goal_Finding_Dataset(Dataset):
             idx = idx.tolist()
 
         img_name = os.path.join(self.root_dir, self.instances.iloc[idx, 0])
-        image_raw = io.imread(img_name)[:240,:240,:]
+        image_raw = io.imread(img_name)[:self.image_dim,:self.image_dim,:]
         image = self.rgb2gray(image_raw)
         image = self.downsampling(image, self.downsampling_size)
         # from matplotlib import pyplot as plt
@@ -321,7 +322,7 @@ def calculate_sample_weights(dataset, keys):
         pos_weights.append(pos_weight)
     return th.tensor(pos_weights)
 
-def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_size, net_output_size, downsampling_size, epochs, keys):
+def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_size, net_output_size, image_dim, downsampling_size, epochs, keys):
     use_cuda = False
     batch_size = 256
     device = th.device("cuda" if use_cuda else "cpu")
@@ -331,8 +332,8 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     #     transforms.ToTensor(),
     #     transforms.Normalize((0.1307,), (0.3081,))
     #     ])
-    dataset_train = Goal_Finding_Dataset(csv_file, root_dir, downsampling_size, train=True, n_train=n_train)
-    dataset_test = Goal_Finding_Dataset(csv_file, root_dir, downsampling_size, n_train=n_train, n_test=100)
+    dataset_train = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, train=True, n_train=n_train)
+    dataset_test = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, n_train=n_train, n_test=100)
 
     train_loader = th.utils.data.DataLoader(dataset_train, batch_size=batch_size)
     test_loader = th.utils.data.DataLoader(dataset_test, batch_size=batch_size)

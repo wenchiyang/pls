@@ -26,7 +26,7 @@ def pre_train_gf(n_train):
         os.makedirs(model_folder)
 
     image_dim = 482
-    downsampling_size = 4
+    downsampling_size = 10
     pretrain_observation_gf(csv_file=csv_file, img_folder=img_folder, model_folder=model_folder,
                             image_dim=image_dim, downsampling_size=downsampling_size,
                             n_train=n_train, epochs=300)
@@ -62,6 +62,6 @@ def main_cluster():
 if __name__ == "__main__":
     # pre_train_sokoban(100)
     # generate_gf()
-    pre_train_gf(100)
+    pre_train_gf(9)
     # main_cluster()
 

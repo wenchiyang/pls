@@ -22,6 +22,7 @@ def pretrain_observation_gf(csv_file, img_folder, model_folder, image_dim, downs
 
     pre_train(csv_file=csv_file, root_dir=img_folder, model_folder=model_folder, n_train=n_train,
               net_class=Observation_net, net_input_size=net_input_size, net_output_size=4,
+              image_dim=image_dim,
               downsampling_size=downsampling_size, epochs=epochs, keys=keys)
 
 def test(folder):
