@@ -56,7 +56,7 @@
       "seed": 34,
       "clip_range": 0.1,
       "gamma": 0.99,
-      "step_limit": 2000000,
+      "step_limit": 1000000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
       "net_arch_vf": [64, 64]
