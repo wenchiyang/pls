@@ -206,7 +206,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         self.program_path = path.join(self.folder, "../../../data", shielding_params["program_type"]+".pl")
 
         if self.program_path:
-            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments4/goal_finding/data/relative_loc_simple.pl")
+            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/goal_finding/data/relative_loc_simple.pl")
             # self.program_path = pp
             with open(self.program_path) as f:
                 self.program = f.read()
@@ -216,6 +216,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             pass
         elif self.differentiable_shield: # PLS
             self.use_learned_observations = shielding_params["use_learned_observations"]
+            self.train_observations = shielding_params["train_observations"] if self.use_learned_observations else None
             self.noisy_observations = shielding_params["noisy_observations"] if self.use_learned_observations else None
             self.observation_type = shielding_params["observation_type"] if self.use_learned_observations else None
         else: # VSRL
@@ -223,6 +224,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             if not self.vsrl_use_renormalization:
                 self.max_num_rejected_samples = shielding_params["max_num_rejected_samples"]
             self.use_learned_observations = shielding_params["use_learned_observations"]
+            self.train_observations = shielding_params["train_observations"] if self.use_learned_observations else None
             self.noisy_observations = shielding_params["noisy_observations"] if self.use_learned_observations else None
             self.observation_type = shielding_params["observation_type"] if self.use_learned_observations else None
 
@@ -238,7 +240,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
                 "action": [i for i in range(self.n_ghost_locs, self.n_ghost_locs + self.n_actions)]
             }
             query_struct = {"safe_action": {"stay": 0, "up": 1, "down": 2, "left": 3, "right": 4}}
-            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments4/goal_finding/data/dpl_layer.p")
+            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/goal_finding/data/dpl_layer.p")
             self.dpl_layer = self.get_layer(
                 path.join(self.folder, "../../../data", "dpl_layer.p"),
                 program=self.program, queries=self.queries, evidences=["safe_next"],
@@ -248,7 +250,9 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
                 self.observation_model = Observation_net(input_size=self.net_input_dim*self.net_input_dim, output_size=4).to(device)
-                self.observation_model.load_state_dict(th.load(path.join(self.folder, "../../data", self.observation_type)))
+                pp = path.join(self.folder, "../../data", self.observation_type)
+                # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/goal_finding/small/data", self.observation_type)
+                self.observation_model.load_state_dict(th.load(pp))
 
         debug_queries = ["safe_next"]
         debug_query_struct = {"safe_next": 0}
@@ -256,7 +260,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             "ghost": [i for i in range(self.n_ghost_locs)],
             "action": [i for i in range(self.n_ghost_locs, self.n_ghost_locs + self.n_actions)]
         }
-        # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments4/goal_finding/data/query_safety_layer.p")
+        # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/goal_finding/data/query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
             path.join(self.folder, "../../../data", "query_safety_layer.p"),
             program=self.program, queries=debug_queries, evidences=[],
@@ -307,10 +311,18 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             ground_truth_ghost = get_ground_wall(tinygrid, PACMAN_COLOR, GHOST_COLOR) if tinygrid is not None else None
 
         if self.alpha != 0 and self.use_learned_observations:
-            if self.noisy_observations:
-                ghosts = self.observation_model.sigmoid(self.observation_model(x))
+            if self.train_observations:
+                if self.noisy_observations:
+                    ghosts = self.observation_model.sigmoid(self.observation_model(x))
+                else:
+                    ghosts = (self.observation_model.sigmoid(self.observation_model(x)) > 0.5).float()
             else:
-                ghosts = (self.observation_model.sigmoid(self.observation_model(x)) > 0.5).float()
+                with th.no_grad():
+                    if self.noisy_observations:
+                        ghosts = self.observation_model.sigmoid(self.observation_model(x))
+                    else:
+                        ghosts = (self.observation_model.sigmoid(self.observation_model(x)) > 0.5).float()
+
         else:
             ghosts = ground_truth_ghost
 

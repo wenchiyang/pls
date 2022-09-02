@@ -43,6 +43,7 @@
       "program_type": "relative_loc_simple",
       "tinygrid_dim": 15,
       "use_learned_observations": true,
+      "train_observations": true,
       "noisy_observations": false,
       "observation_type": "observation_model_1000_examples.pt"
     },
