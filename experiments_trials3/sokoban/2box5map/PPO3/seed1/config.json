@@ -11,7 +11,7 @@
     "reward_finished": 10,
     "reward_last": 0,
     "render": false,
-    "max_steps": 120,
+    "max_steps": 200,
     "render_mode": "gray_array",
     "dim_room": [10, 10],
     "num_boxes": 2,
@@ -36,7 +36,7 @@
     "num_boxes": 2,
     "action_size": 5,
     "difficulty": "medium",
-    "split": "2box5map_large",
+    "split": "2box3map_large",
     "height": 160,
     "width": 160,
     "downsampling_size": 4
