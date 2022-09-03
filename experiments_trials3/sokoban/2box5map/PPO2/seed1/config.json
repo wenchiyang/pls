@@ -11,15 +11,15 @@
     "reward_finished": 10,
     "reward_last": 0,
     "render": false,
-    "max_steps": 60,
+    "max_steps": 100,
     "render_mode": "gray_array",
-    "dim_room": [7, 7],
+    "dim_room": [10, 10],
     "num_boxes": 2,
     "action_size": 5,
     "difficulty": "medium",
-    "split": "2box5map_simple4",
-    "height": 112,
-    "width": 112,
+    "split": "2box3map_large",
+    "height": 160,
+    "width": 160,
     "downsampling_size": 4
   },
 
@@ -32,13 +32,13 @@
     "render": true,
     "max_steps": 60,
     "render_mode": "gray_array",
-    "dim_room": [7, 7],
+    "dim_room": [10, 10],
     "num_boxes": 2,
     "action_size": 5,
     "difficulty": "medium",
-    "split": "2box5map_simple4",
-    "height": 112,
-    "width": 112,
+    "split": "2box5map_large",
+    "height": 160,
+    "width": 160,
     "downsampling_size": 4
   },
 
@@ -50,7 +50,7 @@
       "alpha": 0,
       "differentiable_shield": false,
       "program_type": "sokoban_corner2",
-      "tinygrid_dim": 7
+      "tinygrid_dim": 10
     },
     "params": {
       "log_interval": 1,
@@ -61,7 +61,7 @@
       "seed": 567,
       "clip_range": 0.1,
       "gamma": 0.99,
-      "step_limit": 5000000,
+      "step_limit": 2000000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
       "net_arch_vf": [64, 64]
