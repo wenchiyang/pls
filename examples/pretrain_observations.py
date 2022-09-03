@@ -62,6 +62,6 @@ def main_cluster():
 if __name__ == "__main__":
     # pre_train_sokoban(100)
     # generate_gf()
-    pre_train_gf(9)
+    pre_train_gf(100)
     # main_cluster()
 
