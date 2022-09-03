@@ -36,7 +36,7 @@
     "num_boxes": 2,
     "action_size": 5,
     "difficulty": "medium",
-    "split": "2box5map_simple4",
+    "split": "2box5map_large",
     "height": 160,
     "width": 160,
     "downsampling_size": 4
