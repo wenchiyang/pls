@@ -6,7 +6,7 @@ from altair import Column
 import numpy as np
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-domain_goal_finidng = os.path.join(dir_path, "../..", "experiments_trials3", "goal_finding", "7grid5g")
+domain_goal_finidng = os.path.join(dir_path, "../..", "experiments4", "goal_finding", "small")
 domain_sokoban = os.path.join(dir_path, "../..", "experiments_trials3", "sokoban", "2box5map")
 domain_carracing = os.path.join(dir_path, "../..", "experiments_trials3", "carracing", "sparse_rewards4")
 
@@ -26,7 +26,7 @@ DOMAIN_ABBR= {
 }
 NORMS_REW = {
     "sokoban": {"low": -12, "high": 4},
-    "goal_finding": {"low": -10, "high": 10},
+    "goal_finding": {"low": -20, "high": 60},
     "carracing": {"low": -50, "high": 800}
 }
 ALPHA_NAMES_DIFF = {
@@ -47,12 +47,12 @@ ALPHA_NAMES = {
 ALPHA_NAMES_LEARNING_CURVES = {
     "no_shielding": "PPO",
     "hard_shielding": "PLS",
-    # "alpha_0.1": "PLS",
-    # "alpha_0.3": "PLS",
-    "alpha_0.5": "\u03B1PLS",
-    # "alpha_0.7": "PLS",
-    # "alpha_0.9": "PLS",
-    "vsrl": "VSRL"
+    "PPO": "PPO",
+    "PLSperf": "PLSperf",
+    "PLSnoisy": "PLSnoisy",
+    "PLSthres": "PLSthres",
+    "VSRLperf": "VSRLperf",
+    "VSRLthres": "VSRLthres"
 }
 NEW_TAGS = [
     "Return",
@@ -67,7 +67,7 @@ TAGS = [
     "safety/ep_rel_safety_shielded",
 ]
 SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
-# SEEDS = ["seed1"]
+# SEEDS = ["PPO"]
 
 def load_dataframe_from_file(path, tag):
     ea = event_accumulator.EventAccumulator(path)
@@ -133,7 +133,7 @@ def extract_values():
 
     print("REWARD")
     for exp in exp_names:
-        exp_folder = os.path.join(folder, exp, "seed1")
+        exp_folder = os.path.join(folder, exp, "PPO")
         r = load_step_value(exp_folder, tags[0], 500_000)
         s1 = load_step_value(exp_folder, tags[1], 500_000)
         s2 = load_step_value(exp_folder, tags[2], 500_000)
@@ -142,7 +142,7 @@ def extract_values():
         print(f"\tABS SAFETY: \t\t{s1}")
         print(f"\tREL SAFETY: \t\t{s2}")
 
-extract_values()
+# extract_values()
 
 def load_single_value_rej_vsrl(exp, steps):
     rejs = []
@@ -220,7 +220,7 @@ def draw(dd, fig_path):
     c = charts[0] | charts[1] | charts[2]
     c.show()
 
-def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_title_abbr, figure_height=100):
+def curves(domain_name, curve_type, exp_names, names, step_limit, fig_title_abbr, figure_height=100):
     """
     Plot a safety or reward curve of the experiment of "domain_name/alpha" until "step_limit" steps
     curve_type: "rollout/ep_rew_mean" or "rollout/#violations"
@@ -228,15 +228,15 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
     domain = NAMES[domain_name]
     norm = NORMS_REW[domain_name]
     df_list = []
-    for alpha in alphas:
-        folder = os.path.join(domain, alpha)
+    for exp_name in exp_names:
+        folder = os.path.join(domain, exp_name)
         for seed in SEEDS:
             path = os.path.join(folder, seed)
             df = load_dataframe(path, curve_type, smooth=True)
             if curve_type==TAGS[0]:
                 df["value"] = df["value"].apply(lambda x: normalize_rew(x, norm))
             df["seed"] = seed
-            df["alpha"] = names[alpha]
+            df["alpha"] = names[exp_name]
             # take only step_limit steps
             df = df.drop(df[df.step > step_limit].index)
             df_list.append(df[["value", "step", "seed", "alpha"]])
@@ -264,7 +264,8 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
                             legendX=-10, legendY=-35,
                             titleAnchor='middle'
                         ),
-                        scale=alt.Scale(domain=["PPO", "VSRL", "PLS", "\u03B1PLS"], range=["red", "blue", "gray", "green"])
+                        # scale=alt.Scale(domain=["PPO", "VSRL", "PLS", "\u03B1PLS"], range=["red", "blue", "gray", "green"]),
+                        scale=alt.Scale(domain=exp_names, range=["red", "blue", "gray", "green"][:len(exp_names)])
                         )
     ).properties(
             width=200, #200
@@ -274,27 +275,28 @@ def curves(domain_name, curve_type, alphas, names, step_limit, fig_title, fig_ti
         x=alt.X("step"),
         y=alt.Y("value",title=""),
         color=alt.Color("alpha", 
-                         sort=["PPO", "VSRL", "PLS", "\u03B1PLS"],
+                         # sort=["PPO", "VSRL", "PLS", "\u03B1PLS"],
+                         sort=["PPO", "PLSperf", "PLSnoisy", "PLSthres"],
                          legend=None
         )
     )
     c = alt.layer(band, line).resolve_legend(color='independent')
     # c.show()
-    fig_path = os.path.join(domain, f"{domain_name}_{fig_title}.svg")
+    fig_path = os.path.join(domain, f"{domain_name}_{fig_title_abbr}.png")
     c.save(fig_path)
 
-def safety_optimality_df(domain_name, alphas, n_step):
+def safety_optimality_df(domain_name, exp_names, n_step):
     norm = NORMS_REW[domain_name]
     domain = NAMES[domain_name]
     data = []
-    for alpha in alphas:
+    for exp_name in exp_names:
         for seed in SEEDS:
-            folder = os.path.join(domain, alpha, seed)
+            folder = os.path.join(domain, exp_name, seed)
             safety = load_step_value(folder, TAGS[1], n_step)
             optimality = load_step_value(folder, TAGS[0], n_step)
             safety = normalize_vio(safety)
             optimality = normalize_rew(optimality, norm)
-            data.append([ALPHA_NAMES[alpha], seed, safety, optimality])
+            data.append([ALPHA_NAMES[exp_name], seed, safety, optimality])
     df = pd.DataFrame(data, columns=["alpha", "seed", "safety", "optimality"])
     return df
 
@@ -302,8 +304,8 @@ def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
     """
     Draw a 2D safety-optimality figure of the experiment of "domain_name" at "n_step" steps
     """
-    alphas = ["no_shielding", "alpha_0.1", "alpha_0.3", "alpha_0.5", "alpha_0.7", "alpha_0.9", "hard_shielding"]
-    df = safety_optimality_df(domain_name, alphas, n_step)
+    exp_names = ["no_shielding", "alpha_0.1", "alpha_0.3", "alpha_0.5", "alpha_0.7", "alpha_0.9", "hard_shielding"]
+    df = safety_optimality_df(domain_name, exp_names, n_step)
     x_tick_range = [int(v*10) for v in x_axis_range]
     x_tick_values = [v/10 for v in range(x_tick_range[0], x_tick_range[1]+1)]
     y_tick_range = [int(v*10) for v in y_axis_range]
@@ -407,7 +409,7 @@ def get_time_sample_one_action(name, alpha):
     return avg_time/500000
 
 
-# SEEDS=["seed1"]
+# SEEDS=["PPO"]
 # print(get_time_sample_one_action("goal_finding", "hard_shielding"))
 # print(get_time_sample_one_action("sokoban", "hard_shielding"))
 # print(get_time_sample_one_action("carracing", "hard_shielding"))
@@ -445,32 +447,34 @@ def get_time_sample_one_action(name, alpha):
 #        fig_title="learning_curves",
 #        fig_title_abbr="Return")
 #
-# # SEEDS=["seed1", "seed2"]
-# curves("goal_finding",
-#         alphas=[
-#             "no_shielding",
-#             "hard_shielding",
-#             "alpha_0.5",
-#             "vsrl"
-#         ],
-#         curve_type=TAGS[1], # violation_curves
-#         names=ALPHA_NAMES_LEARNING_CURVES,
-#         step_limit=500_000,
-#         fig_title="violation_curves",
-#         fig_title_abbr="Violation")
-# curves("goal_finding",
-#         alphas=[
-#             "no_shielding",
-#             "hard_shielding",
-#             "alpha_0.5",
-#             "vsrl"
-#         ],
-#         curve_type=TAGS[0], # learning_curves
-#         names=ALPHA_NAMES_LEARNING_CURVES,
-#         step_limit=500_000,
-#         fig_title="learning_curves",
-#         fig_title_abbr="Return")
-#
+# # SEEDS=["PPO", "PLS"]
+curves("goal_finding",
+       exp_names=[
+            "PPO", "PLSperf", "VSRLperf"
+        ],
+        curve_type=TAGS[1], # violation_curves
+        names=ALPHA_NAMES_LEARNING_CURVES,
+        step_limit=1_000_000,
+        fig_title_abbr="Violation")
+
+curves("goal_finding",
+       exp_names=[
+           "PPO", "PLSperf", "VSRLperf"
+       ],
+       curve_type=TAGS[4], # safety
+       names=ALPHA_NAMES_LEARNING_CURVES,
+       step_limit=1_000_000,
+       fig_title_abbr="Safety")
+
+curves("goal_finding",
+       exp_names=[
+            "PPO", "PLSperf", "VSRLperf"
+        ],
+        curve_type=TAGS[0], # learning_curves
+        names=ALPHA_NAMES_LEARNING_CURVES,
+        step_limit=1_000_000,
+        fig_title_abbr="Return")
+
 #
 # curves("carracing",
 #        alphas=[
