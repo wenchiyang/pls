@@ -26,7 +26,7 @@ DOMAIN_ABBR= {
 }
 NORMS_REW = {
     "sokoban": {"low": -12, "high": 4},
-    "goal_finding": {"low": -20, "high": 60},
+    "goal_finding": {"low": 0, "high": 60},
     "carracing": {"low": -50, "high": 800}
 }
 ALPHA_NAMES_DIFF = {
