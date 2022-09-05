@@ -6,8 +6,8 @@
 
   "env_features": {
     "penalty_for_step": -0.1,
-    "penalty_box_off_target": -1,
-    "reward_box_on_target": 1,
+    "penalty_box_off_target": -10,
+    "reward_box_on_target": 10,
     "reward_finished": 10,
     "reward_last": 0,
     "render": false,
@@ -17,7 +17,7 @@
     "num_boxes": 2,
     "action_size": 5,
     "difficulty": "medium",
-    "split": "2box1map_large",
+    "split": "2box1map_large3",
     "height": 160,
     "width": 160,
     "downsampling_size": 4
@@ -36,7 +36,7 @@
     "num_boxes": 2,
     "action_size": 5,
     "difficulty": "medium",
-    "split": "2box1map_large",
+    "split": "2box1map_large3",
     "height": 160,
     "width": 160,
     "downsampling_size": 4
