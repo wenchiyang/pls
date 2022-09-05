@@ -10,7 +10,7 @@
     "reward_box_on_target": 1,
     "reward_finished": 10,
     "reward_last": 0,
-    "render": true,
+    "render": false,
     "max_steps": 120,
     "render_mode": "gray_array",
     "dim_room": [10, 10],
