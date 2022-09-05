@@ -17,7 +17,7 @@
     "num_boxes": 2,
     "action_size": 5,
     "difficulty": "medium",
-    "split": "2box3map_large",
+    "split": "2box1map_large",
     "height": 160,
     "width": 160,
     "downsampling_size": 4
@@ -30,13 +30,13 @@
     "reward_finished": 10,
     "reward_last": 0,
     "render": true,
-    "max_steps": 60,
+    "max_steps": 120,
     "render_mode": "gray_array",
     "dim_room": [10, 10],
     "num_boxes": 2,
     "action_size": 5,
     "difficulty": "medium",
-    "split": "2box5map_large",
+    "split": "2box1map_large",
     "height": 160,
     "width": 160,
     "downsampling_size": 4
@@ -61,7 +61,7 @@
       "seed": 567,
       "clip_range": 0.1,
       "gamma": 0.99,
-      "step_limit": 2000000,
+      "step_limit": 1000000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
       "net_arch_vf": [64, 64]
