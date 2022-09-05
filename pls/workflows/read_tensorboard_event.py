@@ -21,7 +21,7 @@ NAMES = {
 }
 DOMAIN_ABBR= {
     "sokoban": "Sokoban",
-    "goal_finding": "GF",
+    "goal_finding": "Stars",
     "carracing": "CR"
 }
 NORMS_REW = {
@@ -282,7 +282,7 @@ def curves(domain_name, curve_type, exp_names, names, step_limit, fig_title_abbr
     )
     c = alt.layer(band, line).resolve_legend(color='independent')
     # c.show()
-    fig_path = os.path.join(domain, f"{domain_name}_{fig_title_abbr}.png")
+    fig_path = os.path.join(domain, f"{DOMAIN_ABBR[domain_name]}_{fig_title_abbr}.svg")
     c.save(fig_path)
 
 def safety_optimality_df(domain_name, exp_names, n_step):
@@ -454,7 +454,7 @@ curves("goal_finding",
         ],
         curve_type=TAGS[1], # violation_curves
         names=ALPHA_NAMES_LEARNING_CURVES,
-        step_limit=1_000_000,
+        step_limit=500_000,
         fig_title_abbr="Violation")
 
 curves("goal_finding",
@@ -463,7 +463,7 @@ curves("goal_finding",
        ],
        curve_type=TAGS[4], # safety
        names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=1_000_000,
+       step_limit=500_000,
        fig_title_abbr="Safety")
 
 curves("goal_finding",
@@ -472,7 +472,7 @@ curves("goal_finding",
         ],
         curve_type=TAGS[0], # learning_curves
         names=ALPHA_NAMES_LEARNING_CURVES,
-        step_limit=1_000_000,
+        step_limit=500_000,
         fig_title_abbr="Return")
 
 #
