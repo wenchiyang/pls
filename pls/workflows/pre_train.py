@@ -49,12 +49,18 @@ def sample_object_locations_sokoban(room_fixed, num_boxes):
     return room
 
 def generate_random_images_sokoban(csv_path, folder, n_images=10):
-    PLAYER_COLOR = th.tensor([5 / 6] * 3, dtype=th.float32)
-    PLAYER_ON_TARGET_COLOR = th.tensor([1] * 3, dtype=th.float32)
-    FLOOR_COLOR = th.tensor([1 / 6] * 3, dtype=th.float32)
-    PLAYER_COLORS = th.tensor(([5 / 6] * 3, [1] * 3))
-    BOX_COLORS = th.tensor(([3 / 6] * 3, [4 / 6] * 3))
-    OBSTABLE_COLORS = th.tensor(([0] * 3, [3 / 6] * 3, [4 / 6] * 3))
+    WALL_COLOR = th.tensor([0], dtype=th.float32)
+    FLOOR_COLOR = th.tensor([1 / 6], dtype=th.float32)
+    BOX_TARGET_COLOR = th.tensor([2 / 6], dtype=th.float32)
+    BOX_ON_TARGET_COLOR = th.tensor([3 / 6], dtype=th.float32)
+    BOX_COLOR = th.tensor([4 / 6], dtype=th.float32)
+
+    PLAYER_COLOR = th.tensor([5 / 6], dtype=th.float32)
+    PLAYER_ON_TARGET_COLOR = th.tensor([1], dtype=th.float32)
+
+    PLAYER_COLORS = th.tensor(([5 / 6], [1]))
+    BOX_COLORS = th.tensor(([3 / 6], [4 / 6]))
+    OBSTABLE_COLORS = th.tensor(([0], [3 / 6], [4 / 6]))
 
     f_csv = open(csv_path, "w")
     writer = csv.writer(f_csv)
@@ -71,20 +77,20 @@ def generate_random_images_sokoban(csv_path, folder, n_images=10):
             "reward_box_on_target": 1,
             "reward_finished": 10,
             "reward_last": 0,
-            "dim_room": [7, 7],
+            "dim_room": [10, 10],
             "num_boxes": 2,
             "render": False,
-            "render_mode": "tiny_rgb_array",
+            "render_mode": "rgb_array",
             "action_size": 5,
             "difficulty": "medium",
-            "split": "2box5map",
+            "split": "2box1map_large",
             "cache_root": cache_root,
-            "height": 112,
-            "width": 112,
+            "height": 160,
+            "width": 160,
             "downsampling_size": 1
         }
     }
-
+    random.seed(567)
     env_name = config["env_type"]
     env_args = config["env_features"]
     env = gym.make(env_name, **env_args)

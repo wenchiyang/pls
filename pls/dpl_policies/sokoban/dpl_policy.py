@@ -141,7 +141,6 @@ class Sokoban_Monitor(Monitor):
             ep_rew = sum(self.rewards)
             ep_len = len(self.rewards)
 
-            # violate_constraint = box_stuck_in_corner(tinygrid)
             ep_info = {
                 "r": round(ep_rew, 6),
                 "l": ep_len,
@@ -201,31 +200,16 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
 
 
         if self.program_path:
-            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/sokoban_corner2.pl")
-            # self.program_path = pp
+            pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/sokoban_corner2.pl")
+            self.program_path = pp
             with open(self.program_path) as f:
                 self.program = f.read()
-
-        # if self.detect_boxes:
-        #     self.box_layer = nn.Sequential(
-        #         nn.Linear(self.input_size, 128),
-        #         nn.ReLU(),
-        #         nn.Linear(128, self.n_box_locs),
-        #         nn.Sigmoid(),  # TODO : add a flag
-        #     )
-        #
-        # if self.detect_corners:
-        #     self.corner_layer = nn.Sequential(
-        #         nn.Linear(self.input_size, 128),
-        #         nn.ReLU(),
-        #         nn.Linear(128, self.n_corner_locs),
-        #         nn.Sigmoid(),
-        #     )
 
         if self.alpha == 0: # Baseline
             pass
         elif self.differentiable_shield: # PLS
             self.use_learned_observations = shielding_params["use_learned_observations"]
+            self.train_observations = shielding_params["train_observations"] if self.use_learned_observations else None
             self.noisy_observations = shielding_params["noisy_observations"] if self.use_learned_observations else None
             self.observation_type = shielding_params["observation_type"] if self.use_learned_observations else None
         else: # VSRL
@@ -233,6 +217,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             if not self.vsrl_use_renormalization:
                 self.max_num_rejected_samples = shielding_params["max_num_rejected_samples"]
             self.use_learned_observations = shielding_params["use_learned_observations"]
+            self.train_observations = shielding_params["train_observations"] if self.use_learned_observations else None
             self.noisy_observations = shielding_params["noisy_observations"] if self.use_learned_observations else None
             self.observation_type = shielding_params["observation_type"] if self.use_learned_observations else None
 
@@ -254,21 +239,18 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             }
             query_struct = {"safe_action": { "no_op": 0, "push_up": 1,
                                              "push_down": 2, "push_left": 3, "push_right": 4}}
-            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/dpl_layer.p")
+            pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/dpl_layer.p")
             self.dpl_layer = self.get_layer(
-                path.join(self.folder, "../../../data", "dpl_layer.p"),
+                pp, #path.join(self.folder, "../../../data", "dpl_layer.p"),
                 program=self.program, queries=self.queries, evidences=["safe_next"],
                 input_struct=input_struct, query_struct=query_struct
             )
             if self.use_learned_observations:
-                # TODO
-                observation_model_path = path.join(self.folder, "../../data", self.observation_type)
-                observation_model_path = path.join(
-                    "/experiments_trials3/sokoban/2box5map_gray3/data/observation_model_10000_examples.pt")
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
-                self.observation_model = Observation_net(input_size=self.input_size*self.input_size, output_size=8).to(device)
-                self.observation_model.load_state_dict(th.load(observation_model_path))
+                self.observation_model = Observation_net(input_size=self.net_input_dim*self.net_input_dim, output_size=8).to(device)
+                pp = path.join(self.folder, "../../data", self.observation_type)
+                self.observation_model.load_state_dict(th.load(pp))
 
         debug_queries = ["safe_next"]
         debug_query_struct = {"safe_next": 0}
@@ -278,10 +260,10 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             "action": [i for i in range(self.n_box_locs + self.n_corner_locs,
                                         self.n_box_locs + self.n_corner_locs + self.n_actions)]
         }
+        pp = path.join(self.folder, "../../../data", "query_safety_layer.p")
         # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
-            path.join(self.folder, "../../../data", "query_safety_layer.p"),
-            program=self.program, queries=debug_queries, evidences=[],
+            pp, program=self.program, queries=debug_queries, evidences=[],
             input_struct=debug_input_struct, query_struct=debug_query_struct)
 
         self._build(lr_schedule)
@@ -335,16 +317,19 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             ) if tinygrid is not None else None
 
         if self.alpha != 0 and self.use_learned_observations:
-            # TODO
-            output = self.observation_model(x)
-            if self.noisy_observations:
-                boxes_and_corners = self.observation_model.sigmoid(output)
-                boxes = boxes_and_corners[:, :self.n_box_locs]
-                corners = boxes_and_corners[:, self.n_box_locs:]
+            if self.train_observations:
+                if self.noisy_observations:
+                    boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                else:
+                    boxes_and_corners = (self.observation_model.sigmoid(self.observation_model(x)) > 0.5).float()
             else:
-                boxes_and_corners = (self.observation_model.sigmoid(output) > 0.5).float()
-                boxes = boxes_and_corners[:, :self.n_box_locs]
-                corners = boxes_and_corners[:, self.n_box_locs:]
+                with th.no_grad():
+                    if self.noisy_observations:
+                        boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                    else:
+                        boxes_and_corners = (self.observation_model.sigmoid(self.observation_model(x)) > 0.5).float()
+            boxes = boxes_and_corners[:, :self.n_box_locs]
+            corners = boxes_and_corners[:, self.n_box_locs:]
         else:
             boxes = ground_truth_box
             corners = ground_truth_corner

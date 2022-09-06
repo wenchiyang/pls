@@ -6,12 +6,20 @@ from dask.distributed import Client
 def generate_gf():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     img_folder = os.path.join(dir_path, "../pls/data/gf_small")
-    # img_folder = "/cw/dtaijupiter/NoCsBack/dtai/wenchi/pls/pls/data/gf_small"
 
     csv_file = os.path.join(img_folder, "labels.csv")
     if not os.path.exists(img_folder):
         os.makedirs(img_folder)
     generate_random_images_gf(csv_file, img_folder, 10)
+
+def generate_sokoban():
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    img_folder = os.path.join(dir_path, "../pls/data/sokoban")
+    csv_file = os.path.join(img_folder, "labels.csv")
+
+    if not os.path.exists(img_folder):
+        os.makedirs(img_folder)
+    generate_random_images_sokoban(csv_file, img_folder, 1100)
 
 def pre_train_gf(n_train):
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -30,25 +38,25 @@ def pre_train_gf(n_train):
     pretrain_observation_gf(csv_file=csv_file, img_folder=img_folder, model_folder=model_folder,
                             image_dim=image_dim, downsampling_size=downsampling_size,
                             n_train=n_train, epochs=300)
-    # pretrain_observation(csv_file, img_folder, model_folder, 1000, 300)
-    # # pretrain_observation(csv_file, img_folder, model_folder, 10000)
 
 
 def pre_train_sokoban(n_train):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     img_folder = os.path.join(dir_path, "../pls/data/sokoban")
-    csv_file = os.path.join(img_folder, "labels.csv")
 
+    csv_file = os.path.join(img_folder, "labels.csv")
     if not os.path.exists(img_folder):
         os.makedirs(img_folder)
 
-    # generate_random_images_sokoban(csv_file, img_folder, 10100)
-
-    model_folder = os.path.join(dir_path, "../experiments_trials3/sokoban/2box5map_gray/data/")
+    model_folder = os.path.join(dir_path, "../experiments_trials3/sokoban/2box1map/data/")
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
 
-    pretrain_observation_sokoban(csv_file, img_folder, model_folder, n_train=n_train, epochs=300)
+    image_dim = 160
+    downsampling_size = 4
+    pretrain_observation_sokoban(csv_file=csv_file, img_folder=img_folder, model_folder=model_folder,
+                            image_dim=image_dim, downsampling_size=downsampling_size,
+                            n_train=n_train, epochs=300)
 
 
 def main_cluster():
@@ -61,7 +69,7 @@ def main_cluster():
 
 if __name__ == "__main__":
     # pre_train_sokoban(100)
-    # generate_gf()
-    pre_train_gf(100)
+    generate_sokoban()
+    pre_train_sokoban(1000)
     # main_cluster()
 
