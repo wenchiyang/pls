@@ -155,6 +155,7 @@ def main(folder, config):
         n_epochs=config["model_features"]["params"]["n_epochs"],
         gamma=config["model_features"]["params"]["gamma"],
         clip_range=config["model_features"]["params"]["clip_range"],
+        target_kl=config["model_features"]["params"]["target_kl"],
         tensorboard_log=folder_path,
         policy_kwargs={
             "image_encoder": image_encoder,
