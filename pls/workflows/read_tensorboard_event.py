@@ -454,7 +454,7 @@ curves("goal_finding",
         ],
         curve_type=TAGS[1], # violation_curves
         names=ALPHA_NAMES_LEARNING_CURVES,
-        step_limit=10_000_000,
+        step_limit=1_000_000,
         fig_title_abbr="Violation",
         fig_title="Violation"
        )
@@ -465,7 +465,7 @@ curves("goal_finding",
        ],
        curve_type=TAGS[4], # safety
        names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=10_000_000,
+       step_limit=1_000_000,
        fig_title_abbr="Safety",
        fig_title="Safety"
        )
@@ -476,7 +476,7 @@ curves("goal_finding",
         ],
         curve_type=TAGS[0], # learning_curves
         names=ALPHA_NAMES_LEARNING_CURVES,
-        step_limit=10_000_000,
+        step_limit=1_000_000,
         fig_title_abbr="Return",
         fig_title="Return"
        )
@@ -487,7 +487,7 @@ curves("goal_finding",
        ],
        curve_type=TAGS[1], # violation_curves
        names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=10_000_000,
+       step_limit=1_000_000,
        fig_title_abbr="Violation",
        fig_title="Violation_Noisy"
        )
@@ -498,7 +498,7 @@ curves("goal_finding",
        ],
        curve_type=TAGS[4], # safety
        names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=10_000_000,
+       step_limit=1_000_000,
        fig_title_abbr="Safety",
        fig_title="Safety_Noisy"
        )
@@ -509,7 +509,7 @@ curves("goal_finding",
        ],
        curve_type=TAGS[0], # learning_curves
        names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=10_000_000,
+       step_limit=1_000_000,
        fig_title_abbr="Return",
        fig_title="Return_Noisy")
 
