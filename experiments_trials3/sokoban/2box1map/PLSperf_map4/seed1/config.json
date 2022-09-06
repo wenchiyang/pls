@@ -6,8 +6,8 @@
 
   "env_features": {
     "penalty_for_step": -0.1,
-    "penalty_box_off_target": -10,
-    "reward_box_on_target": 10,
+    "penalty_box_off_target": -5,
+    "reward_box_on_target": 5,
     "reward_finished": 10,
     "reward_last": 0,
     "render": false,
@@ -25,8 +25,8 @@
 
   "eval_env_features": {
     "penalty_for_step": -0.1,
-    "penalty_box_off_target": -10,
-    "reward_box_on_target": 10,
+    "penalty_box_off_target": -5,
+    "reward_box_on_target": 5,
     "reward_finished": 10,
     "reward_last": 0,
     "render": true,
