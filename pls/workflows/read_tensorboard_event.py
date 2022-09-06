@@ -220,7 +220,7 @@ def draw(dd, fig_path):
     c = charts[0] | charts[1] | charts[2]
     c.show()
 
-def curves(domain_name, curve_type, exp_names, names, step_limit, fig_title_abbr, figure_height=100):
+def curves(domain_name, curve_type, exp_names, names, step_limit, fig_title_abbr, figure_height=100, fig_title=""):
     """
     Plot a safety or reward curve of the experiment of "domain_name/alpha" until "step_limit" steps
     curve_type: "rollout/ep_rew_mean" or "rollout/#violations"
@@ -282,7 +282,7 @@ def curves(domain_name, curve_type, exp_names, names, step_limit, fig_title_abbr
     )
     c = alt.layer(band, line).resolve_legend(color='independent')
     # c.show()
-    fig_path = os.path.join(domain, f"{DOMAIN_ABBR[domain_name]}_{fig_title_abbr}.svg")
+    fig_path = os.path.join(domain, f"{DOMAIN_ABBR[domain_name]}_{fig_title}.svg")
     c.save(fig_path)
 
 def safety_optimality_df(domain_name, exp_names, n_step):
@@ -454,8 +454,10 @@ curves("goal_finding",
         ],
         curve_type=TAGS[1], # violation_curves
         names=ALPHA_NAMES_LEARNING_CURVES,
-        step_limit=500_000,
-        fig_title_abbr="Violation")
+        step_limit=10_000_000,
+        fig_title_abbr="Violation",
+        fig_title="Violation"
+       )
 
 curves("goal_finding",
        exp_names=[
@@ -463,8 +465,10 @@ curves("goal_finding",
        ],
        curve_type=TAGS[4], # safety
        names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=500_000,
-       fig_title_abbr="Safety")
+       step_limit=10_000_000,
+       fig_title_abbr="Safety",
+       fig_title="Safety"
+       )
 
 curves("goal_finding",
        exp_names=[
@@ -472,8 +476,42 @@ curves("goal_finding",
         ],
         curve_type=TAGS[0], # learning_curves
         names=ALPHA_NAMES_LEARNING_CURVES,
-        step_limit=500_000,
-        fig_title_abbr="Return")
+        step_limit=10_000_000,
+        fig_title_abbr="Return",
+        fig_title="Return"
+       )
+
+curves("goal_finding",
+       exp_names=[
+           "PPO", "PLSthres", "VSRLthres", "PLSnoisy"
+       ],
+       curve_type=TAGS[1], # violation_curves
+       names=ALPHA_NAMES_LEARNING_CURVES,
+       step_limit=10_000_000,
+       fig_title_abbr="Violation",
+       fig_title="Violation_Noisy"
+       )
+
+curves("goal_finding",
+       exp_names=[
+           "PPO", "PLSthres", "VSRLthres", "PLSnoisy"
+       ],
+       curve_type=TAGS[4], # safety
+       names=ALPHA_NAMES_LEARNING_CURVES,
+       step_limit=10_000_000,
+       fig_title_abbr="Safety",
+       fig_title="Safety_Noisy"
+       )
+
+curves("goal_finding",
+       exp_names=[
+           "PPO", "PLSthres", "VSRLthres", "PLSnoisy"
+       ],
+       curve_type=TAGS[0], # learning_curves
+       names=ALPHA_NAMES_LEARNING_CURVES,
+       step_limit=10_000_000,
+       fig_title_abbr="Return",
+       fig_title="Return_Noisy")
 
 #
 # curves("carracing",
