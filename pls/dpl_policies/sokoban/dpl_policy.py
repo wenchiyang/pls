@@ -200,8 +200,8 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
 
 
         if self.program_path:
-            pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/sokoban_corner2.pl")
-            self.program_path = pp
+            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/sokoban_corner2.pl")
+            # self.program_path = pp
             with open(self.program_path) as f:
                 self.program = f.read()
 
@@ -239,10 +239,10 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             }
             query_struct = {"safe_action": { "no_op": 0, "push_up": 1,
                                              "push_down": 2, "push_left": 3, "push_right": 4}}
-            pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/dpl_layer.p")
+            pp = path.join(self.folder, "../../../data", "dpl_layer.p")
+            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/dpl_layer.p")
             self.dpl_layer = self.get_layer(
-                pp, #path.join(self.folder, "../../../data", "dpl_layer.p"),
-                program=self.program, queries=self.queries, evidences=["safe_next"],
+                pp, program=self.program, queries=self.queries, evidences=["safe_next"],
                 input_struct=input_struct, query_struct=query_struct
             )
             if self.use_learned_observations:
