@@ -43,14 +43,18 @@
   },
 
   "model_features": {
-    "name": "PPO",
+    "name": "PLSthres",
     "shield_params": {
       "n_box_locs": 4,
       "n_corner_locs": 4,
-      "alpha": 0,
-      "differentiable_shield": false,
+      "alpha": 1,
+      "differentiable_shield": true,
       "program_type": "sokoban_corner2",
-      "tinygrid_dim": 10
+      "tinygrid_dim": 10,
+      "use_learned_observations": true,
+      "train_observations": false,
+      "noisy_observations": false,
+      "observation_type": "observation_model_1000_examples.pt"
     },
     "params": {
       "log_interval": 1,
@@ -64,7 +68,8 @@
       "step_limit": 1000000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
-      "net_arch_vf": [64, 64]
+      "net_arch_vf": [64, 64],
+      "target_kl": 0.2
     }
   }
 }
