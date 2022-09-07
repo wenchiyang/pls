@@ -144,7 +144,7 @@ def main(folder, config):
     ]
     image_encoder = image_encoder_cls()
     net_input_dim = math.ceil(config["env_features"]["height"] / config["env_features"]["downsampling_size"])
-
+    target_kl = config["model_features"]["params"]["target_kl"] if "target_kl" in config["model_features"]["params"] else None
     model = model_cls(
         policy_cls,
         env=env,
@@ -155,7 +155,7 @@ def main(folder, config):
         n_epochs=config["model_features"]["params"]["n_epochs"],
         gamma=config["model_features"]["params"]["gamma"],
         clip_range=config["model_features"]["params"]["clip_range"],
-        target_kl=config["model_features"]["params"]["target_kl"],
+        target_kl=target_kl,
         tensorboard_log=folder_path,
         policy_kwargs={
             "image_encoder": image_encoder,
