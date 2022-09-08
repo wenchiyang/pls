@@ -3,23 +3,23 @@ from pls.workflows.pre_train import generate_random_images_gf, generate_random_i
 from pls.workflows.execute_workflow import pretrain_observation_gf, pretrain_observation_sokoban
 from dask.distributed import Client
 
-def generate_gf():
+def generate_gf(num_imgs):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     img_folder = os.path.join(dir_path, "../pls/data/gf_small")
 
     csv_file = os.path.join(img_folder, "labels.csv")
     if not os.path.exists(img_folder):
         os.makedirs(img_folder)
-    generate_random_images_gf(csv_file, img_folder, 10)
+    generate_random_images_gf(csv_file, img_folder, num_imgs)
 
-def generate_sokoban():
+def generate_sokoban(num_imgs):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     img_folder = os.path.join(dir_path, "../pls/data/sokoban")
     csv_file = os.path.join(img_folder, "labels.csv")
 
     if not os.path.exists(img_folder):
         os.makedirs(img_folder)
-    generate_random_images_sokoban(csv_file, img_folder, 1100)
+    generate_random_images_sokoban(csv_file, img_folder, num_imgs)
 
 def pre_train_gf(n_train):
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -69,7 +69,7 @@ def main_cluster():
 
 if __name__ == "__main__":
     # pre_train_sokoban(100)
-    generate_sokoban()
-    pre_train_sokoban(1000)
+    generate_sokoban(num_imgs=1100)
+    pre_train_sokoban(n_train=1000)
     # main_cluster()
 
