@@ -326,6 +326,7 @@ def calculate_sample_weights(dataset, keys):
         zeros = dataset.instances[key].value_counts()[0]
         pos_weight = zeros/ones
         pos_weights.append(pos_weight)
+        print(key, pos_weight)
     return th.tensor(pos_weights)
 
 def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_size, net_output_size, image_dim, downsampling_size, epochs, keys):
