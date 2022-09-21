@@ -240,10 +240,10 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
                 "action": [i for i in range(self.n_ghost_locs, self.n_ghost_locs + self.n_actions)]
             }
             query_struct = {"safe_action": {"stay": 0, "up": 1, "down": 2, "left": 3, "right": 4}}
+            pp = path.join(self.folder, "../../../data", "dpl_layer.p")
             # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/goal_finding/data/dpl_layer.p")
             self.dpl_layer = self.get_layer(
-                path.join(self.folder, "../../../data", "dpl_layer.p"),
-                program=self.program, queries=self.queries, evidences=["safe_next"],
+                pp, program=self.program, queries=self.queries, evidences=["safe_next"],
                 input_struct=input_struct, query_struct=query_struct
             )
             if self.use_learned_observations:
@@ -260,10 +260,10 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             "ghost": [i for i in range(self.n_ghost_locs)],
             "action": [i for i in range(self.n_ghost_locs, self.n_ghost_locs + self.n_actions)]
         }
+        pp = path.join(self.folder, "../../../data", "query_safety_layer.p")
         # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/goal_finding/data/query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
-            path.join(self.folder, "../../../data", "query_safety_layer.p"),
-            program=self.program, queries=debug_queries, evidences=[],
+            pp, program=self.program, queries=debug_queries, evidences=[],
             input_struct=debug_input_struct, query_struct=debug_query_struct
         )
 
@@ -325,6 +325,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
 
         else:
             ghosts = ground_truth_ghost
+            # ghosts = th.where(ground_truth_ghost==0, 0.1, 0.9)
 
         object_detect_probs = {
             "ground_truth_ghost": ground_truth_ghost,
@@ -335,6 +336,15 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             actions = distribution.get_actions(deterministic=deterministic)
             log_prob = distribution.log_prob(actions)
             object_detect_probs["alpha"] = 0
+            results = self.query_safety_layer(
+                x={
+                    "ghost": ghosts,
+                    "action": base_actions,
+                }
+            )
+            policy_safety = results["safe_next"]
+            object_detect_probs["policy_safety"] = policy_safety
+
             return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
 
         if not self.differentiable_shield: # VSRL
@@ -487,18 +497,20 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         :return: estimated value, log likelihood of taking those actions
             and entropy of the action distribution.
         """
-        if not self.differentiable_shield:
-            obs = self.image_encoder(obs)
-            features = self.extract_features(obs)
-            latent_pi, latent_vf = self.mlp_extractor(features)
-            distribution = self._get_action_dist_from_latent(latent_pi)
-            log_prob = distribution.log_prob(actions)
-            values = self.value_net(latent_vf)
-            return values, log_prob, distribution.entropy()
+        # if not self.differentiable_shield:
+        #     obs = self.image_encoder(obs)
+        #     features = self.extract_features(obs)
+        #     latent_pi, latent_vf = self.mlp_extractor(features)
+        #     distribution = self._get_action_dist_from_latent(latent_pi)
+        #     log_prob = distribution.log_prob(actions)
+        #     values = self.value_net(latent_vf)
+        #
+        #     return values, log_prob, distribution.entropy(), safeties
 
-        _, values, _, mass, _ = self.forward(obs, tinygrid=tinygrid)
+        _, values, _, mass, [object_detect_probs, _] = self.forward(obs, tinygrid=tinygrid)
         log_prob = mass.log_prob(actions)
-        return values, log_prob, mass.entropy()
+        policy_safety = object_detect_probs["policy_safety"]
+        return values, log_prob, mass.entropy(), policy_safety
 
 
 

@@ -145,6 +145,8 @@ def main(folder, config):
     image_encoder = image_encoder_cls()
     net_input_dim = math.ceil(config["env_features"]["height"] / config["env_features"]["downsampling_size"])
     target_kl = config["model_features"]["params"]["target_kl"] if "target_kl" in config["model_features"]["params"] else None
+    safety_coef = config["model_features"]["params"]["safety_coef"] if "safety_coef" in config["model_features"]["params"] else 0
+    vf_coef = config["model_features"]["params"]["vf_coef"] if "vf_coef" in config["model_features"]["params"] else 0.5
     model = model_cls(
         policy_cls,
         env=env,
@@ -169,6 +171,8 @@ def main(folder, config):
         verbose=0,
         seed=config["model_features"]["params"]["seed"],
         _init_setup_model=True,
+        safety_coef=safety_coef,
+        vf_coef=vf_coef
     )
 
     model.set_random_seed(config["model_features"]["params"]["seed"])
