@@ -412,7 +412,17 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
 
             log_prob = mass.log_prob(actions)
             object_detect_probs["alpha"] = alpha
-            ## DEBUG
+
+
+            results = self.query_safety_layer(
+                x={
+                    "ghost": ghosts,
+                    "action": base_actions,
+                }
+            )
+            policy_safety = results["safe_next"]
+            object_detect_probs["policy_safety"] = policy_safety
+
             return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
 
