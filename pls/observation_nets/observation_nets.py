@@ -29,8 +29,8 @@ class Observation_net_cnn(nn.Module):
         self.conv2 = nn.Conv2d(8, 16, kernel_size=3, padding=1) # (16, 24, 24) # pool -> (16, 12, 12)
         self.conv3 = nn.Conv2d(16, 32, kernel_size=3, padding=1) # (32, 12, 12) # pool -> (32, 6, 6)
         # linear layers
-        self.fc1 = nn.Linear(1152, 64) # downsampling_size = 10
-        # self.fc1 = nn.Linear(1568, 64) # downsampling_size = 8
+        # self.fc1 = nn.Linear(1152, 64) # downsampling_size = 10
+        self.fc1 = nn.Linear(1568, 64) # downsampling_size = 8
         # self.fc1 = nn.Linear(3200, 64) # downsampling_size = 6
         self.fc2 = nn.Linear(64, output_size)
         # max pooling
@@ -51,8 +51,8 @@ class Observation_net_cnn(nn.Module):
         x = self.pool(F.relu(self.conv2(x)))
         x = self.pool(F.relu(self.conv3(x)))
         # flattening the image
-        x = x.view(-1, 6*6*32) # downsampling_size = 10
-        # x = x.view(-1, 1568) # downsampling_size = 8
+        # x = x.view(-1, 6*6*32) # downsampling_size = 10
+        x = x.view(-1, 1568) # downsampling_size = 8
         # x = x.view(-1, 3200) # downsampling_size = 6
         # linear layers
         x = F.relu(self.fc1(x))
