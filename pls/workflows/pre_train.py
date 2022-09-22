@@ -246,11 +246,14 @@ class Goal_Finding_Dataset(Dataset):
 
     @staticmethod
     def downsampling(x, downsampling_size):
-        dz = block_reduce(x.squeeze(), block_size=(downsampling_size, downsampling_size), func=np.mean)
-        dz = th.tensor(dz)
-        # plt.imshow(dz, cmap="gray", vmin=-1, vmax=1)
-        # plt.show()
-        return dz
+        if downsampling_size is not None:
+            dz = block_reduce(x.squeeze(), block_size=(downsampling_size, downsampling_size), func=np.mean)
+            dz = th.tensor(dz)
+            # plt.imshow(dz, cmap="gray", vmin=-1, vmax=1)
+            # plt.show()
+            return dz
+        else:
+            return x
 
     def __getitem__(self, idx):
         if th.is_tensor(idx):
@@ -259,7 +262,7 @@ class Goal_Finding_Dataset(Dataset):
         img_name = os.path.join(self.root_dir, self.instances.iloc[idx, 0])
         image_raw = io.imread(img_name)[:self.image_dim,:self.image_dim,:]
         image = self.rgb2gray(image_raw)
-        image = self.downsampling(image, self.downsampling_size)
+        image = self.downsampling(image, self.downsampling_size).unsqueeze(dim=0)
         # from matplotlib import pyplot as plt
         # plt.imshow(image, cmap="gray", vmin=-1, vmax=1)
         # plt.show()
@@ -335,10 +338,6 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     device = th.device("cuda" if use_cuda else "cpu")
     th.manual_seed(0)
 
-    # transform = transforms.Compose([
-    #     transforms.ToTensor(),
-    #     transforms.Normalize((0.1307,), (0.3081,))
-    #     ])
     dataset_train = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, train=True, n_train=n_train)
     dataset_test = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, n_train=n_train, n_test=100)
 
@@ -350,11 +349,18 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     pos_weight = calculate_sample_weights(dataset_train, keys)
     loss_function = th.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
-    log_path = os.path.join(model_folder, f"observation_model_{n_train}_examples.log")
+    if "cnn" in str(net_class):
+        log_path = os.path.join(model_folder, f"observation_model_{n_train}_examples_{downsampling_size}_cnn.log")
+    else:
+        log_path = os.path.join(model_folder, f"observation_model_{n_train}_examples.log")
     f_log = open(log_path, "w")
     for epoch in range(1, epochs):
         train(model, device, train_loader, optimizer, epoch, loss_function, f_log)
         test(model, device, test_loader, th.nn.BCEWithLogitsLoss(reduction='sum'), f_log)
-    model_path = os.path.join(model_folder, f"observation_model_{n_train}_examples.pt")
+    if "cnn" in str(net_class):
+        model_path = os.path.join(model_folder, f"observation_model_{n_train}_examples_{downsampling_size}_cnn.pt")
+    else:
+        model_path = os.path.join(model_folder, f"observation_model_{n_train}_examples.pt")
     th.save(model.state_dict(), model_path)
+
 
