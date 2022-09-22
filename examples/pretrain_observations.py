@@ -71,7 +71,7 @@ if __name__ == "__main__":
     # pre_train_sokoban(100)
     # generate_sokoban(num_imgs=1100)
     # generate_gf(num_imgs=100)
-    # pre_train_gf(n_train=50, net_class=Observation_net, downsampling_size=8, epochs=10)
-    pre_train_gf(n_train=1000, net_class=Observation_net_cnn, downsampling_size=8, epochs=300)
+    pre_train_gf(n_train=90, net_class=Observation_net, downsampling_size=8, epochs=10)
+    # pre_train_gf(n_train=50, net_class=Observation_net_cnn, downsampling_size=8, epochs=10)
     # main_cluster()
 

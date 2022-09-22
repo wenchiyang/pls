@@ -323,14 +323,25 @@ def test(model, device, test_loader, loss_function, f_log):
     f_log.flush()
 
 def calculate_sample_weights(dataset, keys):
+    # pos_weights = []
+    # for key in keys:
+    #     ones = dataset.instances[key].value_counts()[1]
+    #     zeros = dataset.instances[key].value_counts()[0]
+    #     pos_weight = zeros/ones
+    #     pos_weights.append(pos_weight)
+    #     print(key, pos_weight)
+    # return th.tensor(pos_weights)
     pos_weights = []
     for key in keys:
         ones = dataset.instances[key].value_counts()[1]
         zeros = dataset.instances[key].value_counts()[0]
-        pos_weight = zeros/ones
+        total = ones + zeros
+        n_classes = 2
+        pos_weight = (1 / ones) * (total / n_classes)
         pos_weights.append(pos_weight)
         print(key, pos_weight)
     return th.tensor(pos_weights)
+
 
 def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_size, net_output_size, image_dim, downsampling_size, epochs, keys):
     use_cuda = False
