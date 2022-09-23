@@ -277,11 +277,15 @@ class Goal_Finding_Dataset(Dataset):
             sample = self.transform(sample)
         return sample
 
-num_iters = 0
+num_iters_train = 0
+num_iters_test = 0
 
 def train(model, device, train_loader, optimizer, epoch, loss_function, f_log, writer):
     model.train()
-    global num_iters
+    global num_iters_train
+    sig = nn.Sigmoid()
+    correct = 0
+    true_positive, true_negative, false_positive, false_negative = 0, 0, 0, 0
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device).squeeze(1)
         optimizer.zero_grad()
@@ -293,24 +297,25 @@ def train(model, device, train_loader, optimizer, epoch, loss_function, f_log, w
 
         # log
         f_log.write(f'Train Epoch: {epoch} [{(batch_idx+1) * len(data)}/{len(train_loader.dataset)} ({100. * (batch_idx+1) / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}\n')
-        writer.add_scalar('Loss/train', loss.item(), num_iters)
-        num_iters += 1
+        writer.add_scalar('Loss/train', loss.item(), num_iters_train)
+        num_iters_train += 1
+
+        pred = (sig(output) > 0.5).float()
 
 
 def test(model, device, test_loader, epoch, loss_function, f_log, writer):
     model.eval()
-    test_loss = 0
+    avg_test_loss = 0
     correct = 0
-    true_positive = 0
-    true_negative = 0
-    false_positive = 0
-    false_negative = 0
+    true_positive, true_negative, false_positive, false_negative = 0, 0, 0, 0
     sig = nn.Sigmoid()
+    global num_iters_test
     with th.no_grad():
         for batch_idx, (data, target) in enumerate(test_loader):
             data, target = data.to(device), target.to(device).squeeze(1)
             output = model(data)
-            test_loss += loss_function(output, target).item()  # sum up batch loss
+            test_loss = loss_function(output, target).item()  # sum up batch loss
+            avg_test_loss += test_loss
             pred = (sig(output) > 0.5).float()
             correct += pred.eq(target.view_as(pred)).sum().item()
             tp = th.logical_and(target.view_as(pred) == 1, pred == 1).sum().item()
@@ -322,7 +327,10 @@ def test(model, device, test_loader, epoch, loss_function, f_log, writer):
             true_negative += tn
             false_positive += fp
             false_negative += fn
-    test_loss /= len(test_loader.dataset)
+            # log
+            writer.add_scalar('Loss/test', test_loss, num_iters_test)
+            num_iters_test += 1
+    avg_test_loss /= len(test_loader.dataset)
 
     precision = (true_positive)/(true_positive+false_positive) if true_positive+false_positive != 0 else -1
     recall = (true_positive)/(true_positive+false_negative) if true_positive+false_negative != 0 else -1
@@ -335,10 +343,9 @@ def test(model, device, test_loader, epoch, loss_function, f_log, writer):
         f'Recall: {true_positive}/{true_positive+false_negative} ({100. * recall:.0f}%), \n\t\t' +
         f'tp: {true_positive}, tn: {true_negative}, fp: {false_positive}, fn:{false_negative}\n')
     f_log.flush()
-    writer.add_scalar('Loss/test', test_loss, epoch)
-    writer.add_scalar('Loss/precision', precision, epoch)
-    writer.add_scalar('Loss/recall', recall, epoch)
-    writer.add_scalar('Loss/accuracy', accuracy, epoch)
+    writer.add_scalar('Test/precision', precision, epoch)
+    writer.add_scalar('Test/recall', recall, epoch)
+    writer.add_scalar('Test/accuracy', accuracy, epoch)
 
 def calculate_sample_weights(dataset, keys):
     # pos_weights = []
@@ -368,7 +375,7 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     th.manual_seed(0)
 
     dataset_train = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, train=True, n_train=n_train)
-    dataset_test = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, n_train=n_train, n_test=100)
+    dataset_test = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, n_train=n_train, n_test=1000)
 
     train_loader = th.utils.data.DataLoader(dataset_train, batch_size=batch_size)
     test_loader = th.utils.data.DataLoader(dataset_test, batch_size=batch_size)
