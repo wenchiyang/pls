@@ -295,9 +295,6 @@ def train(model, device, train_loader, optimizer, epoch, loss_function, f_log, w
         writer.add_scalar('Loss/train', loss.item(), epoch)
 
 
-
-
-
 def test(model, device, test_loader, epoch, loss_function, f_log, writer):
     model.eval()
     test_loss = 0
@@ -308,32 +305,38 @@ def test(model, device, test_loader, epoch, loss_function, f_log, writer):
     false_negative = 0
     sig = nn.Sigmoid()
     with th.no_grad():
-        for data, target in test_loader:
+        for batch_idx, (data, target) in enumerate(test_loader):
             data, target = data.to(device), target.to(device).squeeze(1)
             output = model(data)
             test_loss += loss_function(output, target).item()  # sum up batch loss
             pred = (sig(output) > 0.5).float()
             correct += pred.eq(target.view_as(pred)).sum().item()
-            true_positive  += th.logical_and(target.view_as(pred) == 1, pred == 1).sum().item()
-            true_negative  += th.logical_and(target.view_as(pred) == 0, pred == 0).sum().item()
-            false_positive += th.logical_and(target.view_as(pred) == 0, pred == 1).sum().item()
-            false_negative += th.logical_and(target.view_as(pred) == 1, pred == 0).sum().item()
-            assert true_positive+true_negative+false_positive+false_negative == target.numel()
+            tp = th.logical_and(target.view_as(pred) == 1, pred == 1).sum().item()
+            tn = th.logical_and(target.view_as(pred) == 0, pred == 0).sum().item()
+            fp = th.logical_and(target.view_as(pred) == 0, pred == 1).sum().item()
+            fn = th.logical_and(target.view_as(pred) == 1, pred == 0).sum().item()
+            assert tp+tn+fp+fn == target.numel()
+            true_positive += tp
+            true_negative += tn
+            false_positive += fp
+            false_negative += fn
     test_loss /= len(test_loader.dataset)
 
     precision = (true_positive)/(true_positive+false_positive) if true_positive+false_positive != 0 else -1
     recall = (true_positive)/(true_positive+false_negative) if true_positive+false_negative != 0 else -1
+    accuracy = correct / (len(test_loader.dataset) * target.size()[1])
 
     # log
     f_log.write(f'Test set: Average loss: {test_loss:.4f}, \n\t\t' +
         f'Accuracy: {correct}/{len(test_loader.dataset) * target.size()[1]} ({100. * correct / (len(test_loader.dataset) * target.size()[1]):.0f}%)\n\t\t' +
-        f'Precision: {true_positive}/{true_positive+false_positive} ({precision:.0f}%),\n\t\t' +
-        f'Recall: {true_positive}/{true_positive+false_negative} ({recall:.0f}%), \n\t\t' +
+        f'Precision: {true_positive}/{true_positive+false_positive} ({100. * precision:.0f}%),\n\t\t' +
+        f'Recall: {true_positive}/{true_positive+false_negative} ({100. * recall:.0f}%), \n\t\t' +
         f'tp: {true_positive}, tn: {true_negative}, fp: {false_positive}, fn:{false_negative}\n')
     f_log.flush()
     writer.add_scalar('Loss/test', test_loss, epoch)
     writer.add_scalar('Loss/precision', precision, epoch)
     writer.add_scalar('Loss/recall', recall, epoch)
+    writer.add_scalar('Loss/accuracy', accuracy, epoch)
 
 def calculate_sample_weights(dataset, keys):
     # pos_weights = []
@@ -358,7 +361,7 @@ def calculate_sample_weights(dataset, keys):
 
 def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_size, net_output_size, image_dim, downsampling_size, epochs, keys):
     use_cuda = False
-    batch_size = 1024
+    batch_size = 8
     device = th.device("cuda" if use_cuda else "cpu")
     th.manual_seed(0)
 
@@ -371,7 +374,7 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
 
 
     model = net_class(input_size=net_input_size, output_size=net_output_size).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
     pos_weight = calculate_sample_weights(dataset_train, keys)
     loss_function = th.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
@@ -387,10 +390,14 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     f_log = open(log_path, "w")
     for epoch in range(1, epochs):
         train(model, device, train_loader, optimizer, epoch, loss_function, f_log, writer)
-        # test(model, device, test_loader, epoch, th.nn.BCEWithLogitsLoss(reduction='sum'), f_log, writer)
-        test(model, device, test_loader, epoch, th.nn.BCEWithLogitsLoss(reduction='sum'), f_log, writer)
+        test(model, device, test_loader, epoch, th.nn.BCEWithLogitsLoss(pos_weight=pos_weight), f_log, writer)
+        if epoch % 2 == 0:
+            path = os.path.join(log_folder, f"observation_{epoch}_steps.zip")
+            th.save(model.state_dict(), path)
     if "cnn" in str(net_class):
         model_path = os.path.join(model_folder, f"observation_model_{n_train}_examples_{downsampling_size}_cnn.pt")
     else:
         model_path = os.path.join(model_folder, f"observation_model_{n_train}_examples.pt")
     th.save(model.state_dict(), model_path)
+
+
