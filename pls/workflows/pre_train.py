@@ -278,14 +278,12 @@ class Goal_Finding_Dataset(Dataset):
         return sample
 
 num_iters_train = 0
-num_iters_test = 0
+num_iters_test1 = 0
+num_iters_test2 = 0
 
 def train(model, device, train_loader, optimizer, epoch, loss_function, f_log, writer):
     model.train()
     global num_iters_train
-    sig = nn.Sigmoid()
-    correct = 0
-    true_positive, true_negative, false_positive, false_negative = 0, 0, 0, 0
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device).squeeze(1)
         optimizer.zero_grad()
@@ -300,16 +298,14 @@ def train(model, device, train_loader, optimizer, epoch, loss_function, f_log, w
         writer.add_scalar('Loss/train', loss.item(), num_iters_train)
         num_iters_train += 1
 
-        pred = (sig(output) > 0.5).float()
 
-
-def test(model, device, test_loader, epoch, loss_function, f_log, writer):
+def test(model, device, test_loader, epoch, loss_function, f_log, writer, use_train_set=False):
     model.eval()
     avg_test_loss = 0
     correct = 0
     true_positive, true_negative, false_positive, false_negative = 0, 0, 0, 0
     sig = nn.Sigmoid()
-    global num_iters_test
+    global num_iters_test1, num_iters_test2
     with th.no_grad():
         for batch_idx, (data, target) in enumerate(test_loader):
             data, target = data.to(device), target.to(device).squeeze(1)
@@ -328,8 +324,13 @@ def test(model, device, test_loader, epoch, loss_function, f_log, writer):
             false_positive += fp
             false_negative += fn
             # log
-            writer.add_scalar('Loss/test', test_loss, num_iters_test)
-            num_iters_test += 1
+            if not use_train_set:
+                writer.add_scalar('Loss/test', test_loss, num_iters_test1)
+                num_iters_test1 += 1
+            else:
+                writer.add_scalar('Loss/test (use trainset)', test_loss, num_iters_test2)
+                num_iters_test2 += 1
+
     avg_test_loss /= len(test_loader.dataset)
 
     precision = (true_positive)/(true_positive+false_positive) if true_positive+false_positive != 0 else -1
@@ -337,15 +338,20 @@ def test(model, device, test_loader, epoch, loss_function, f_log, writer):
     accuracy = correct / (len(test_loader.dataset) * target.size()[1])
 
     # log
-    f_log.write(f'Test set: Average loss: {test_loss:.4f}, \n\t\t' +
-        f'Accuracy: {correct}/{len(test_loader.dataset) * target.size()[1]} ({100. * correct / (len(test_loader.dataset) * target.size()[1]):.0f}%)\n\t\t' +
-        f'Precision: {true_positive}/{true_positive+false_positive} ({100. * precision:.0f}%),\n\t\t' +
-        f'Recall: {true_positive}/{true_positive+false_negative} ({100. * recall:.0f}%), \n\t\t' +
-        f'tp: {true_positive}, tn: {true_negative}, fp: {false_positive}, fn:{false_negative}\n')
-    f_log.flush()
-    writer.add_scalar('Test/precision', precision, epoch)
-    writer.add_scalar('Test/recall', recall, epoch)
-    writer.add_scalar('Test/accuracy', accuracy, epoch)
+    if not use_train_set:
+        f_log.write(f'Test set: Average loss: {test_loss:.4f}, \n\t\t' +
+            f'Accuracy: {correct}/{len(test_loader.dataset) * target.size()[1]} ({100. * correct / (len(test_loader.dataset) * target.size()[1]):.0f}%)\n\t\t' +
+            f'Precision: {true_positive}/{true_positive+false_positive} ({100. * precision:.0f}%),\n\t\t' +
+            f'Recall: {true_positive}/{true_positive+false_negative} ({100. * recall:.0f}%), \n\t\t' +
+            f'tp: {true_positive}, tn: {true_negative}, fp: {false_positive}, fn:{false_negative}\n')
+        f_log.flush()
+        writer.add_scalar('Test/precision', precision, epoch)
+        writer.add_scalar('Test/recall', recall, epoch)
+        writer.add_scalar('Test/accuracy', accuracy, epoch)
+    else:
+        writer.add_scalar('Train/precision', precision, epoch)
+        writer.add_scalar('Train/recall', recall, epoch)
+        writer.add_scalar('Train/accuracy', accuracy, epoch)
 
 def calculate_sample_weights(dataset, keys):
     # pos_weights = []
@@ -375,10 +381,12 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     th.manual_seed(0)
 
     dataset_train = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, train=True, n_train=n_train)
-    dataset_test = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, n_train=n_train, n_test=1000)
+    dataset_test1 = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, n_train=n_train, n_test=100)
+    dataset_test2 = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, n_train=0, n_test=n_train)
 
     train_loader = th.utils.data.DataLoader(dataset_train, batch_size=batch_size)
-    test_loader = th.utils.data.DataLoader(dataset_test, batch_size=batch_size)
+    test_loader1 = th.utils.data.DataLoader(dataset_test1, batch_size=batch_size)
+    test_loader2 = th.utils.data.DataLoader(dataset_test2, batch_size=batch_size)
 
 
 
@@ -399,7 +407,8 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     f_log = open(log_path, "w")
     for epoch in range(1, epochs):
         train(model, device, train_loader, optimizer, epoch, loss_function, f_log, writer)
-        test(model, device, test_loader, epoch, th.nn.BCEWithLogitsLoss(pos_weight=pos_weight), f_log, writer)
+        test(model, device, test_loader1, epoch, loss_function, f_log, writer)
+        test(model, device, test_loader2, epoch, loss_function, f_log, writer, use_train_set=True)
         if epoch % 100 == 0:
             path = os.path.join(log_folder, f"observation_{epoch}_steps.zip")
             th.save(model.state_dict(), path)
