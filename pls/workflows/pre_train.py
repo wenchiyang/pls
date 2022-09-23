@@ -1,6 +1,5 @@
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import datasets, transforms
 from torch.utils.data import Dataset
 import os
 import gym
@@ -16,6 +15,10 @@ from skimage import io
 from matplotlib import pyplot as plt
 from skimage.measure import block_reduce
 import random
+import torchvision
+from torch.utils.tensorboard import SummaryWriter
+from torchvision import datasets, transforms
+
 
 
 
@@ -276,7 +279,7 @@ class Goal_Finding_Dataset(Dataset):
 
 
 
-def train(model, device, train_loader, optimizer, epoch, loss_function, f_log):
+def train(model, device, train_loader, optimizer, epoch, loss_function, f_log, writer):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device).squeeze(1)
@@ -286,11 +289,16 @@ def train(model, device, train_loader, optimizer, epoch, loss_function, f_log):
 
         loss.backward()
         optimizer.step()
+
+        # log
         f_log.write(f'Train Epoch: {epoch} [{(batch_idx+1) * len(data)}/{len(train_loader.dataset)} ({100. * (batch_idx+1) / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}\n')
+        writer.add_scalar('Loss/train', loss.item(), epoch)
 
 
 
-def test(model, device, test_loader, loss_function, f_log):
+
+
+def test(model, device, test_loader, epoch, loss_function, f_log, writer):
     model.eval()
     test_loss = 0
     correct = 0
@@ -315,12 +323,17 @@ def test(model, device, test_loader, loss_function, f_log):
 
     precision = (true_positive * 100)/(true_positive+false_positive) if true_positive+false_positive != 0 else -1
     recall = (true_positive * 100)/(true_positive+false_negative) if true_positive+false_negative != 0 else -1
+
+    # log
     f_log.write(f'Test set: Average loss: {test_loss:.4f}, \n\t\t' +
         f'Accuracy: {correct}/{len(test_loader.dataset) * target.size()[1]} ({100. * correct / (len(test_loader.dataset) * target.size()[1]):.0f}%)\n\t\t' +
         f'Precision: {true_positive}/{true_positive+false_positive} ({precision:.0f}%),\n\t\t' +
         f'Recall: {true_positive}/{true_positive+false_negative} ({recall:.0f}%), \n\t\t' +
         f'tp: {true_positive}, tn: {true_negative}, fp: {false_positive}, fn:{false_negative}\n')
     f_log.flush()
+    writer.add_scalar('Loss/test', test_loss, epoch)
+    writer.add_scalar('Loss/precision', precision, epoch)
+    writer.add_scalar('Loss/recall', recall, epoch)
 
 def calculate_sample_weights(dataset, keys):
     # pos_weights = []
@@ -345,7 +358,7 @@ def calculate_sample_weights(dataset, keys):
 
 def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_size, net_output_size, image_dim, downsampling_size, epochs, keys):
     use_cuda = False
-    batch_size = 256
+    batch_size = 1024
     device = th.device("cuda" if use_cuda else "cpu")
     th.manual_seed(0)
 
@@ -355,23 +368,29 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     train_loader = th.utils.data.DataLoader(dataset_train, batch_size=batch_size)
     test_loader = th.utils.data.DataLoader(dataset_test, batch_size=batch_size)
 
+
+
     model = net_class(input_size=net_input_size, output_size=net_output_size).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001)
     pos_weight = calculate_sample_weights(dataset_train, keys)
     loss_function = th.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     if "cnn" in str(net_class):
-        log_path = os.path.join(model_folder, f"observation_model_{n_train}_examples_{downsampling_size}_cnn.log")
+        log_folder = os.path.join(model_folder, f"observation_model_{n_train}_examples_{downsampling_size}_cnn")
+        log_path = os.path.join(log_folder, f"observation_model_{n_train}_examples_{downsampling_size}_cnn.log")
+
     else:
-        log_path = os.path.join(model_folder, f"observation_model_{n_train}_examples.log")
+        log_folder = os.path.join(model_folder, f"observation_model_{n_train}_examples")
+        log_path = os.path.join(log_folder, f"observation_model_{n_train}_examples.log")
+
+    writer = SummaryWriter(log_dir=log_folder)
     f_log = open(log_path, "w")
     for epoch in range(1, epochs):
-        train(model, device, train_loader, optimizer, epoch, loss_function, f_log)
-        test(model, device, test_loader, th.nn.BCEWithLogitsLoss(reduction='sum'), f_log)
+        train(model, device, train_loader, optimizer, epoch, loss_function, f_log, writer)
+        # test(model, device, test_loader, epoch, th.nn.BCEWithLogitsLoss(reduction='sum'), f_log, writer)
+        test(model, device, test_loader, epoch, loss_function, f_log, writer)
     if "cnn" in str(net_class):
         model_path = os.path.join(model_folder, f"observation_model_{n_train}_examples_{downsampling_size}_cnn.pt")
     else:
         model_path = os.path.join(model_folder, f"observation_model_{n_train}_examples.pt")
     th.save(model.state_dict(), model_path)
-
-
