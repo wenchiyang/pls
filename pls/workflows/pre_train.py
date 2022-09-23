@@ -18,6 +18,7 @@ import random
 import torchvision
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import datasets, transforms
+import time
 
 
 
@@ -282,6 +283,7 @@ num_iters_test1 = 0
 num_iters_test2 = 0
 
 def train(model, device, train_loader, optimizer, epoch, loss_function, f_log, writer):
+    start_time = time.time()
     model.train()
     global num_iters_train
     for batch_idx, (data, target) in enumerate(train_loader):
@@ -297,9 +299,13 @@ def train(model, device, train_loader, optimizer, epoch, loss_function, f_log, w
         f_log.write(f'Train Epoch: {epoch} [{(batch_idx+1) * len(data)}/{len(train_loader.dataset)} ({100. * (batch_idx+1) / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}\n')
         writer.add_scalar('Loss/train', loss.item(), num_iters_train)
         num_iters_train += 1
+    time_epoch = (time.time() - start_time)
+    writer.add_scalar('Time/train_per_epoch', time_epoch, epoch)
+
 
 
 def test(model, device, test_loader, epoch, loss_function, f_log, writer, use_train_set=False):
+    start_time = time.time()
     model.eval()
     avg_test_loss = 0
     correct = 0
@@ -331,13 +337,17 @@ def test(model, device, test_loader, epoch, loss_function, f_log, writer, use_tr
                 writer.add_scalar('Loss/test (use trainset)', test_loss, num_iters_test2)
                 num_iters_test2 += 1
 
+
     avg_test_loss /= len(test_loader.dataset)
 
     precision = (true_positive)/(true_positive+false_positive) if true_positive+false_positive != 0 else -1
     recall = (true_positive)/(true_positive+false_negative) if true_positive+false_negative != 0 else -1
     accuracy = correct / (len(test_loader.dataset) * target.size()[1])
 
+
+
     # log
+    time_epoch = (time.time() - start_time)
     if not use_train_set:
         f_log.write(f'Test set: Average loss: {test_loss:.4f}, \n\t\t' +
             f'Accuracy: {correct}/{len(test_loader.dataset) * target.size()[1]} ({100. * correct / (len(test_loader.dataset) * target.size()[1]):.0f}%)\n\t\t' +
@@ -348,10 +358,12 @@ def test(model, device, test_loader, epoch, loss_function, f_log, writer, use_tr
         writer.add_scalar('Test/precision', precision, epoch)
         writer.add_scalar('Test/recall', recall, epoch)
         writer.add_scalar('Test/accuracy', accuracy, epoch)
+        writer.add_scalar('Time/test_per_epoch', time_epoch, epoch)
     else:
         writer.add_scalar('Train/precision', precision, epoch)
         writer.add_scalar('Train/recall', recall, epoch)
         writer.add_scalar('Train/accuracy', accuracy, epoch)
+        writer.add_scalar('Time/test_per_epoch (use trainset)', time_epoch, epoch)
 
 def calculate_sample_weights(dataset, keys):
     # pos_weights = []
@@ -382,7 +394,7 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
 
     dataset_train = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, train=True, n_train=n_train)
     dataset_test1 = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, n_train=n_train, n_test=100)
-    dataset_test2 = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, n_train=0, n_test=n_train)
+    dataset_test2 = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, n_train=0, n_test=100)
 
     train_loader = th.utils.data.DataLoader(dataset_train, batch_size=batch_size)
     test_loader1 = th.utils.data.DataLoader(dataset_test1, batch_size=batch_size)
@@ -392,7 +404,14 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
 
     model = net_class(input_size=net_input_size, output_size=net_output_size).to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
+    print("CLASS WEIGHTS TRAIN:")
     pos_weight = calculate_sample_weights(dataset_train, keys)
+    print("CLASS WEIGHTS TEST:")
+    calculate_sample_weights(dataset_test1, keys)
+    print("CLASS WEIGHTS TEST (USE TRAINSET):")
+    calculate_sample_weights(dataset_test2, keys)
+
+
     loss_function = th.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     if "cnn" in str(net_class):
