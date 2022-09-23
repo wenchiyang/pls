@@ -391,7 +391,7 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     for epoch in range(1, epochs):
         train(model, device, train_loader, optimizer, epoch, loss_function, f_log, writer)
         test(model, device, test_loader, epoch, th.nn.BCEWithLogitsLoss(pos_weight=pos_weight), f_log, writer)
-        if epoch % 2 == 0:
+        if epoch % 100 == 0:
             path = os.path.join(log_folder, f"observation_{epoch}_steps.zip")
             th.save(model.state_dict(), path)
     if "cnn" in str(net_class):
