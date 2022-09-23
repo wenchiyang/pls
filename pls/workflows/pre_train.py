@@ -277,10 +277,11 @@ class Goal_Finding_Dataset(Dataset):
             sample = self.transform(sample)
         return sample
 
-
+num_iters = 0
 
 def train(model, device, train_loader, optimizer, epoch, loss_function, f_log, writer):
     model.train()
+    global num_iters
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device).squeeze(1)
         optimizer.zero_grad()
@@ -292,7 +293,8 @@ def train(model, device, train_loader, optimizer, epoch, loss_function, f_log, w
 
         # log
         f_log.write(f'Train Epoch: {epoch} [{(batch_idx+1) * len(data)}/{len(train_loader.dataset)} ({100. * (batch_idx+1) / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}\n')
-        writer.add_scalar('Loss/train', loss.item(), epoch)
+        writer.add_scalar('Loss/train', loss.item(), num_iters)
+        num_iters += 1
 
 
 def test(model, device, test_loader, epoch, loss_function, f_log, writer):
