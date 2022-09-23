@@ -321,8 +321,8 @@ def test(model, device, test_loader, epoch, loss_function, f_log, writer):
             assert true_positive+true_negative+false_positive+false_negative == target.numel()
     test_loss /= len(test_loader.dataset)
 
-    precision = (true_positive * 100)/(true_positive+false_positive) if true_positive+false_positive != 0 else -1
-    recall = (true_positive * 100)/(true_positive+false_negative) if true_positive+false_negative != 0 else -1
+    precision = (true_positive)/(true_positive+false_positive) if true_positive+false_positive != 0 else -1
+    recall = (true_positive)/(true_positive+false_negative) if true_positive+false_negative != 0 else -1
 
     # log
     f_log.write(f'Test set: Average loss: {test_loss:.4f}, \n\t\t' +
@@ -388,7 +388,7 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     for epoch in range(1, epochs):
         train(model, device, train_loader, optimizer, epoch, loss_function, f_log, writer)
         # test(model, device, test_loader, epoch, th.nn.BCEWithLogitsLoss(reduction='sum'), f_log, writer)
-        test(model, device, test_loader, epoch, loss_function, f_log, writer)
+        test(model, device, test_loader, epoch, th.nn.BCEWithLogitsLoss(reduction='sum'), f_log, writer)
     if "cnn" in str(net_class):
         model_path = os.path.join(model_folder, f"observation_model_{n_train}_examples_{downsampling_size}_cnn.pt")
     else:
