@@ -6,7 +6,7 @@ import gym
 import pacman_gym
 from pacman_gym.envs.goal_finding import sample_layout
 import csv
-from pls.dpl_policies.goal_finding.util import get_ground_wall
+from pls.dpl_policies.goal_finding.util import get_ground_wall, get_agent_coord
 from pls.dpl_policies.sokoban.util import get_ground_truth_of_box, get_ground_truth_of_corners
 import torch as th
 import pandas as pd
@@ -145,7 +145,7 @@ def generate_random_images_gf(csv_path, folder, n_images=10):
     FOOD_COLOR = 1
     f_csv = open(csv_path, "w")
     writer = csv.writer(f_csv)
-    writer.writerow(["image_name", "ghost(up)", "ghost(down)", "ghost(left)", "ghost(right)"])
+    writer.writerow(["image_name", "ghost(up)", "ghost(down)", "ghost(left)", "ghost(right)", "agent_x", "agent_y"])
     config = {
         "env_type": "GoalFinding-v0",
         "env_features":{
@@ -204,7 +204,8 @@ def generate_random_images_gf(csv_path, folder, n_images=10):
         tinyGrid = env.game.compose_img("tinygrid")
         tinyGrid = th.tensor(tinyGrid).unsqueeze(0)
         ground_truth_ghost = get_ground_wall(tinyGrid, PACMAN_COLOR, GHOST_COLOR)
-        row = [f"img{n:06}.jpeg"] + ground_truth_ghost.flatten().tolist()
+        agent_r, agent_c = get_agent_coord(tinyGrid, PACMAN_COLOR)
+        row = [f"img{n:06}.jpeg"] + ground_truth_ghost.flatten().tolist() + [agent_r, agent_c]
         writer.writerow(row)
         f_csv.flush()
         if n % 10 == 0:
@@ -282,7 +283,7 @@ num_iters_train = 0
 num_iters_test1 = 0
 num_iters_test2 = 0
 
-def train(model, device, train_loader, optimizer, epoch, loss_function, f_log, writer):
+def train(model, device, train_loader, optimizer, epoch, loss_function1, loss_function2, f_log, writer):
     start_time = time.time()
     model.train()
     global num_iters_train
@@ -290,45 +291,55 @@ def train(model, device, train_loader, optimizer, epoch, loss_function, f_log, w
         data, target = data.to(device), target.to(device).squeeze(1)
         optimizer.zero_grad()
         output = model(data)
-        loss = loss_function(output, target)
-
+        fire_labels = output[:, :4]
+        agent_coord = output[:, -2:]
+        fire_loss = loss_function1(fire_labels, target[:, :4])
+        agent_coord_loss = loss_function2(agent_coord, target[:, -2:])
+        loss = fire_loss + agent_coord_loss
         loss.backward()
         optimizer.step()
 
         # log
         f_log.write(f'Train Epoch: {epoch} [{(batch_idx+1) * len(data)}/{len(train_loader.dataset)} ({100. * (batch_idx+1) / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}\n')
         writer.add_scalar('Loss/train', loss.item(), num_iters_train)
+        writer.add_scalar('Loss/train_fire', fire_loss.item(), num_iters_train)
+        writer.add_scalar('Loss/train_agent_coord', agent_coord_loss.item(), num_iters_train)
         num_iters_train += 1
     time_epoch = (time.time() - start_time)
     writer.add_scalar('Time/train_per_epoch', time_epoch, epoch)
 
 
 
-def test(model, device, test_loader, epoch, loss_function, f_log, writer, use_train_set=False):
+def test(model, device, test_loader, epoch, loss_function1, loss_function2, f_log, writer, use_train_set=False):
     start_time = time.time()
     model.eval()
     avg_test_loss = 0
     correct = 0
-    true_positive, true_negative, false_positive, false_negative = 0, 0, 0, 0
+    total_tp, total_tn, total_fp, total_fn = 0, 0, 0, 0
     sig = nn.Sigmoid()
     global num_iters_test1, num_iters_test2
     with th.no_grad():
         for batch_idx, (data, target) in enumerate(test_loader):
             data, target = data.to(device), target.to(device).squeeze(1)
             output = model(data)
-            test_loss = loss_function(output, target).item()  # sum up batch loss
+            fire_labels = output[:, :4]
+            agent_coord = output[:, -2:]
+            fire_targets = target[:, :4]
+            test_fire_loss = loss_function1(fire_labels, fire_targets).item()  # sum up batch loss
+            test_agent_coord_loss = loss_function2(agent_coord, target[:, -2:]).item()
+            test_loss = test_fire_loss + test_agent_coord_loss
             avg_test_loss += test_loss
-            pred = (sig(output) > 0.5).float()
-            correct += pred.eq(target.view_as(pred)).sum().item()
-            tp = th.logical_and(target.view_as(pred) == 1, pred == 1).sum().item()
-            tn = th.logical_and(target.view_as(pred) == 0, pred == 0).sum().item()
-            fp = th.logical_and(target.view_as(pred) == 0, pred == 1).sum().item()
-            fn = th.logical_and(target.view_as(pred) == 1, pred == 0).sum().item()
-            assert tp+tn+fp+fn == target.numel()
-            true_positive += tp
-            true_negative += tn
-            false_positive += fp
-            false_negative += fn
+            pred = (sig(fire_labels) > 0.5).float()
+            correct += (fire_targets == pred).sum().item()
+            tp = th.logical_and(fire_targets == 1, pred == 1).sum().item()
+            tn = th.logical_and(fire_targets == 0, pred == 0).sum().item()
+            fp = th.logical_and(fire_targets == 0, pred == 1).sum().item()
+            fn = th.logical_and(fire_targets == 1, pred == 0).sum().item()
+            assert tp+tn+fp+fn == fire_labels.numel()
+            total_tp += tp
+            total_tn += tn
+            total_fp += fp
+            total_fn += fn
             # log
             if not use_train_set:
                 writer.add_scalar('Loss/test', test_loss, num_iters_test1)
@@ -340,9 +351,9 @@ def test(model, device, test_loader, epoch, loss_function, f_log, writer, use_tr
 
     avg_test_loss /= len(test_loader.dataset)
 
-    precision = (true_positive)/(true_positive+false_positive) if true_positive+false_positive != 0 else -1
-    recall = (true_positive)/(true_positive+false_negative) if true_positive+false_negative != 0 else -1
-    accuracy = correct / (len(test_loader.dataset) * target.size()[1])
+    precision = (total_tp)/(total_tp+total_fp) if total_tp+total_fp != 0 else -1
+    recall = (total_tp)/(total_tp+total_fn) if total_tp+total_fn != 0 else -1
+    accuracy = correct / (len(test_loader.dataset) * 4)
 
 
 
@@ -351,9 +362,9 @@ def test(model, device, test_loader, epoch, loss_function, f_log, writer, use_tr
     if not use_train_set:
         f_log.write(f'Test set: Average loss: {test_loss:.4f}, \n\t\t' +
             f'Accuracy: {correct}/{len(test_loader.dataset) * target.size()[1]} ({100. * correct / (len(test_loader.dataset) * target.size()[1]):.0f}%)\n\t\t' +
-            f'Precision: {true_positive}/{true_positive+false_positive} ({100. * precision:.0f}%),\n\t\t' +
-            f'Recall: {true_positive}/{true_positive+false_negative} ({100. * recall:.0f}%), \n\t\t' +
-            f'tp: {true_positive}, tn: {true_negative}, fp: {false_positive}, fn:{false_negative}\n')
+            f'Precision: {total_tp}/{total_tp+total_fp} ({100. * precision:.0f}%),\n\t\t' +
+            f'Recall: {total_tp}/{total_tp+total_fn} ({100. * recall:.0f}%), \n\t\t' +
+            f'tp: {total_tp}, tn: {total_tn}, fp: {total_fp}, fn:{total_fn}\n')
         f_log.flush()
         writer.add_scalar('Test/precision', precision, epoch)
         writer.add_scalar('Test/recall', recall, epoch)
@@ -412,7 +423,8 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     calculate_sample_weights(dataset_test2, keys)
 
 
-    loss_function = th.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    loss_function1 = th.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    loss_function2 = th.nn.MSELoss()
 
     if "cnn" in str(net_class):
         log_folder = os.path.join(model_folder, f"observation_model_{n_train}_examples_{downsampling_size}_cnn")
@@ -425,9 +437,9 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     writer = SummaryWriter(log_dir=log_folder)
     f_log = open(log_path, "w")
     for epoch in range(1, epochs):
-        train(model, device, train_loader, optimizer, epoch, loss_function, f_log, writer)
-        test(model, device, test_loader1, epoch, loss_function, f_log, writer)
-        test(model, device, test_loader2, epoch, loss_function, f_log, writer, use_train_set=True)
+        train(model, device, train_loader, optimizer, epoch, loss_function1, loss_function2, f_log, writer)
+        test(model, device, test_loader1, epoch, loss_function1, loss_function2, f_log, writer)
+        test(model, device, test_loader2, epoch, loss_function1, loss_function2, f_log, writer, use_train_set=True)
         if epoch % 100 == 0:
             path = os.path.join(log_folder, f"observation_{epoch}_steps.zip")
             th.save(model.state_dict(), path)
