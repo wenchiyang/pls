@@ -27,10 +27,11 @@ def run_evaluate():
     # hard = os.path.join(folder, "hard_shielding")
     # soft2 = os.path.join(folder, "soft_shielding2")
 
-    # model_at_step = 100000
+    # model_at_step = 1500000
+    # model_at_step = 1000000
     model_at_step = "end"
     mean_reward, n_deaths = evaluate(folder, model_at_step=model_at_step, n_test_episodes=100)
-    print("no:", mean_reward, n_deaths)
+    print(mean_reward, n_deaths)
 
 def main_cluster():
     client = Client("134.58.41.100:8786")
@@ -49,25 +50,31 @@ def main_cluster_test():
 
 if __name__ == "__main__":
     hyper_parameters = {
-        "exp_folders": ["experiments4"],
+        "exp_folders": [
+            # "experiments4",
+            # "experiments_trials3"
+            "experiments_safety"
+        ],
         "domains": [
-            # "sokoban/2box10map_long",
-            # "goal_finding/smallGrid100map",
-            "goal_finding/7grid5g"
-            # "goal_finding/7grid5g_gray2"
-            # "sokoban/2box5map",
-            # "sokoban/2box5map_gray",
+            # "goal_finding/7grid5g"
+            "goal_finding/small"
+            # "sokoban/2box1map",
             # "carracing/onemap"
             # "carracing/sparse_rewards4"
+            # "goal_finding/test3"
         ],
         "exps": [
-            "PPO",
-            "PLSperf",
-            "VSRLperf",
+            "sflosscoef",
+            "noisy",
+            "thres",
+            # "test"
             ],
         "seeds":
-            # ["PPO", "PLS", "seed3", "seed4", "seed5"]
-            ["seed1"]
+            [
+            "PPO", "coef=0.1", "coef=1", "coef=5",
+            "PLSnpisy", "coef=0.01", "coef=0.1", "coef=1", "coef=5", "coef=10",
+            "PLSthres",
+            ]
     }
 
     # dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -91,7 +98,8 @@ if __name__ == "__main__":
                               hyper["seeds"],
                               )
         exps.append(folder)
-    # main_cluster()
+    main_cluster()
     # main_cluster_test()
-    run_test()
+    # run_train()
+    # run_test()
     # run_evaluate()

@@ -313,15 +313,17 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         if self.alpha != 0 and self.use_learned_observations:
             if self.train_observations:
                 if self.noisy_observations:
-                    ghosts = self.observation_model.sigmoid(self.observation_model(x))
+                    ghosts = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
                 else:
-                    ghosts = (self.observation_model.sigmoid(self.observation_model(x)) > 0.5).float()
+                    ghosts = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                    ghosts = (ghosts > 0.5).float()
             else:
                 with th.no_grad():
                     if self.noisy_observations:
-                        ghosts = self.observation_model.sigmoid(self.observation_model(x))
+                        ghosts = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
                     else:
-                        ghosts = (self.observation_model.sigmoid(self.observation_model(x)) > 0.5).float()
+                        ghosts = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                        ghosts = (ghosts > 0.5).float()
 
         else:
             ghosts = ground_truth_ghost

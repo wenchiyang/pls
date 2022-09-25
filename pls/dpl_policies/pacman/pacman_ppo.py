@@ -396,7 +396,8 @@ class Pacman_DPLPPO(PPO):
                 )
 
             new_obs, rewards, dones, infos = env.step(clipped_actions)
-
+            # if th.any(object_detect_probs["ground_truth_ghost"]):
+            #     k=1
             for e in env.envs:
                 if e.env.render_or_not:
                     e.env.render()

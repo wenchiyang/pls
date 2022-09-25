@@ -15,7 +15,7 @@
     "render_mode": "gray",
     "height": 482,
     "width": 482,
-    "downsampling_size": 10,
+    "downsampling_size": 8,
     "background": "bg_small.jpg"
   },
 
@@ -32,7 +32,7 @@
     "render_mode": "gray",
     "height": 482,
     "width": 482,
-    "downsampling_size": 10,
+    "downsampling_size": 8,
     "background": "bg_small.jpg"
   },
 
