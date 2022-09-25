@@ -343,9 +343,13 @@ def test(model, device, test_loader, epoch, loss_function1, loss_function2, f_lo
             # log
             if not use_train_set:
                 writer.add_scalar('Loss/test', test_loss, num_iters_test1)
+                writer.add_scalar('Loss/test_fire_loss', test_fire_loss, num_iters_test1)
+                writer.add_scalar('Loss/test_agent_coord_loss', test_agent_coord_loss, num_iters_test1)
                 num_iters_test1 += 1
             else:
                 writer.add_scalar('Loss/test (use trainset)', test_loss, num_iters_test2)
+                writer.add_scalar('Loss/test_fire_loss (use trainset)', test_fire_loss, num_iters_test2)
+                writer.add_scalar('Loss/test_agent_coord_loss (use trainset)', test_agent_coord_loss, num_iters_test2)
                 num_iters_test2 += 1
 
 
@@ -400,6 +404,7 @@ def calculate_sample_weights(dataset, keys):
 def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_size, net_output_size, image_dim, downsampling_size, epochs, keys):
     use_cuda = False
     batch_size = 8
+    save_freq = 50
     device = th.device("cuda" if use_cuda else "cpu")
     th.manual_seed(0)
 
@@ -440,8 +445,8 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
         train(model, device, train_loader, optimizer, epoch, loss_function1, loss_function2, f_log, writer)
         test(model, device, test_loader1, epoch, loss_function1, loss_function2, f_log, writer)
         test(model, device, test_loader2, epoch, loss_function1, loss_function2, f_log, writer, use_train_set=True)
-        if epoch % 100 == 0:
-            path = os.path.join(log_folder, f"observation_{epoch}_steps.zip")
+        if epoch % save_freq == 0:
+            path = os.path.join(log_folder, f"observation_{epoch}_steps.pt")
             th.save(model.state_dict(), path)
     if "cnn" in str(net_class):
         model_path = os.path.join(model_folder, f"observation_model_{n_train}_examples_{downsampling_size}_cnn.pt")
