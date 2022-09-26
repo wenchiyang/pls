@@ -15,7 +15,7 @@
     "render_mode": "gray",
     "height": 482,
     "width": 482,
-    "downsampling_size": 10,
+    "downsampling_size": 8,
     "background": "bg_small.jpg"
   },
   "eval_env_features": {
@@ -31,7 +31,7 @@
     "render_mode": "gray",
     "height": 482,
     "width": 482,
-    "downsampling_size": 10,
+    "downsampling_size": 8,
     "background": "bg_small.jpg"
   },
   "model_features": {
@@ -45,12 +45,12 @@
       "use_learned_observations": true,
       "train_observations": false,
       "noisy_observations": false,
-      "observation_type": "observation_model_1000_examples.pt"
+      "observation_type": "observation_2k_examples_100_steps.pt"
     },
 
     "params": {
       "log_interval": 1,
-      "batch_size": 1024,
+      "batch_size": 128,
       "n_epochs": 15,
       "n_steps": 2048,
       "learning_rate": 0.0001,
@@ -60,7 +60,9 @@
       "step_limit": 1000000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
-      "net_arch_vf": [64, 64]
+      "net_arch_vf": [64, 64],
+      "target_kl": 0.1,
+      "safety_coef": 0
     }
   }
 }
