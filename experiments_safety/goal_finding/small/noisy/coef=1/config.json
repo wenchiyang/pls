@@ -50,7 +50,7 @@
 
     "params": {
       "log_interval": 1,
-      "batch_size": 1024,
+      "batch_size": 128,
       "n_epochs": 15,
       "n_steps": 2048,
       "learning_rate": 0.0001,
@@ -61,6 +61,7 @@
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
       "net_arch_vf": [64, 64],
+      "target_kl": 0.1,
       "safety_coef": 1
     }
   }
