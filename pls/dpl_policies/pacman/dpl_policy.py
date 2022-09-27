@@ -376,7 +376,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
                     acc = th.ones((ghosts.size()[0], 1)) # extra dimension for action "stay"
                     mask = th.cat((acc, ~ghosts.bool()), 1).bool()
                     masked_distr = distribution.distribution.probs * mask
-                    safe_normalization_const = th.sum(masked_distr, dim=1)
+                    safe_normalization_const = th.sum(masked_distr, dim=1,  keepdim=True)
                     safeast_actions = masked_distr / safe_normalization_const
 
                     alpha = self.alpha
@@ -391,6 +391,16 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
                 log_prob = distribution.log_prob(actions)
                 object_detect_probs["num_rejected_samples"] = num_rejected_samples
                 object_detect_probs["alpha"] = alpha
+
+                results = self.query_safety_layer(
+                    x={
+                        "ghost": ghosts,
+                        "action": base_actions,
+                    }
+                )
+                policy_safety = results["safe_next"]
+                object_detect_probs["policy_safety"] = policy_safety
+
                 return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
         if self.differentiable_shield: # PLS

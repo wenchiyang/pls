@@ -579,7 +579,7 @@ class Pacman_DPLPPO(PPO):
                     continue_training = False
                     if self.verbose >= 1:
                         print(f"Early stopping at step {epoch} due to reaching max kl: {approx_kl_div:.2f}")
-                    # break
+                    break
 
                 # Optimization step
                 self.policy.optimizer.zero_grad()
