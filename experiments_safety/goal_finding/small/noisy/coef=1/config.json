@@ -50,7 +50,7 @@
 
     "params": {
       "log_interval": 1,
-      "batch_size": 128,
+      "batch_size": 512,
       "n_epochs": 15,
       "n_steps": 2048,
       "learning_rate": 0.0001,
