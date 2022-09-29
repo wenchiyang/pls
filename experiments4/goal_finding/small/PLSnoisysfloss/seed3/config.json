@@ -35,14 +35,17 @@
     "background": "bg_small.jpg"
   },
   "model_features": {
-    "name": "PLSperf",
+    "name": "PLSnoisy",
     "shield_params": {
       "n_ghost_locs": 4,
       "alpha": 1,
       "differentiable_shield": true,
       "program_type": "relative_loc_simple",
       "tinygrid_dim": 15,
-      "use_learned_observations": false
+      "use_learned_observations": true,
+      "train_observations": false,
+      "noisy_observations": true,
+      "observation_type": "observation_2k_examples_100_steps.pt"
     },
 
     "params": {
@@ -51,14 +54,14 @@
       "n_epochs": 15,
       "n_steps": 2048,
       "learning_rate": 0.0001,
-      "seed": 111,
+      "seed": 890,
       "clip_range": 0.1,
       "gamma": 0.99,
       "step_limit": 700000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
       "net_arch_vf": [64, 64],
-      "safety_coef": 0
+      "safety_coef": 1
     }
   }
 }
