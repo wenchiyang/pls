@@ -10,10 +10,6 @@ domain_goal_finidng = os.path.join(dir_path, "../..", "experiments4", "goal_find
 domain_sokoban = os.path.join(dir_path, "../..", "experiments4", "sokoban", "2box1map")
 domain_carracing = os.path.join(dir_path, "../..", "experiments_trials3", "carracing", "sparse_rewards4")
 
-# dir_path = "/cw/dtaijupiter/NoCsBack/dtai/wenchi/pls/experiments_trials3"
-# domain_goal_finidng = os.path.join(dir_path, "goal_finding", "7grid5g")
-# domain_sokoban = os.path.join(dir_path, "sokoban", "2box10map")
-
 NAMES = {
     "sokoban": domain_sokoban,
     "goal_finding": domain_goal_finidng,
@@ -34,19 +30,10 @@ ALPHA_NAMES_DIFF = {
     "hard_shielding": "PLS",
     "no_shielding": "PPO"
 }
-ALPHA_NAMES = {
-    "no_shielding": "0.0",
-    "hard_shielding": "1.0",
-    "alpha_0.1": "0.1",
-    "alpha_0.3": "0.3",
-    "alpha_0.5": "0.5",
-    "alpha_0.7": "0.7",
-    "alpha_0.9": "0.9",
-    "vsrl": "vsrl"
-}
+
 ALPHA_NAMES_LEARNING_CURVES = {
-    "no_shielding": "PPO",
-    "hard_shielding": "PLS",
+    # "no_shielding": "PPO",
+    # "hard_shielding": "PLS",
     "PPO": "PPO",
     "PLSperf": "PLSperf",
     "PLSnoisy": "PLSnoisy",
@@ -70,7 +57,6 @@ TAGS = [
     "safety/ep_rel_safety_shielded",
 ]
 SEEDS = ["seed1", "seed2", "seed3", "seed4", "seed5"]
-# SEEDS = ["PPO"]
 
 def load_dataframe_from_file(path, tag):
     ea = event_accumulator.EventAccumulator(path)
@@ -113,39 +99,37 @@ def load_step_value(folder, tag, n_step):
     return value
 
 def extract_values():
-    folder = os.path.join(dir_path, "../..", "experiments_trials3", "goal_finding", "7grid5g_gray2")
+    folder = os.path.join(dir_path, "../..", "experiments4", "goal_finding", "small")
     exp_names = [
         "PPO",
-        "PLS_perfect",
-        "PLSnoisy_0.1k",
-        "PLSnoisy_1k",
-        "PLSnoisy_10k",
-        "PLSthres_0.1k",
-        "PLSthres_1k",
-        "PLSthres_10k",
-        "VSRL_perfect",
-        "VSRL_0.1k",
-        "VSRL_1k",
-        "VSRL_10k",
-        "PLSnoisy_imp_0.1k",
-        "PLSnoisy_imp_1k",
-        "PLSnoisy_imp_10k",
+        "VSRLperf",
+        "PLSperf",
+        "VSRLthres",
+        "PLSthres",
+        "PLSnoisy",
+        "PPOsfloss",
+        "PLSnoisysfloss"
     ]
 
-    tags = ["rollout/ep_rew_mean", "safety/ep_abs_safety_shielded", "safety/ep_rel_safety_shielded"]
+    tags = ["rollout/ep_rew_mean", "safety/ep_rel_safety_shielded", "safety/n_deaths"]
 
-    print("REWARD")
     for exp in exp_names:
-        exp_folder = os.path.join(folder, exp, "PPO")
-        r = load_step_value(exp_folder, tags[0], 500_000)
-        s1 = load_step_value(exp_folder, tags[1], 500_000)
-        s2 = load_step_value(exp_folder, tags[2], 500_000)
-        print(f"{exp}:")
-        print(f"\tREWARD: \t\t{r}")
-        print(f"\tABS SAFETY: \t\t{s1}")
-        print(f"\tREL SAFETY: \t\t{s2}")
+        rs, ss, vs = [], [], []
+        for seed in SEEDS:
+            exp_folder = os.path.join(folder, exp, seed)
+            r = load_step_value(exp_folder, tags[0], 500_000)
+            s = load_step_value(exp_folder, tags[1], 500_000)
+            v = load_step_value(exp_folder, tags[2], 500_000)
+            rs.append(r)
+            ss.append(s)
+            vs.append(v)
+        avg_r = sum(rs)/len(rs)
+        avg_s = sum(ss)/len(ss)
+        avg_v = sum(vs)/len(vs)
 
-# extract_values()
+        print(f"{exp}\t\t{avg_r:.2f}\t{avg_s:.2f}\t{avg_v:.2f}")
+
+extract_values()
 
 def load_single_value_rej_vsrl(exp, steps):
     rejs = []
