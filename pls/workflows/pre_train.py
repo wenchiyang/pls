@@ -8,6 +8,7 @@ from pacman_gym.envs.goal_finding import sample_layout
 import csv
 from pls.dpl_policies.goal_finding.util import get_ground_wall, get_agent_coord
 from pls.dpl_policies.sokoban.util import get_ground_truth_of_box, get_ground_truth_of_corners
+from pls.dpl_policies.sokoban.util import get_agent_coord as get_agent_coord_sokoban
 import torch as th
 import pandas as pd
 import numpy as np
@@ -68,7 +69,7 @@ def generate_random_images_sokoban(csv_path, folder, n_images=10):
 
     f_csv = open(csv_path, "w")
     writer = csv.writer(f_csv)
-    writer.writerow(["image_name", "box(up)", "box(down)", "box(left)", "box(right)", "corner(up)", "corner(down)", "corner(left)", "corner(right)"])
+    writer.writerow(["image_name", "box(up)", "box(down)", "box(left)", "box(right)", "corner(up)", "corner(down)", "corner(left)", "corner(right)", "agent_r", "agent_c"])
 
     cache_root = os.path.join(folder, "../../../")
 
@@ -104,18 +105,10 @@ def generate_random_images_sokoban(csv_path, folder, n_images=10):
 
     for n in range(n_images):
         env.select_room()
-        # imgg = env.render(mode="rgb_array")
-        # plt.imshow(img, cmap="gray", vmin=-1, vmax=1)
-        # plt.show()
-
         room = sample_object_locations_sokoban(env.room_fixed, num_boxes)
-        # print(room)
         env.env.room_state = room
         # print(env.env.room_state)
         img = env.render(mode="rgb_array")
-
-        # plt.imshow(img, cmap="gray", vmin=-1, vmax=1)
-        # plt.show()
 
         path = os.path.join(folder, f"img{n:06}.jpeg")
         plt.imsave(path, img)
@@ -128,9 +121,10 @@ def generate_random_images_sokoban(csv_path, folder, n_images=10):
         ground_truth_corner = get_ground_truth_of_corners(
             input=tinyGrid, agent_colors=PLAYER_COLORS, obsacle_colors=OBSTABLE_COLORS, floor_color=FLOOR_COLOR,
         )
-        ground_truth = th.cat((ground_truth_box, ground_truth_corner), 1)
+        agent_r, agent_c = get_agent_coord_sokoban(tinyGrid, PLAYER_COLORS)
+        ground_truth = th.cat((ground_truth_box, ground_truth_corner), 1).flatten().tolist() + [agent_r, agent_c]
 
-        row = [f"img{n:06}.jpeg"] + ground_truth.flatten().tolist()
+        row = [f"img{n:06}.jpeg"] + ground_truth
         writer.writerow(row)
         f_csv.flush()
         if n % 10 == 0:
@@ -145,7 +139,7 @@ def generate_random_images_gf(csv_path, folder, n_images=10):
     FOOD_COLOR = 1
     f_csv = open(csv_path, "w")
     writer = csv.writer(f_csv)
-    writer.writerow(["image_name", "ghost(up)", "ghost(down)", "ghost(left)", "ghost(right)", "agent_x", "agent_y"])
+    writer.writerow(["image_name", "ghost(up)", "ghost(down)", "ghost(left)", "ghost(right)", "agent_r", "agent_c"])
     config = {
         "env_type": "GoalFinding-v0",
         "env_features":{
@@ -283,7 +277,7 @@ num_iters_train = 0
 num_iters_test1 = 0
 num_iters_test2 = 0
 
-def train(model, device, train_loader, optimizer, epoch, loss_function1, loss_function2, f_log, writer):
+def train(model, device, train_loader, optimizer, epoch, loss_function1, loss_function2, net_output_size, f_log, writer):
     start_time = time.time()
     model.train()
     global num_iters_train
@@ -291,9 +285,9 @@ def train(model, device, train_loader, optimizer, epoch, loss_function1, loss_fu
         data, target = data.to(device), target.to(device).squeeze(1)
         optimizer.zero_grad()
         output = model(data)
-        fire_labels = output[:, :4]
+        fire_labels = output[:, :net_output_size]
         agent_coord = output[:, -2:]
-        fire_loss = loss_function1(fire_labels, target[:, :4])
+        fire_loss = loss_function1(fire_labels, target[:, :net_output_size])
         agent_coord_loss = loss_function2(agent_coord, target[:, -2:])
         loss = fire_loss + agent_coord_loss
         loss.backward()
@@ -310,7 +304,7 @@ def train(model, device, train_loader, optimizer, epoch, loss_function1, loss_fu
 
 
 
-def test(model, device, test_loader, epoch, loss_function1, loss_function2, f_log, writer, use_train_set=False):
+def test(model, device, test_loader, epoch, loss_function1, loss_function2, net_output_size, f_log, writer, use_train_set=False):
     start_time = time.time()
     model.eval()
     avg_test_loss = 0
@@ -322,9 +316,9 @@ def test(model, device, test_loader, epoch, loss_function1, loss_function2, f_lo
         for batch_idx, (data, target) in enumerate(test_loader):
             data, target = data.to(device), target.to(device).squeeze(1)
             output = model(data)
-            fire_labels = output[:, :4]
+            fire_labels = output[:, :net_output_size]
             agent_coord = output[:, -2:]
-            fire_targets = target[:, :4]
+            fire_targets = target[:, :net_output_size]
             test_fire_loss = loss_function1(fire_labels, fire_targets).item()  # sum up batch loss
             test_agent_coord_loss = loss_function2(agent_coord, target[:, -2:]).item()
             test_loss = test_fire_loss + test_agent_coord_loss
@@ -357,7 +351,7 @@ def test(model, device, test_loader, epoch, loss_function1, loss_function2, f_lo
 
     precision = (total_tp)/(total_tp+total_fp) if total_tp+total_fp != 0 else -1
     recall = (total_tp)/(total_tp+total_fn) if total_tp+total_fn != 0 else -1
-    accuracy = correct / (len(test_loader.dataset) * 4)
+    accuracy = correct / (len(test_loader.dataset) * net_output_size)
 
 
 
@@ -442,9 +436,9 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     writer = SummaryWriter(log_dir=log_folder)
     f_log = open(log_path, "w")
     for epoch in range(1, epochs):
-        train(model, device, train_loader, optimizer, epoch, loss_function1, loss_function2, f_log, writer)
-        test(model, device, test_loader1, epoch, loss_function1, loss_function2, f_log, writer)
-        test(model, device, test_loader2, epoch, loss_function1, loss_function2, f_log, writer, use_train_set=True)
+        train(model, device, train_loader, optimizer, epoch, loss_function1, loss_function2, net_output_size, f_log, writer)
+        test(model, device, test_loader1, epoch, loss_function1, loss_function2, net_output_size, f_log, writer)
+        test(model, device, test_loader2, epoch, loss_function1, loss_function2, net_output_size, f_log, writer, use_train_set=True)
         if epoch % save_freq == 0:
             path = os.path.join(log_folder, f"observation_{epoch}_steps.pt")
             th.save(model.state_dict(), path)
