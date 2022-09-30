@@ -403,8 +403,8 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     th.manual_seed(0)
 
     dataset_train = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, train=True, n_train=n_train)
-    dataset_test1 = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, n_train=n_train, n_test=100)
-    dataset_test2 = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, n_train=0, n_test=100)
+    dataset_test1 = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, n_train=n_train, n_test=200)
+    dataset_test2 = Goal_Finding_Dataset(csv_file, root_dir, image_dim, downsampling_size, n_train=0, n_test=200)
 
     train_loader = th.utils.data.DataLoader(dataset_train, batch_size=batch_size)
     test_loader1 = th.utils.data.DataLoader(dataset_test1, batch_size=batch_size)
