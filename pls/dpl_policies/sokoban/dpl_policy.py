@@ -186,7 +186,6 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         )
         super(Sokoban_DPLActorCriticPolicy, self).__init__(observation_space,action_space, lr_schedule, **kwargs)
         ###############################
-
         self.image_encoder = image_encoder
         self.n_box_locs = shielding_params["n_box_locs"]
         self.n_corner_locs = shielding_params["n_corner_locs"]
@@ -321,13 +320,15 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 if self.noisy_observations:
                     boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
                 else:
-                    boxes_and_corners = (self.observation_model.sigmoid(self.observation_model(x)) > 0.5).float()
+                    boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                    boxes_and_corners = (boxes_and_corners > 0.5).float()
             else:
                 with th.no_grad():
                     if self.noisy_observations:
                         boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
                     else:
-                        boxes_and_corners = (self.observation_model.sigmoid(self.observation_model(x)) > 0.5).float()
+                        boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                        boxes_and_corners = (boxes_and_corners > 0.5).float()
             boxes = boxes_and_corners[:, :self.n_box_locs]
             corners = boxes_and_corners[:, self.n_box_locs:]
         else:
@@ -345,6 +346,16 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             actions = distribution.get_actions(deterministic=deterministic)
             log_prob = distribution.log_prob(actions)
             object_detect_probs["alpha"] = 0
+            results = self.query_safety_layer(
+                x={
+                    "box": boxes,
+                    "corner": corners,
+                    "action": base_actions,
+                }
+            )
+            policy_safety = results["safe_next"]
+            object_detect_probs["policy_safety"] = policy_safety
+
             return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
 
         if not self.differentiable_shield: # VSRL
@@ -376,7 +387,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                     acc = th.ones((risky_actions.size()[0], 1)) # extra dimension for action "stay"
                     mask = th.cat((acc, ~risky_actions.bool()), 1).bool()
                     masked_distr = distribution.distribution.probs * mask
-                    safe_normalization_const = th.sum(masked_distr, dim=1)
+                    safe_normalization_const = th.sum(masked_distr, dim=1, keepdim=True)
                     safeast_actions = masked_distr / safe_normalization_const
 
                     alpha = self.alpha
@@ -387,9 +398,21 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                         actions = mass.sample()
                     else:
                         actions = th.argmax(mass.probs, dim=1)
+
                 log_prob = distribution.log_prob(actions)
                 object_detect_probs["num_rejected_samples"] = num_rejected_samples
                 object_detect_probs["alpha"] = alpha
+
+                results = self.query_safety_layer(
+                    x={
+                        "box": boxes,
+                        "corner": corners,
+                        "action": base_actions,
+                    }
+                )
+                policy_safety = results["safe_next"]
+                object_detect_probs["policy_safety"] = policy_safety
+
                 return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
         if self.differentiable_shield:
@@ -414,6 +437,17 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
 
             log_prob = mass.log_prob(actions)
             object_detect_probs["alpha"] = alpha
+
+            results = self.query_safety_layer(
+                x={
+                    "box": boxes,
+                    "corner": corners,
+                    "action": base_actions,
+                }
+            )
+            policy_safety = results["safe_next"]
+            object_detect_probs["policy_safety"] = policy_safety
+
             return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
 
@@ -436,11 +470,50 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             distribution = self._get_action_dist_from_latent(latent_pi)
             log_prob = distribution.log_prob(actions)
             values = self.value_net(latent_vf)
-            return values, log_prob, distribution.entropy()
+            base_actions = distribution.distribution.probs
+            with th.no_grad():
+                ground_truth_box = get_ground_truth_of_box(
+                    input=tinygrid, agent_colors=PLAYER_COLORS, box_colors=BOX_COLORS,
+                ) if tinygrid is not None else None
+                ground_truth_corner = get_ground_truth_of_corners(
+                    input=tinygrid, agent_colors=PLAYER_COLORS, obsacle_colors=OBSTABLE_COLORS, floor_color=FLOOR_COLOR,
+                ) if tinygrid is not None else None
 
-        _, values, _, mass, _ = self.forward(obs, tinygrid=tinygrid)
+            if self.alpha != 0 and self.use_learned_observations:
+                if self.train_observations:
+                    if self.noisy_observations:
+                        boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                    else:
+                        boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                        boxes_and_corners = (boxes_and_corners > 0.5).float()
+                else:
+                    with th.no_grad():
+                        if self.noisy_observations:
+                            boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                        else:
+                            boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                            boxes_and_corners = (boxes_and_corners > 0.5).float()
+                boxes = boxes_and_corners[:, :self.n_box_locs]
+                corners = boxes_and_corners[:, self.n_box_locs:]
+            else:
+                boxes = ground_truth_box
+                corners = ground_truth_corner
+
+            results = self.query_safety_layer(
+                x={
+                    "box": boxes,
+                    "corner": corners,
+                    "action": base_actions,
+                }
+            )
+            policy_safety = results["safe_next"]
+
+            return values, log_prob, distribution.entropy(), policy_safety
+
+        _, values, _, mass, _, [object_detect_probs, _]  = self.forward(obs, tinygrid=tinygrid)
         log_prob = mass.log_prob(actions)
-        return values, log_prob, mass.entropy()
+        policy_safety = object_detect_probs["policy_safety"]
+        return values, log_prob, mass.entropy(), policy_safety
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False, tinygrid = None) -> th.Tensor:
         with th.no_grad():

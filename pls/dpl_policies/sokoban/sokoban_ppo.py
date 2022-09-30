@@ -29,18 +29,22 @@ class RolloutBufferSamples_TinyGrid(NamedTuple):
     old_log_prob: th.Tensor
     advantages: th.Tensor
     returns: th.Tensor
+    safeties: th.Tensor
 
 class RolloutBuffer_TinyGrid(RolloutBuffer):
     def __init__(self, *args, tinygrid_space, **kwargs):
         self.tinygrid_shape = get_obs_shape(tinygrid_space)
+        self.safeties = None
         super(RolloutBuffer_TinyGrid, self).__init__(*args, **kwargs)
 
     def reset(self) -> None:
         super(RolloutBuffer_TinyGrid, self).reset()
         self.tinygrids = np.zeros((self.buffer_size, self.n_envs) + self.tinygrid_shape, dtype=np.float32)
+        self.safeties = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
 
-    def add(self, *args, tinygrid, **kwargs) -> None:
+    def add(self, *args, tinygrid, safety, **kwargs) -> None:
         self.tinygrids[self.pos] = np.array(tinygrid).copy()
+        self.safeties[self.pos] = np.array(safety).copy()
         super(RolloutBuffer_TinyGrid, self).add(*args, **kwargs)
 
     def get(self, batch_size: Optional[int] = None) -> Generator[RolloutBufferSamples_TinyGrid, None, None]:
@@ -57,6 +61,7 @@ class RolloutBuffer_TinyGrid(RolloutBuffer):
                 "log_probs",
                 "advantages",
                 "returns",
+                "safeties"
             ]
 
             for tensor in _tensor_names:
@@ -81,12 +86,14 @@ class RolloutBuffer_TinyGrid(RolloutBuffer):
             self.log_probs[batch_inds].flatten(),
             self.advantages[batch_inds].flatten(),
             self.returns[batch_inds].flatten(),
+            self.safeties[batch_inds].flatten(),
         )
         return RolloutBufferSamples_TinyGrid(*tuple(map(self.to_torch, data)))
 
 
 class Sokoban_DPLPPO(PPO):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, safety_coef, **kwargs):
+        self.safety_coef = safety_coef
         super(Sokoban_DPLPPO, self).__init__(*args, **kwargs)
 
     def _setup_model(self) -> None:
@@ -374,30 +381,6 @@ class Sokoban_DPLPPO(PPO):
                     (object_detect_probs, base_policy),
                 ) = self.policy.forward(obs_tensor, tinygrid)
 
-                #
-                # self.policy.logging_per_step(
-                #     mass, object_detect_probs, base_policy, action_lookup, self.logger
-                # )
-                # abs_safe_next_shielded, abs_safe_next_base, rel_safe_next_shielded, rel_safe_next_base = self.policy.logging_per_episode(
-                #     mass, object_detect_probs, base_policy, action_lookup
-                # )
-                # if object_detect_probs.get("alpha") is not None:
-                #     alphas.append(object_detect_probs["alpha"])
-                # if object_detect_probs.get("num_rejected_samples") is not None:
-                #     nums_rejected_samples.append(object_detect_probs["num_rejected_samples"])
-
-                # # if in a risky situation
-                # if th.any(th.logical_and(object_detect_probs["ground_truth_box"], object_detect_probs["ground_truth_corner"])):
-                #     n_risky_states += 1
-                #     risky_action = 1 + th.logical_and(object_detect_probs["ground_truth_box"], object_detect_probs["ground_truth_corner"]).squeeze().nonzero()
-                #     if th.any(actions == risky_action):
-                #         self.n_deaths += 1
-
-                # abs_safeties_shielded.append(abs_safe_next_shielded)
-                # abs_safeties_base.append(abs_safe_next_base)
-                # rel_safeties_shielded.append(rel_safe_next_shielded)
-                # rel_safeties_base.append(rel_safe_next_base)
-
             actions = actions.cpu().numpy()
 
             # Rescale and perform action
@@ -421,6 +404,7 @@ class Sokoban_DPLPPO(PPO):
             if callback.on_step() is False:
                 return False
 
+            safety = object_detect_probs["policy_safety"]
 
             if dones:
                 ep_len = infos[0]["episode"]["l"]
@@ -473,7 +457,8 @@ class Sokoban_DPLPPO(PPO):
                 self._last_episode_starts,
                 values,
                 log_probs,
-                tinygrid=tinygrid
+                tinygrid=tinygrid,
+                safety=safety
             )
             self._last_obs = new_obs
             self._last_episode_starts = dones
@@ -506,6 +491,7 @@ class Sokoban_DPLPPO(PPO):
         entropy_losses = []
         pg_losses, value_losses = [], []
         clip_fractions = []
+        safety_losses = []
 
         continue_training = True
 
@@ -523,8 +509,9 @@ class Sokoban_DPLPPO(PPO):
                 if self.use_sde:
                     self.policy.reset_noise(self.batch_size)
 
-                values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, rollout_data.tinygrids, actions)
+                values, log_prob, entropy, policy_safeties = self.policy.evaluate_actions(rollout_data.observations, rollout_data.tinygrids, actions)
                 values = values.flatten()
+                policy_safeties = policy_safeties.flatten()
                 # Normalize advantage
                 advantages = rollout_data.advantages
                 if self.normalize_advantage:
@@ -565,7 +552,12 @@ class Sokoban_DPLPPO(PPO):
 
                 entropy_losses.append(entropy_loss.item())
 
-                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
+                # safety loss
+                safety_loss = -th.log(policy_safeties)
+                safety_loss = th.mean(safety_loss)
+                safety_losses.append(safety_loss.item())
+
+                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss  + self.safety_coef * safety_loss
 
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
@@ -599,6 +591,7 @@ class Sokoban_DPLPPO(PPO):
         self.logger.record("train/entropy_loss", np.mean(entropy_losses))
         self.logger.record("train/policy_gradient_loss", np.mean(pg_losses))
         self.logger.record("train/value_loss", np.mean(value_losses))
+        self.logger.record("train/safety_loss", np.mean(safety_losses))
         self.logger.record("train/approx_kl", np.mean(approx_kl_divs))
         self.logger.record("train/clip_fraction", np.mean(clip_fractions))
         self.logger.record("train/loss", loss.item())
@@ -607,6 +600,7 @@ class Sokoban_DPLPPO(PPO):
             self.logger.record("train/std", th.exp(self.policy.log_std).mean().item())
 
         self.logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
+        self.logger.record("train/used_epochs", epoch + 1)
         self.logger.record("train/clip_range", clip_range)
         if self.clip_range_vf is not None:
             self.logger.record("train/clip_range_vf", clip_range_vf)

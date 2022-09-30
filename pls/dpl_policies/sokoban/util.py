@@ -239,3 +239,8 @@ def get_ground_truth_of_box(
 
     return res
 
+def get_agent_coord(input, agent_colors):
+    for agent_color in agent_colors:
+        centers = (input == agent_color).nonzero()[:, 1:]
+        if centers.numel() > 0:
+            return int(centers[0][0]), int(centers[0][1])
