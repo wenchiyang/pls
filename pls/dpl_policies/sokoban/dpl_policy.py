@@ -20,7 +20,7 @@ from os import path
 import pickle
 from gym.spaces import Box
 
-from pls.observation_nets.observation_nets import Observation_net
+from pls.observation_nets.observation_nets import Observation_Net_Sokoban
 
 WALL_COLOR = th.tensor([0], dtype=th.float32)
 FLOOR_COLOR = th.tensor([1 / 6], dtype=th.float32)
@@ -247,7 +247,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             if self.use_learned_observations:
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
-                self.observation_model = Observation_net(input_size=self.net_input_dim*self.net_input_dim, output_size=8).to(device)
+                self.observation_model = Observation_Net_Sokoban(input_size=self.net_input_dim*self.net_input_dim, output_size=8).to(device)
                 pp = path.join(self.folder, "../../data", self.observation_type)
                 self.observation_model.load_state_dict(th.load(pp))
 
@@ -318,16 +318,16 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         if self.alpha != 0 and self.use_learned_observations:
             if self.train_observations:
                 if self.noisy_observations:
-                    boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                    boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :8])
                 else:
-                    boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                    boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :8])
                     boxes_and_corners = (boxes_and_corners > 0.5).float()
             else:
                 with th.no_grad():
                     if self.noisy_observations:
-                        boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                        boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :8])
                     else:
-                        boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                        boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :8])
                         boxes_and_corners = (boxes_and_corners > 0.5).float()
             boxes = boxes_and_corners[:, :self.n_box_locs]
             corners = boxes_and_corners[:, self.n_box_locs:]
@@ -452,7 +452,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
 
 
     def evaluate_actions(
-        self, obs: th.Tensor, tinygrid: th.Tensor, actions: th.Tensor
+        self, x: th.Tensor, tinygrid: th.Tensor, actions: th.Tensor
     ) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
         """
         Evaluate actions according to the current policy,
@@ -464,7 +464,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             and entropy of the action distribution.
         """
         if not self.differentiable_shield:
-            obs = self.image_encoder(obs)
+            obs = self.image_encoder(x)
             features = self.extract_features(obs)
             latent_pi, latent_vf = self.mlp_extractor(features)
             distribution = self._get_action_dist_from_latent(latent_pi)
@@ -482,16 +482,16 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
             if self.alpha != 0 and self.use_learned_observations:
                 if self.train_observations:
                     if self.noisy_observations:
-                        boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                        boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :8])
                     else:
-                        boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                        boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :8])
                         boxes_and_corners = (boxes_and_corners > 0.5).float()
                 else:
                     with th.no_grad():
                         if self.noisy_observations:
-                            boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                            boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :8])
                         else:
-                            boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x))
+                            boxes_and_corners = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :8])
                             boxes_and_corners = (boxes_and_corners > 0.5).float()
                 boxes = boxes_and_corners[:, :self.n_box_locs]
                 corners = boxes_and_corners[:, self.n_box_locs:]
@@ -510,7 +510,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
 
             return values, log_prob, distribution.entropy(), policy_safety
 
-        _, values, _, mass, _, [object_detect_probs, _]  = self.forward(obs, tinygrid=tinygrid)
+        _, values, _, mass, [object_detect_probs, _]  = self.forward(x, tinygrid=tinygrid)
         log_prob = mass.log_prob(actions)
         policy_safety = object_detect_probs["policy_safety"]
         return values, log_prob, mass.entropy(), policy_safety
