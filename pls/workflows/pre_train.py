@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch.optim as optim
+from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv, is_vecenv_wrapped, VecMonitor
 from torch.utils.data import Dataset
 import os
 import gym
@@ -9,6 +10,7 @@ import csv
 from pls.dpl_policies.goal_finding.util import get_ground_wall, get_agent_coord
 from pls.dpl_policies.sokoban.util import get_ground_truth_of_box, get_ground_truth_of_corners
 from pls.dpl_policies.sokoban.util import get_agent_coord as get_agent_coord_sokoban
+from pls.dpl_policies.carracing.util import get_ground_truth_of_grass
 import torch as th
 import pandas as pd
 import numpy as np
@@ -20,8 +22,70 @@ import torchvision
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import datasets, transforms
 import time
+from pls.workflows.evaluate import load_model_and_env
+import json
+from time import sleep
 
 
+def sample_stuff(model, env, csv_path, deterministic=True, render=False, n_images=10, folder=None):
+    f_csv = open(csv_path, "w")
+    writer = csv.writer(f_csv)
+    writer.writerow(["image_name", "grass(in_front)","grass(on_the_left)", "grass(on_the_right)"])
+
+    if not isinstance(env, VecEnv):
+        env = DummyVecEnv([lambda: env])
+
+    observations = env.reset()
+    current_lengths = 0
+    n = 0
+    while n < n_images:
+        actions = model.predict(observations, deterministic=deterministic)
+        observations, rewards, dones, infos = env.step(actions[0])
+
+        if render:
+            for e in env.envs:
+                e.env.render()
+
+        if current_lengths % 50 == 0:
+            img = env.envs[0].render(mode="state_pixels")
+            gray_img = env.envs[0].render(mode="gray")
+            gray_img = th.tensor(gray_img).unsqueeze(dim=0).unsqueeze(dim=1)
+
+            path = os.path.join(folder, f"img{n:06}.jpeg")
+            plt.imsave(path, img)
+
+            ground_truth_grass = get_ground_truth_of_grass(input=gray_img)
+            row = [f"img{n:06}.jpeg"] + ground_truth_grass.flatten().tolist()
+            writer.writerow(row)
+            f_csv.flush()
+            n += 1
+
+        current_lengths += 1
+
+
+
+def load_policy_cr(folder, model_at_step):
+    path = os.path.join(folder, "config.json")
+    with open(path) as json_data_file:
+        config = json.load(json_data_file)
+    model, env = load_model_and_env(folder, config, model_at_step)
+    return model, env
+
+
+
+def generate_random_images_cr(csv_path, folder, n_images=10):
+    policy_folder = os.path.join(os.path.dirname(__file__), "../../experiments_safety/carracing/map1/PPO/seed1")
+    model, env = load_policy_cr(policy_folder, model_at_step=300000)
+
+    sample_stuff(
+        model=model,
+        env=env,
+        csv_path=csv_path,
+        deterministic=False,
+        render=True,
+        n_images=n_images,
+        folder=folder
+    )
 
 
 def sample_object_locations_sokoban(room_fixed, num_boxes):

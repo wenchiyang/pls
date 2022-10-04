@@ -5,38 +5,34 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, VecMonitor, is
 from stable_baselines3.common.utils import obs_as_tensor
 import numpy as np
 import warnings
-# from ppo_dpl import load_model_and_env as ppo_load_model_and_env
 from pls.workflows.ppo_dpl import setup_env
+from time import sleep
 
 
-# def test(folder, model_at_step, n_test_episodes):
-#     path = os.path.join(folder, "config.json")
-#     with open(path) as json_data_file:
-#         config = json.load(json_data_file)
-#     learner = config["workflow_name"]
-#     if "ppo" in learner:
-#         model, env = ppo_load_model_and_env(folder, config, model_at_step)
-#
 from pls.dpl_policies.goal_finding.goal_finding_ppo import GoalFinding_DPLPPO
+from pls.dpl_policies.sokoban.sokoban_ppo import Sokoban_DPLPPO
+from pls.dpl_policies.pacman.pacman_ppo import Pacman_DPLPPO
+from pls.dpl_policies.carracing.carracing_ppo import Carracing_DPLPPO
 
 
 def load_model_and_env(folder, config, model_at_step, eval=True):
-    program_path = os.path.join(folder, "../../../data", f'{config["model_features"]["params"]["program_type"]}.pl')
-    env, image_encoder_cls, shielding_settings, custom_callback = setup_env(
-        folder, config
-    )
+    env, image_encoder_cls = setup_env(folder, config, eval)
     env_name = config["env_type"]
     if "GoalFinding" in env_name:
         model_cls = GoalFinding_DPLPPO
-    # elif "Sokoban" in env_name:
-    #     model_cls = Sokoban_DPLPPO
+    elif "Pacman" in env_name:
+        model_cls = Pacman_DPLPPO
+    elif "oban" in env_name:
+        model_cls = Sokoban_DPLPPO
+    elif "Car" in env_name:
+        model_cls = Carracing_DPLPPO
 
     if model_at_step == "end":
         path = os.path.join(folder, "model.zip")
     else:
         path = os.path.join(folder, "model_checkpoints", f"rl_model_{model_at_step}_steps.zip")
     model = model_cls.load(path, env)
-    if eval:
+    if "GoalFinding" in env_name and eval:
         model.set_random_seed(config["eval_env_features"]["seed"])
 
     return model, env
@@ -140,13 +136,15 @@ def my_evaluate_policy(
     n_deaths = 0
     states = None
     while (episode_counts < episode_count_targets).any():
-        if render:
-            for e in env.envs:
-                e.env.render()
-        actions, states = model.predict(observations, state=states, deterministic=deterministic)
-        obs_tensor = obs_as_tensor(observations, model.device)
-        # abs_safeties = model.policy.evaluate_safety_shielded(obs_tensor)
-        observations, rewards, dones, infos = env.step(actions)
+        if "Carracing" in str(model):
+            actions = model.predict(observations, deterministic=deterministic)
+        else:
+            # tinygrid = env.envs[0].render("tinygrid")
+            # tinygrid = env.envs[0].render("tiny_rgb_array")
+            tinygrid = env.envs[0].render("rgb_array")
+            # tinygrid = obs_as_tensor(tinygrid, "cpu").unsqueeze(0)
+            actions = model.predict(observations, state=tinygrid, deterministic=deterministic)
+        observations, rewards, dones, infos = env.step(actions[0])
         if render:
             for e in env.envs:
                 e.env.render()
@@ -166,6 +164,8 @@ def my_evaluate_policy(
                     callback(locals(), globals())
 
                 if dones[i]:
+                    if render:
+                        env.render()
                     if is_monitor_wrapped:
                         # Atari wrapper can send a "done" signal when
                         # the agent loses a life, but it does not correspond
@@ -200,6 +200,7 @@ def my_evaluate_policy(
 
         if render:
             env.render()
+            sleep(0.05)
 
     mean_reward = np.mean(episode_rewards)
     std_reward = np.std(episode_rewards)

@@ -263,71 +263,38 @@ MY_ROAD_COLOR =  -0.1
 MY_CAR_COLOR =   1
 
 
-is_grass = lambda x: x > 0
+
 is_road = lambda x: th.logical_and(-0.15 < x, x < -0.05)
+# is_grass = lambda x: x > 0
+is_grass = lambda x: ~is_road(x)
 
-
-def is_all_grass(
-        input
-):
-    arr = th.tensor(input)
-    image = arr[:, 0:84, :]
-    mean_color = th.mean(image)
-
-    return mean_color > 0.55
-
-def get_ground_truth_of_grass2(
-    input
-):
-    # arr = self.env.render(mode="state_pixels")
-
-    # take only the first frame in the stack
-    arr = th.squeeze(input[:,0,:,:], dim=1)
-
-    # from matplotlib import pyplot as plt
-    # temp = arr.clone()
-    # temp[:, 70:71, 44:45] = 1  # left
-    # temp[:, 70:71, 51:52] = 1  # right
-    # temp[:, 64:65, 47:49] = 1  # top
-    # plt.imshow(temp[0], cmap=plt.get_cmap('gray'), vmin=-1, vmax=1)
-    # plt.show()
-
-    left = th.mean(arr[:, 70:71, 44:45], dim=(1, 2))
-    right = th.mean(arr[:, 70:71, 51:52], dim=(1, 2))
-    top = th.mean(arr[:, 64:65, 47:49], dim=(1, 2))
-
-
-    try:
-        assert th.all(th.logical_or(is_grass(left), is_road(left))), f"left: {left}"
-        assert th.all(th.logical_or(is_grass(right), is_road(right))), f"right: {right}"
-        assert th.all(th.logical_or(is_grass(top), is_road(top))), f"top: {top}"
-    except AssertionError:
-        pass
-        # print("AssertionError, get_ground_truth_of_grass failed.")
-        # print(left, right, top)
-    sym_state = is_grass(th.stack((top, left, right), dim=1)).float()
-
-    return sym_state
+# def is_all_grass(
+#         input
+# ):
+#     arr = th.tensor(input)
+#     image = arr[:, 0:84, :]
+#     mean_color = th.mean(image)
+#
+#     return mean_color > 0.55
 
 def get_ground_truth_of_grass(
     input
 ):
-    # arr = self.env.render(mode="state_pixels")
-
     # take only the first frame in the stack
     arr = th.squeeze(input[:,0,:,:], dim=1)
 
     # from matplotlib import pyplot as plt
+    # arr = th.squeeze(input[:,0,:,:], dim=1)
     # temp = arr.clone()
-    # temp[:, 70:71, 44:45] = 1  # left
-    # temp[:, 70:71, 51:52] = 1  # right
-    # temp[:, 64:65, 47:49] = 1  # top
+    # temp[:, 33:34, 22:23] = -1  # left
+    # temp[:, 33:34, 25:26] = -1  # right
+    # temp[:, 27:28, 23:25] = -1  # top
     # plt.imshow(temp[0], cmap=plt.get_cmap('gray'), vmin=-1, vmax=1)
     # plt.show()
 
-    left = th.mean(arr[:, 70:71, 42:43], dim=(1, 2))
-    right = th.mean(arr[:, 70:71, 53:54], dim=(1, 2))
-    top = th.mean(arr[:, 58:59, 47:49], dim=(1, 2))
+    left = th.mean(arr[:, 33:34, 22:23], dim=(1, 2))
+    right= th.mean(arr[:, 33:34, 25:26], dim=(1, 2))
+    top =  th.mean(arr[:, 27:28, 23:25], dim=(1, 2))
 
 
     try:
@@ -336,8 +303,8 @@ def get_ground_truth_of_grass(
         assert th.all(th.logical_or(is_grass(top), is_road(top))), f"top: {top}"
     except AssertionError:
         pass
-        # print("AssertionError, get_ground_truth_of_grass failed.")
-        # print(left, right, top)
+        print("AssertionError, get_ground_truth_of_grass failed.")
+        print(left, right, top)
     sym_state = is_grass(th.stack((top, left, right), dim=1)).float()
 
     return sym_state

@@ -20,9 +20,9 @@ class Observation_net(nn.Module):
         return x
 
 
-class Observation_net_cnn(nn.Module):
+class Observation_Net_Stars(nn.Module):
     def __init__(self, input_size, output_size):
-        super(Observation_net_cnn, self).__init__()
+        super(Observation_Net_Stars, self).__init__()
         # input (1, 61, 61)
         # convolutional layers
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=8, kernel_size=5, stride=2, padding=1) # (8, 30, 30)

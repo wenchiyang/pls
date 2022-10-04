@@ -20,7 +20,7 @@ from pls.deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
 from .util import get_ground_wall
 from matplotlib import pyplot as plt
 from skimage.measure import block_reduce
-from pls.observation_nets.observation_nets import Observation_net, Observation_net_cnn
+from pls.observation_nets.observation_nets import Observation_net, Observation_Net_Stars
 from random import random
 
 WALL_COLOR = 0.25
@@ -206,7 +206,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             if self.use_learned_observations:
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
-                self.observation_model = Observation_net_cnn(input_size=self.net_input_dim*self.net_input_dim, output_size=4).to(device)
+                self.observation_model = Observation_Net_Stars(input_size=self.net_input_dim * self.net_input_dim, output_size=4).to(device)
                 pp = path.join(self.folder, "../../data", self.observation_type)
                 # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/goal_finding/small/data", self.observation_type)
                 self.observation_model.load_state_dict(th.load(pp))

@@ -9,35 +9,26 @@ from stable_baselines3.common.callbacks import ConvertCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from pls.observation_nets.observation_nets import Observation_Net_Carracing
 # import matplotlib.pyplot as plt
-# import torchvision
-# from tqdm import tqdm
 from collections import deque
+from gym.spaces import Box
 
 from stable_baselines3.common.type_aliases import (
     GymObs,
     GymStepReturn,
     Schedule,
 )
-from stable_baselines3.common.preprocessing import is_image_space
 
 from pls.deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
-from pls.dpl_policies.carracing.util import get_ground_truth_of_grass, is_all_grass, get_ground_truth_of_grass2
+from pls.dpl_policies.carracing.util import get_ground_truth_of_grass
 from os import path
 import pickle
-
+import torch.nn.functional as F
 
 class Carracing_Encoder(nn.Module):
-    def __init__(self, input_size, n_actions, shielding_settings, program_path, debug_program_path, folder):
+    def __init__(self, n_stacked_images):
         super(Carracing_Encoder, self).__init__()
-        self.input_size = input_size
-        self.n_grass_locs = shielding_settings["n_grass_locs"]
-        self.n_actions = n_actions
-        self.program_path = program_path
-        self.debug_program_path = debug_program_path
-        self.folder = folder
-        self.sensor_noise = shielding_settings["sensor_noise"]
-        self.max_num_rejected_samples = shielding_settings["max_num_rejected_samples"]
 
     def forward(self, x):
         return x
@@ -46,65 +37,75 @@ class Carracing_Encoder(nn.Module):
 class Carracing_Callback(ConvertCallback):
     def __init__(self, callback):
         super(Carracing_Callback, self).__init__(callback)
-        self.is_rollout = False
-        self.is_training = False
+    def on_step(self) -> bool:
+        logger = self.locals["self"].logger
+        mass = self.locals["mass"]
+        action_lookup = self.locals["action_lookup"]
+        object_detect_probs = self.locals["object_detect_probs"]
+        base_policy = self.locals["base_policy"]
+        policy = self.locals["self"].policy
+        for act in range(self.locals["self"].action_space.n):
+            logger.record(
+                f"policy/shielded {action_lookup[act]}",
+                float(mass.probs[0][act]),
+            )
+        if object_detect_probs.get("alpha") is not None:
+            logger.record(
+                f"safety/alpha",
+                float(object_detect_probs.get("alpha")),
+            )
+        abs_safe_next_shielded = policy.get_step_safety(
+            mass.probs,
+            object_detect_probs["ground_truth_grass"],
+        )
+        abs_safe_next_base = policy.get_step_safety(
+            base_policy,
+            object_detect_probs["ground_truth_grass"],
+        )
+        rel_safe_next_shielded = policy.get_step_safety(
+            mass.probs,
+            object_detect_probs["grass"]
+        )
+        rel_safe_next_base = policy.get_step_safety(
+            base_policy,
+            object_detect_probs["grass"]
+        )
 
-    def _on_rollout_start(self):
-        self.is_rollout = True
+        self.locals["abs_safeties_shielded"].append(abs_safe_next_shielded)
+        self.locals["abs_safeties_base"].append(abs_safe_next_base)
+        self.locals["rel_safeties_shielded"].append(rel_safe_next_shielded)
+        self.locals["rel_safeties_base"].append(rel_safe_next_base)
 
-    def _on_rollout_end(self):
-        self.is_rollout = False
-
-    def _on_training_start(self):
-        self.is_training = True
-
-    def _on_training_end(self):
-        self.is_training = False
-
-    def _on_step(self):
-        return True
+        if object_detect_probs.get("alpha") is not None:
+            self.locals["alphas"].append(object_detect_probs["alpha"])
+        if object_detect_probs.get("num_rejected_samples") is not None:
+            self.locals["nums_rejected_samples"].append(object_detect_probs["num_rejected_samples"])
+        # if is in a risky situation
+        if th.any(object_detect_probs["ground_truth_grass"], dim=1):
+            self.locals["n_risky_states"].append(1)
+        else:
+            self.locals["n_risky_states"].append(0)
 
 
 class Carracing_Monitor(Monitor):
     def __init__(self, *args, vio_len, **kwargs):
-        self.vio_len = vio_len
+        self.vio_len = vio_len # TODO
         super(Carracing_Monitor, self).__init__(*args, **kwargs)
 
     def reset(self, **kwargs) -> GymObs:
-        # self.counter_temp = 0
-        self.violate_constraint = False
+        self.violate_constraint = False # TODO
         self.violate_constraint_dequeue = deque(maxlen=self.vio_len)
-        return super(Carracing_Monitor, self).reset(**kwargs)
+        output = super(Carracing_Monitor, self).reset(**kwargs)
+        return output
 
 
     def step(self, action: Union[np.ndarray, int]) -> GymStepReturn:
         if self.needs_reset:
             raise RuntimeError("Tried to step environment that needs reset")
         observation, reward, done, info = self.env.step(action)
-        # if info["is_success"]:
-        #     reward += 100
-        # if info["new_reward"]:
-        #     reward += 50
-        # self.counter_temp += 1
-        # if reward > 0:
-        #     reward += 50
-        #     # print(self.counter_temp)
-        #     # ran = random()
-        #     # if ran > 0.95:
-        #     #     self.rewards.append(reward)
-        #     # else:
-        #     #     self.rewards.append(-0.1)
-
         self.rewards.append(reward)
-        # symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
-        # violate_constraint = th.all(symbolic_state)
-        # TODO: No green panalty
-        # all_green = is_all_grass(observation)
-        # if all_green: # green penalty
-        #     reward -= 0.05
-        # self.rewards.append(reward)
 
-        symbolic_state = get_ground_truth_of_grass2(th.from_numpy(observation.copy()).unsqueeze(0))
+        symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0)) # TODO
         violate_constraint = th.all(symbolic_state)
         self.violate_constraint_dequeue.append(bool(violate_constraint))
         if len(self.violate_constraint_dequeue) == self.vio_len and False not in set(self.violate_constraint_dequeue):
@@ -151,22 +152,14 @@ class CustomCNNFeaturesExtractor(BaseFeaturesExtractor):
 
     def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 256):
         super(CustomCNNFeaturesExtractor, self).__init__(observation_space, features_dim)
-        self._features_dim = features_dim
+        # TODO: automatically compute features_dim (now it must be manually provided according to the observation size)
+        self._features_dim = features_dim # This is the size of the output
         n_stacked_images, _, _ = observation_space.shape
-        self.extractor_network = nn.Sequential(  # Input shape (3, 96, 96)
-            nn.Conv2d(n_stacked_images, 8, kernel_size=3, stride=2),  # (8, 47, 47)
-            nn.ReLU(),
-            nn.Conv2d(8, 16, kernel_size=3, stride=2),  # (16, 23, 23)
-            nn.ReLU(),
-            nn.Conv2d(16, 32, kernel_size=3, stride=2),  # (32, 11, 11)
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=3, stride=2),  # (32, 11, 11)
-            nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=3, stride=1),  # (64, 5, 5)
-            nn.ReLU(),
-            nn.Conv2d(128, features_dim, kernel_size=3, stride=1),  # (128, 3, 3) -> (256, 1, 1)
-            nn.ReLU()
-        )
+        self.conv1 = nn.Conv2d(in_channels=n_stacked_images, out_channels=8, kernel_size=5, stride=2, padding=1) # (8, 15, 15)
+        self.conv2 = nn.Conv2d(in_channels=8, out_channels=16, kernel_size=5, stride=2, padding=1) # (16, 7, 7)
+        self.conv3 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=5, stride=2, padding=1) # (32, 3, 3)
+        self.conv4 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=1) # (64, 1, 1)
+
 
     """
     Forward pass through the model.
@@ -175,11 +168,16 @@ class CustomCNNFeaturesExtractor(BaseFeaturesExtractor):
 
     Returns:
         Tensor of shape (B,features_dim) representing a compressed view of the input image.
-        Intended to be used for policy and 
+        Intended to be used for policy and
     """
 
-    def forward(self, observations: th.Tensor) -> th.Tensor:
-        return self.extractor_network(observations).view(-1, self._features_dim)
+    def forward(self, x: th.Tensor) -> th.Tensor:
+        # convolutional layers with ReLU
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
+        x = F.relu(self.conv4(x))
+        return x.view(-1, self._features_dim)
 
 
 class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
@@ -189,96 +187,103 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
             action_space: gym.spaces.Space,
             lr_schedule: Schedule,
             image_encoder: Carracing_Encoder = None,
-            alpha=0.5,
-            differentiable_shield=True,
+            shielding_params = None,
+            net_input_dim = 1,
+            folder = None,
             **kwargs
     ):
+        observation_space = Box(
+            low=-1,
+            high=1,
+            shape=(
+                observation_space.shape[0], net_input_dim, net_input_dim
+            )
+        )
         super(Carracing_DPLActorCriticPolicy, self).__init__(observation_space, action_space, lr_schedule,
                                                              features_extractor_class=CustomCNNFeaturesExtractor,
                                                              **kwargs)
         ###############################
-
         self.image_encoder = image_encoder
-        self.input_size = self.image_encoder.input_size
+        self.n_grass_locs = shielding_params["n_grass_locs"]
+        self.alpha = shielding_params["alpha"]
+        self.differentiable_shield = shielding_params["differentiable_shield"]
+        self.net_input_dim = net_input_dim
+        self.n_actions = 5
+        self.folder = path.join(path.dirname(__file__), "../../..", folder)
+        self.program_path = path.join(self.folder, "../../../data", shielding_params["program_type"]+".pl")
 
-        self.n_grass_locs = self.image_encoder.n_grass_locs
+        if self.program_path:
+            with open(self.program_path) as f:
+                self.program = f.read()
 
-        self.n_actions = self.image_encoder.n_actions
-        self.program_path = self.image_encoder.program_path
-        self.debug_program_path = self.image_encoder.debug_program_path
-        self.folder = self.image_encoder.folder
-        self.sensor_noise = self.image_encoder.sensor_noise
-        self.alpha = alpha
-        self.differentiable_shield = differentiable_shield
-        self.max_num_rejected_samples = self.image_encoder.max_num_rejected_samples
 
-        with open(self.program_path) as f:
-            self.program = f.read()
-        with open(self.debug_program_path) as f:
-            self.debug_program = f.read()
-
-        self.evidences = ["safe_next"]
-        # IMPORTANT: THE ORDER OF QUERIES IS THE ORDER OF THE OUTPUT
-        self.queries = [
-                           "safe_action(do_nothing)",
-                           "safe_action(accelerate)",
-                           "safe_action(brake)",
-                           "safe_action(turn_left)",
-                           "safe_action(turn_right)",
-                       ][: self.n_actions]
-
-        if self.alpha == 0:
-            # NO shielding
+        if self.alpha == 0: # Baseline
             pass
-        else:
-            # HARD shielding and SOFT shielding
+        elif self.differentiable_shield: # PLS
+            self.use_learned_observations = shielding_params["use_learned_observations"]
+            self.train_observations = shielding_params["train_observations"] if self.use_learned_observations else None
+            self.noisy_observations = shielding_params["noisy_observations"] if self.use_learned_observations else None
+            self.observation_type = shielding_params["observation_type"] if self.use_learned_observations else None
+        else: # VSRL
+            self.vsrl_use_renormalization = shielding_params["vsrl_use_renormalization"]
+            if not self.vsrl_use_renormalization:
+                self.max_num_rejected_samples = shielding_params["max_num_rejected_samples"]
+            self.use_learned_observations = shielding_params["use_learned_observations"]
+            self.train_observations = shielding_params["train_observations"] if self.use_learned_observations else None
+            self.noisy_observations = shielding_params["noisy_observations"] if self.use_learned_observations else None
+            self.observation_type = shielding_params["observation_type"] if self.use_learned_observations else None
+
+
+        if self.alpha == 0: # NO shielding
+            pass
+        else: # HARD shielding and SOFT shielding
+            self.queries = ["safe_action(do_nothing)", "safe_action(accelerate)",
+                            "safe_action(brake)", "safe_action(turn_left)",
+                            "safe_action(turn_right)"][: self.n_actions]
             input_struct = {
                 "grass": [i for i in range(self.n_grass_locs)],
-                "action": [i for i in range(self.n_grass_locs,
-                                            self.n_grass_locs + self.n_actions)],
+                "action": [i for i in range(self.n_grass_locs, self.n_grass_locs + self.n_actions)]
             }
-            action_lst = ["do_nothing", "accelerate", "brake", "turn_left", "turn_right"]
-
-            query_struct = {"safe_action": dict(zip(action_lst[:self.n_actions], range(self.n_actions)))}
-
-            cache_path = path.join(self.folder, "../../../data", "dpl_layer.p")
+            query_struct = {"safe_action": {"do_nothing": 0, "accelerate": 1, "brake": 2, "turn_left": 3, "turn_right": 4}}
+            pp = path.join(self.folder, "../../../data", "dpl_layer.p")
             self.dpl_layer = self.get_layer(
-                cache_path,
-                program=self.program, queries=self.queries, evidences=["safe_next"],
+                pp, program=self.program, queries=self.queries, evidences=["safe_next"],
                 input_struct=input_struct, query_struct=query_struct
             )
+            if self.use_learned_observations:
+                use_cuda = False
+                device = th.device("cuda" if use_cuda else "cpu")
+                self.observation_model = Observation_Net_Carracing(input_size=self.net_input_dim*self.net_input_dim, output_size=4).to(device)
+                pp = path.join(self.folder, "../../data", self.observation_type)
+                self.observation_model.load_state_dict(th.load(pp))
 
-        if self.alpha == "learned":
-            self.alpha_net = nn.Sequential(
-                nn.Linear(self.input_size, 128),
-                nn.ReLU(),
-                nn.Linear(128, 1),
-                nn.Sigmoid(),
-            )
-
-        # For all settings, calculate "safe_next"
         debug_queries = ["safe_next"]
         debug_query_struct = {"safe_next": 0}
         debug_input_struct = {
             "grass": [i for i in range(self.n_grass_locs)],
-            "action": [i for i in range(self.n_grass_locs,
-                                        self.n_grass_locs + self.n_actions)]
+            "action": [i for i in range(self.n_grass_locs, self.n_grass_locs + self.n_actions)]
         }
-        cache_path = path.join(self.folder, "../../../data", "query_safety_layer.p")
+        pp = path.join(self.folder, "../../../data", "query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
-            cache_path,
-            program=self.program,
-            queries=debug_queries,
-            evidences=[],
-            input_struct=debug_input_struct,
-            query_struct=debug_query_struct
+            pp, program=self.program, queries=debug_queries, evidences=[],
+            input_struct=debug_input_struct,query_struct=debug_query_struct
         )
 
         self._build(lr_schedule)
 
     def get_layer(self, cache_path, program, queries, evidences, input_struct, query_struct):
+
         if path.exists(cache_path):
-            return pickle.load(open(cache_path, "rb"))
+            try:
+                return pickle.load(open(cache_path, "rb"))
+            except:
+                pass
+                print("Nooooo")
+                layer = DeepProbLogLayer_Approx(
+                    program=program, queries=queries, evidences=evidences,
+                    input_struct=input_struct, query_struct=query_struct
+                )
+                return layer
 
         layer = DeepProbLogLayer_Approx(
             program=program, queries=queries, evidences=evidences,
@@ -286,29 +291,6 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
         )
         pickle.dump(layer, open(cache_path, "wb"))
         return layer
-
-    def logging_per_episode(self, mass, object_detect_probs, base_policy, action_lookup):
-        abs_safe_next_shielded = self.get_step_safety(
-            mass.probs,
-            object_detect_probs["ground_truth_grass"]
-        )
-        abs_safe_next_base = self.get_step_safety(
-            base_policy,
-            object_detect_probs["ground_truth_grass"]
-        )
-        return abs_safe_next_shielded, abs_safe_next_base
-
-    def logging_per_step(self, mass, object_detect_probs, base_policy, action_lookup, logger):
-        for act in range(self.action_space.n):
-            logger.record(
-                f"policy/shielded {action_lookup[act]}",
-                float(mass.probs[0][act]),
-            )
-        if object_detect_probs.get("alpha") is not None:
-            logger.record(
-                f"safety/alpha",
-                float(object_detect_probs.get("alpha")),
-            )
 
     def get_step_safety(self, policy_distribution, grass_probs):
         with th.no_grad():
@@ -338,87 +320,134 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
         base_actions = distribution.distribution.probs
 
         with th.no_grad():
-            ground_truth_grass = get_ground_truth_of_grass(
-                input=x,
-            )
+            ground_truth_grass = get_ground_truth_of_grass(input=x)
 
-            grasses = ground_truth_grass + (self.sensor_noise) * th.randn(ground_truth_grass.shape)
-            grasses = th.clamp(grasses, min=0, max=1)
+        if self.alpha != 0 and self.use_learned_observations:
+            if self.train_observations:
+                if self.noisy_observations:
+                    grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                else:
+                    grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                    grasses = (grasses > 0.5).float()
+            else:
+                with th.no_grad():
+                    if self.noisy_observations:
+                        grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                    else:
+                        grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                        grasses = (grasses > 0.5).float()
 
-            object_detect_probs = {
-                "ground_truth_grass": ground_truth_grass
-            }
+        else:
+            grasses = ground_truth_grass
 
-        if self.alpha == 0:
+        object_detect_probs = {
+            "ground_truth_grass": ground_truth_grass,
+            "grass": grasses
+        }
+
+        if self.alpha == 0: # PPO
             actions = distribution.get_actions(deterministic=deterministic)
             log_prob = distribution.log_prob(actions)
             object_detect_probs["alpha"] = 0
+            results = self.query_safety_layer(
+                x={
+                    "grass": grasses,
+                    "action": base_actions,
+                }
+            )
+            policy_safety = results["safe_next"]
+            object_detect_probs["policy_safety"] = policy_safety
             return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
 
-        if not self.differentiable_shield and self.alpha == 1:
-            num_rejected_samples = 0
-            while True:
-                actions = distribution.get_actions(deterministic=deterministic)
+        if not self.differentiable_shield:  # VSRL
+            if not self.vsrl_use_renormalization:
+                if self.alpha != 0:
+                    raise NotImplemented
+                #====== VSRL rejection sampling =========
+                num_rejected_samples = 0
                 with th.no_grad():
-                    # Using problog to model check
-                    results = self.query_safety_layer(
-                        x={
-                            "grass": grasses,
-                            "action": th.eye(self.n_actions)[actions],
-                        }
-                    )
-                safe_next = results["safe_next"]
-                if not th.any(safe_next.isclose(
-                        th.zeros(actions.shape))) or num_rejected_samples > self.max_num_rejected_samples:
-                    break
-                else:
-                    num_rejected_samples += 1
-            log_prob = distribution.log_prob(actions)
-            object_detect_probs["num_rejected_samples"] = num_rejected_samples
-            object_detect_probs["alpha"] = 1
-            return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
+                    while True:
+                        actions = distribution.get_actions(deterministic=deterministic) # sample an action
+                        # check if the action is safe
+                        vsrl_actions_encoding = th.eye(self.n_actions)[actions][:, 1:]
+                        actions_are_unsafe = th.logical_and(vsrl_actions_encoding, grasses)
+                        if not th.any(actions_are_unsafe) or num_rejected_samples > self.max_num_rejected_samples:
+                            break
+                        else: # sample another action
+                            num_rejected_samples += 1
+                log_prob = distribution.log_prob(actions)
+                object_detect_probs["num_rejected_samples"] = num_rejected_samples
+                object_detect_probs["alpha"] = 1
+                return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
+            else:
+                # ====== VSRL with mask =========
+                with th.no_grad():
+                    num_rejected_samples = 0
+                    acc = th.ones((grasses.size()[0], 1)) # extra dimension for action "stay"
+                    mask = th.cat((acc, ~grasses.bool()[:, 0:1], acc, ~grasses.bool()[:, 1:]), 1).bool()
+                    masked_distr = distribution.distribution.probs * mask
+                    safe_normalization_const = th.sum(masked_distr, dim=1,  keepdim=True)
+                    safeast_actions = masked_distr / safe_normalization_const
 
-        if self.differentiable_shield:
+                    alpha = self.alpha
+                    actions = alpha * safeast_actions + (1 - alpha) * base_actions
+
+                    mass = Categorical(probs=actions)
+                    if not deterministic:
+                        actions = mass.sample()
+                    else:
+                        actions = th.argmax(mass.probs, dim=1)
+
+                log_prob = distribution.log_prob(actions)
+                object_detect_probs["num_rejected_samples"] = num_rejected_samples
+                object_detect_probs["alpha"] = alpha
+
+                results = self.query_safety_layer(
+                    x={
+                        "grass": grasses,
+                        "action": base_actions,
+                    }
+                )
+                policy_safety = results["safe_next"]
+                object_detect_probs["policy_safety"] = policy_safety
+
+                return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
+
+        if self.differentiable_shield: # PLS
             results = self.dpl_layer(
                 x={
                     "grass": grasses,
                     "action": base_actions,
                 }
             )
+            safeast_actions = results["safe_action"]
+            alpha = self.alpha
+            actions = alpha * safeast_actions + (1 - alpha) * base_actions
 
-            if self.alpha == "learned":
-                alpha = self.alpha_net(obs)
-                object_detect_probs["alpha"] = alpha
+            # TODO: This is incorrect? This should be the shielded policy distribution (of type CategoricalDistribution)
+            mass = Categorical(probs=actions)
+            if not deterministic:
+                actions = mass.sample()
             else:
-                alpha = self.alpha
-        else:
-            with th.no_grad():
-                results = self.dpl_layer(
-                    x={
-                        "grass": grasses,
-                        "action": base_actions,
-                    }
-                )
+                actions = th.argmax(mass.probs, dim=1)
 
-            if self.alpha == "learned":
-                raise NotImplemented
-            else:
-                alpha = self.alpha
-        object_detect_probs["alpha"] = alpha
-        safeast_actions = results["safe_action"]
-        actions = alpha * safeast_actions + (1 - alpha) * base_actions
+            log_prob = mass.log_prob(actions)
+            object_detect_probs["alpha"] = alpha
 
-        mass = Categorical(probs=actions)
-        if not deterministic:
-            actions = mass.sample()
-        else:
-            actions = th.argmax(mass.probs, dim=1)
-        log_prob = mass.log_prob(actions)
+
+            results = self.query_safety_layer(
+                x={
+                    "grass": grasses,
+                    "action": base_actions,
+                }
+            )
+            policy_safety = results["safe_next"]
+            object_detect_probs["policy_safety"] = policy_safety
 
         return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
     def evaluate_actions(
-            self, obs: th.Tensor, actions: th.Tensor
+            self, x: th.Tensor, actions: th.Tensor
     ) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
         """
         Evaluate actions according to the current policy,
@@ -430,19 +459,50 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
             and entropy of the action distribution.
         """
 
-        if not self.differentiable_shield and self.alpha == 1:
-            obs = self.image_encoder(obs)
+        if not self.differentiable_shield:
+            obs = self.image_encoder(x)
             features = self.extract_features(obs)
             latent_pi, latent_vf = self.mlp_extractor(features)
             distribution = self._get_action_dist_from_latent(latent_pi)
             log_prob = distribution.log_prob(actions)
             values = self.value_net(latent_vf)
+            base_actions = distribution.distribution.probs
 
-            return values, log_prob, distribution.entropy()
+            with th.no_grad():
+                ground_truth_grass = get_ground_truth_of_grass(input=x)
 
-        _, values, _, mass, _ = self.forward(obs)
+            if self.alpha != 0 and self.use_learned_observations:
+                if self.train_observations:
+                    if self.noisy_observations:
+                        grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                    else:
+                        grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                        grasses = (grasses > 0.5).float()
+                else:
+                    with th.no_grad():
+                        if self.noisy_observations:
+                            grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                        else:
+                            grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                            grasses = (grasses > 0.5).float()
+
+            else:
+                grasses = ground_truth_grass
+
+            results = self.query_safety_layer(
+                x={
+                    "grass": grasses,
+                    "action": base_actions,
+                }
+            )
+            policy_safety = results["safe_next"]
+
+            return values, log_prob, distribution.entropy(), policy_safety
+
+        _, values, _, mass, [object_detect_probs, _] = self.forward(x)
         log_prob = mass.log_prob(actions)
-        return values, log_prob, mass.entropy()
+        policy_safety = object_detect_probs["policy_safety"]
+        return values, log_prob, mass.entropy(), policy_safety
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
         with th.no_grad():
