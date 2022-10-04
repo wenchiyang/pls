@@ -43,7 +43,7 @@
   },
 
   "model_features": {
-    "name": "PPO",
+    "name": "PPOsfloss",
     "shield_params": {
       "n_box_locs": 4,
       "n_corner_locs": 4,
@@ -64,7 +64,8 @@
       "step_limit": 700000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
-      "net_arch_vf": [64, 64]
+      "net_arch_vf": [64, 64],
+      "safety_coef": 1
     }
   }
 }

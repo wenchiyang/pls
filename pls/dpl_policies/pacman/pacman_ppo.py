@@ -161,7 +161,6 @@ class Pacman_DPLPPO(PPO):
             if log_interval is not None and iteration % log_interval == 0:
                 self.logger.record("safety/n_deaths", self.n_deaths)
                 fps = int(self.num_timesteps / (time.time() - self.start_time))
-
                 self.logger.record("time/iterations", iteration, exclude="tensorboard")
                 if len(self.ep_info_buffer) > 0 and len(self.ep_info_buffer[0]) > 0:
                     self.logger.record(

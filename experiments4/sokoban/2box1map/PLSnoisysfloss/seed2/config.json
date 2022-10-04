@@ -43,14 +43,18 @@
   },
 
   "model_features": {
-    "name": "PPO",
+    "name": "PLSnoisysfloss",
     "shield_params": {
       "n_box_locs": 4,
       "n_corner_locs": 4,
-      "alpha": 0,
-      "differentiable_shield": false,
+      "alpha": 1,
+      "differentiable_shield": true,
       "program_type": "sokoban_corner2",
-      "tinygrid_dim": 10
+      "tinygrid_dim": 10,
+      "use_learned_observations": true,
+      "train_observations": false,
+      "noisy_observations": true,
+      "observation_type": "observation_model_1000_examples.pt"
     },
     "params": {
       "log_interval": 1,
@@ -58,13 +62,14 @@
       "n_epochs": 15,
       "n_steps": 4096,
       "learning_rate": 0.0001,
-      "seed": 567,
+      "seed": 111,
       "clip_range": 0.1,
       "gamma": 0.99,
       "step_limit": 700000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
-      "net_arch_vf": [64, 64]
+      "net_arch_vf": [64, 64],
+      "safety_coef": 1
     }
   }
 }

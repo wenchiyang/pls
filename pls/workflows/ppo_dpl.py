@@ -70,16 +70,6 @@ def setup_env(folder, config, eval=False):
 
     elif "Sokoban" in env_name or "Boxoban" in env_name:
         image_encoder_cls = Sokoban_Encoder
-        # shielding_settings = {
-        #     "n_box_locs": config["model_features"]["params"]["n_box_locs"],
-        #     "n_corner_locs": config["model_features"]["params"]["n_corner_locs"],
-        #     "sensor_noise": config["model_features"]["params"]["sensor_noise"],
-        #     "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"],
-        #     "use_learned_observations": config["model_features"]["params"]["use_learned_observations"],
-        #     "noisy_observations": config["model_features"]["params"]["noisy_observations"],
-        #     "observation_type": config["model_features"]["params"]["observation_type"],
-        # }
-
         env = Sokoban_Monitor(
             env,
             allow_early_resets=False
@@ -88,14 +78,10 @@ def setup_env(folder, config, eval=False):
 
     elif "Car" in env_name:
         image_encoder_cls = Carracing_Encoder
-        # shielding_settings = {
-        #     "n_grass_locs": config["model_features"]["params"]["n_grass_locs"],
-        #     "sensor_noise": config["model_features"]["params"]["sensor_noise"],
-        #     "max_num_rejected_samples": config["model_features"]["params"]["max_num_rejected_samples"]
-        # }
         env = Carracing_Monitor(
             env,
-            vio_len = config["monitor_features"]["vio_len"],
+            # vio_len = config["monitor_features"]["vio_len"],
+            vio_len = 1,
             allow_early_resets=False
         )
 
@@ -125,14 +111,17 @@ def main(folder, config):
         model_cls = Pacman_DPLPPO
         policy_cls = Pacman_DPLActorCriticPolicy
         custom_callback = Pacman_Callback(custom_callback)
+        encoder_kwargs = {}
     elif "Sokoban" in env_name or "Boxoban" in env_name:
         model_cls = Sokoban_DPLPPO
         policy_cls = Sokoban_DPLActorCriticPolicy
         custom_callback = Sokoban_Callback(custom_callback)
+        encoder_kwargs = {}
     elif "Car" in env_name :
         model_cls = Carracing_DPLPPO
         policy_cls = Carracing_DPLActorCriticPolicy
         custom_callback = Carracing_Callback(custom_callback)
+        encoder_kwargs = {"n_stacked_images": 4}
 
 
     #####   Configure network   #############
@@ -142,7 +131,7 @@ def main(folder, config):
             vf=config["model_features"]["params"]["net_arch_vf"],
         )
     ]
-    image_encoder = image_encoder_cls()
+    image_encoder = image_encoder_cls(**encoder_kwargs)
     net_input_dim = math.ceil(config["env_features"]["height"] / config["env_features"]["downsampling_size"])
     target_kl = config["model_features"]["params"]["target_kl"] if "target_kl" in config["model_features"]["params"] else None
     safety_coef = config["model_features"]["params"]["safety_coef"] if "safety_coef" in config["model_features"]["params"] else 0

@@ -54,14 +54,14 @@
     },
     "params": {
       "log_interval": 1,
-      "batch_size": 2048,
+      "batch_size": 512,
       "n_epochs": 15,
       "n_steps": 4096,
       "learning_rate": 0.0001,
       "seed": 890,
       "clip_range": 0.1,
       "gamma": 0.99,
-      "step_limit": 1000000,
+      "step_limit": 700000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
       "net_arch_vf": [64, 64]
