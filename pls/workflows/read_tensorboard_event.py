@@ -8,7 +8,7 @@ import numpy as np
 dir_path = os.path.dirname(os.path.realpath(__file__))
 domain_goal_finidng = os.path.join(dir_path, "../..", "experiments4", "goal_finding", "small")
 domain_sokoban = os.path.join(dir_path, "../..", "experiments4", "sokoban", "2box1map")
-domain_carracing = os.path.join(dir_path, "../..", "experiments_trials3", "carracing", "sparse_rewards4")
+domain_carracing = os.path.join(dir_path, "../..", "experiments4", "carracing", "map1")
 
 NAMES = {
     "sokoban": domain_sokoban,
@@ -98,8 +98,7 @@ def load_step_value(folder, tag, n_step):
     value = get_step_value_in_dataframe(df, steps=n_step)
     return value
 
-def extract_values():
-    folder = os.path.join(dir_path, "../..", "experiments4", "goal_finding", "small")
+def extract_values(folder):
     exp_names = [
         "PPO",
         "VSRLperf",
@@ -129,7 +128,8 @@ def extract_values():
 
         print(f"{exp}\t\t{avg_r:.2f}\t{avg_s:.2f}\t{avg_v:.2f}")
 
-extract_values()
+
+
 
 def load_single_value_rej_vsrl(exp, steps):
     rejs = []
@@ -478,6 +478,9 @@ def get_time_sample_one_action(name, alpha):
 
 # WE USE THE FOLLOWING
 # STARS
+#
+# extract_values(domain_goal_finidng)
+#
 #curves("goal_finding",
 #        exp_names=[
 #            "PPO", "PLSperf", "VSRLperf"
@@ -607,132 +610,135 @@ def get_time_sample_one_action(name, alpha):
 #        )
 
 # SOKOOBAN
-curves("sokoban",
-       exp_names=[
-           "PPO", "PLSperf", "VSRLperf"
-       ],
-       curve_type=TAGS[1], # violation_curves
-       names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=500_000,
-       fig_title_abbr="Violation",
-       fig_title="Violation"
-       )
 
-curves("sokoban",
-       exp_names=[
-           "PPO", "PLSperf", "VSRLperf"
-       ],
-       curve_type=TAGS[4], # safety
-       names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=500_000,
-       fig_title_abbr="Safety",
-       fig_title="Safety"
-       )
+extract_values(domain_sokoban)
 
-curves("sokoban",
-       exp_names=[
-           "PPO", "PLSperf", "VSRLperf"
-       ],
-       curve_type=TAGS[0], # learning_curves
-       names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=500_000,
-       fig_title_abbr="Return",
-       fig_title="Return"
-       )
-
-curves("sokoban",
-       exp_names=[
-           "PPO", "PLSthres", "VSRLthres", "PLSnoisy"
-       ],
-       curve_type=TAGS[1], # violation_curves
-       names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=500_000,
-       fig_title_abbr="Violation",
-       fig_title="Violation_Noisy"
-       )
-
-curves("sokoban",
-       exp_names=[
-           "PPO", "PLSthres", "VSRLthres", "PLSnoisy"
-       ],
-       curve_type=TAGS[4], # safety
-       names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=500_000,
-       fig_title_abbr="Safety",
-       fig_title="Safety_Noisy"
-       )
-
-curves("sokoban",
-       exp_names=[
-           "PPO", "PLSthres", "VSRLthres", "PLSnoisy"
-       ],
-       curve_type=TAGS[0], # learning_curves
-       names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=500_000,
-       fig_title_abbr="Return",
-       fig_title="Return_Noisy"
-       )
-
-curves("sokoban",
-       exp_names=[
-           "PPO", "PPOsfloss", "PLSperf",
-       ],
-       curve_type=TAGS[1], # violation_curves
-       names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=500_000,
-       fig_title_abbr="Violation",
-       fig_title="Violation_SF"
-       )
-curves("sokoban",
-       exp_names=[
-           "PPO", "PPOsfloss", "PLSperf",
-       ],
-       curve_type=TAGS[4], # safety
-       names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=500_000,
-       fig_title_abbr="Safety",
-       fig_title="Safety_SF"
-       )
-
-curves("sokoban",
-       exp_names=[
-           "PPO", "PPOsfloss", "PLSperf",
-       ],
-       curve_type=TAGS[0], # learning_curves
-       names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=500_000,
-       fig_title_abbr="Return",
-       fig_title="Return_SF"
-       )
-curves("sokoban",
-       exp_names=[
-           "PPO", "PLSnoisy", "PLSnoisysfloss",
-       ],
-       curve_type=TAGS[1], # violation_curves
-       names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=500_000,
-       fig_title_abbr="Violation",
-       fig_title="Violation_Noisy_SF"
-       )
-curves("sokoban",
-       exp_names=[
-           "PPO", "PLSnoisy", "PLSnoisysfloss",
-       ],
-       curve_type=TAGS[4], # safety
-       names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=500_000,
-       fig_title_abbr="Safety",
-       fig_title="Safety_Noisy_SF"
-       )
-curves("sokoban",
-       exp_names=[
-           "PPO", "PLSnoisy", "PLSnoisysfloss",
-       ],
-       curve_type=TAGS[0], # learning_curves
-       names=ALPHA_NAMES_LEARNING_CURVES,
-       step_limit=500_000,
-       fig_title_abbr="Return",
-       fig_title="Return_Noisy_SF"
-       )
-
-
+# curves("sokoban",
+#        exp_names=[
+#            "PPO", "PLSperf", "VSRLperf"
+#        ],
+#        curve_type=TAGS[1], # violation_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=500_000,
+#        fig_title_abbr="Violation",
+#        fig_title="Violation"
+#        )
+#
+# curves("sokoban",
+#        exp_names=[
+#            "PPO", "PLSperf", "VSRLperf"
+#        ],
+#        curve_type=TAGS[4], # safety
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=500_000,
+#        fig_title_abbr="Safety",
+#        fig_title="Safety"
+#        )
+#
+# curves("sokoban",
+#        exp_names=[
+#            "PPO", "PLSperf", "VSRLperf"
+#        ],
+#        curve_type=TAGS[0], # learning_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=500_000,
+#        fig_title_abbr="Return",
+#        fig_title="Return"
+#        )
+#
+# curves("sokoban",
+#        exp_names=[
+#            "PPO", "PLSthres", "VSRLthres", "PLSnoisy"
+#        ],
+#        curve_type=TAGS[1], # violation_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=500_000,
+#        fig_title_abbr="Violation",
+#        fig_title="Violation_Noisy"
+#        )
+#
+# curves("sokoban",
+#        exp_names=[
+#            "PPO", "PLSthres", "VSRLthres", "PLSnoisy"
+#        ],
+#        curve_type=TAGS[4], # safety
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=500_000,
+#        fig_title_abbr="Safety",
+#        fig_title="Safety_Noisy"
+#        )
+#
+# curves("sokoban",
+#        exp_names=[
+#            "PPO", "PLSthres", "VSRLthres", "PLSnoisy"
+#        ],
+#        curve_type=TAGS[0], # learning_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=500_000,
+#        fig_title_abbr="Return",
+#        fig_title="Return_Noisy"
+#        )
+#
+# curves("sokoban",
+#        exp_names=[
+#            "PPO", "PPOsfloss", "PLSperf",
+#        ],
+#        curve_type=TAGS[1], # violation_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=500_000,
+#        fig_title_abbr="Violation",
+#        fig_title="Violation_SF"
+#        )
+# curves("sokoban",
+#        exp_names=[
+#            "PPO", "PPOsfloss", "PLSperf",
+#        ],
+#        curve_type=TAGS[4], # safety
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=500_000,
+#        fig_title_abbr="Safety",
+#        fig_title="Safety_SF"
+#        )
+#
+# curves("sokoban",
+#        exp_names=[
+#            "PPO", "PPOsfloss", "PLSperf",
+#        ],
+#        curve_type=TAGS[0], # learning_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=500_000,
+#        fig_title_abbr="Return",
+#        fig_title="Return_SF"
+#        )
+# curves("sokoban",
+#        exp_names=[
+#            "PPO", "PLSnoisy", "PLSnoisysfloss",
+#        ],
+#        curve_type=TAGS[1], # violation_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=500_000,
+#        fig_title_abbr="Violation",
+#        fig_title="Violation_Noisy_SF"
+#        )
+# curves("sokoban",
+#        exp_names=[
+#            "PPO", "PLSnoisy", "PLSnoisysfloss",
+#        ],
+#        curve_type=TAGS[4], # safety
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=500_000,
+#        fig_title_abbr="Safety",
+#        fig_title="Safety_Noisy_SF"
+#        )
+# curves("sokoban",
+#        exp_names=[
+#            "PPO", "PLSnoisy", "PLSnoisysfloss",
+#        ],
+#        curve_type=TAGS[0], # learning_curves
+#        names=ALPHA_NAMES_LEARNING_CURVES,
+#        step_limit=500_000,
+#        fig_title_abbr="Return",
+#        fig_title="Return_Noisy_SF"
+#        )
+#
+#
