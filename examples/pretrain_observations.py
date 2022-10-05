@@ -1,18 +1,9 @@
 import os
 from pls.workflows.pre_train import generate_random_images_gf, generate_random_images_sokoban, generate_random_images_cr
-from pls.workflows.execute_workflow import pretrain_observation_gf, pretrain_observation_sokoban
+from pls.workflows.execute_workflow import pretrain_observation_gf, pretrain_observation_sokoban, pretrain_observation_cr
 from dask.distributed import Client
-from pls.observation_nets.observation_nets import Observation_net, Observation_Net_Stars, Observation_Net_Sokoban
+from pls.observation_nets.observation_nets import Observation_Net_Stars, Observation_Net_Sokoban, Observation_Net_Carracing
 
-
-def generate_cr(num_imgs):
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    img_folder = os.path.join(dir_path, "../pls/data/carracing")
-
-    csv_file = os.path.join(img_folder, "labels.csv")
-    if not os.path.exists(img_folder):
-        os.makedirs(img_folder)
-    generate_random_images_cr(csv_file, img_folder, num_imgs)
 
 def generate_gf(num_imgs):
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -31,6 +22,15 @@ def generate_sokoban(num_imgs):
     if not os.path.exists(img_folder):
         os.makedirs(img_folder)
     generate_random_images_sokoban(csv_file, img_folder, num_imgs)
+
+def generate_cr(num_imgs):
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    img_folder = os.path.join(dir_path, "../pls/data/carracing")
+
+    csv_file = os.path.join(img_folder, "labels.csv")
+    if not os.path.exists(img_folder):
+        os.makedirs(img_folder)
+    generate_random_images_cr(csv_file, img_folder, num_imgs)
 
 def pre_train_gf(n_train, net_class, epochs, downsampling_size=None):
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -66,6 +66,22 @@ def pre_train_sokoban(n_train, net_class, epochs, downsampling_size=None):
                             image_dim=image_dim, downsampling_size=downsampling_size,
                             n_train=n_train, epochs=epochs, net_class=net_class)
 
+def pre_train_cr(n_train, net_class, epochs, downsampling_size=1):
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    img_folder = os.path.join(dir_path, "../pls/data/carracing")
+
+    csv_file = os.path.join(img_folder, "labels.csv")
+    if not os.path.exists(img_folder):
+        os.makedirs(img_folder)
+
+    model_folder = os.path.join(dir_path, "../experiments_safety/carracing/map1/data/")
+    if not os.path.exists(model_folder):
+        os.makedirs(model_folder)
+
+    image_dim = 48
+    pretrain_observation_cr(csv_file=csv_file, img_folder=img_folder, model_folder=model_folder,
+                                 image_dim=image_dim, downsampling_size=downsampling_size,
+                                 n_train=n_train, epochs=epochs, net_class=net_class)
 
 def main_cluster():
     client = Client("134.58.41.100:8786")
@@ -78,8 +94,9 @@ def main_cluster():
 if __name__ == "__main__":
     # generate_gf(num_imgs=1100)
     # pre_train_gf(n_train=1000, net_class=Observation_Net_Stars, downsampling_size=8, epochs=10000)
-    # generate_sokoban(num_imgs=3100)
+    # generate_sokoban(num_imgs=20)
     # pre_train_sokoban(n_train=1000, net_class=Observation_Net_Sokoban, downsampling_size=4, epochs=10)
-    generate_cr(num_imgs=1100)
+    generate_cr(num_imgs=4100)
+    # pre_train_cr(n_train=501, net_class=Observation_Net_Carracing, downsampling_size=1, epochs=10)
     # main_cluster()
 

@@ -253,7 +253,7 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
             if self.use_learned_observations:
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
-                self.observation_model = Observation_Net_Carracing(input_size=self.net_input_dim*self.net_input_dim, output_size=4).to(device)
+                self.observation_model = Observation_Net_Carracing(input_size=self.net_input_dim*self.net_input_dim, output_size=3).to(device)
                 pp = path.join(self.folder, "../../data", self.observation_type)
                 self.observation_model.load_state_dict(th.load(pp))
 
@@ -325,16 +325,17 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
         if self.alpha != 0 and self.use_learned_observations:
             if self.train_observations:
                 if self.noisy_observations:
-                    grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                    # use the first frame
+                    grasses = self.observation_model.sigmoid(self.observation_model(x[:,0:1,:,:])[:, :3])
                 else:
-                    grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                    grasses = self.observation_model.sigmoid(self.observation_model(x[:,0:1,:,:])[:, :3])
                     grasses = (grasses > 0.5).float()
             else:
                 with th.no_grad():
                     if self.noisy_observations:
-                        grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                        grasses = self.observation_model.sigmoid(self.observation_model(x[:,0:1,:,:])[:, :3])
                     else:
-                        grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                        grasses = self.observation_model.sigmoid(self.observation_model(x[:,0:1,:,:])[:, :3])
                         grasses = (grasses > 0.5).float()
 
         else:
@@ -474,16 +475,16 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
             if self.alpha != 0 and self.use_learned_observations:
                 if self.train_observations:
                     if self.noisy_observations:
-                        grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                        grasses = self.observation_model.sigmoid(self.observation_model(x[:,0:1,:,:])[:, :3])
                     else:
-                        grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                        grasses = self.observation_model.sigmoid(self.observation_model(x[:,0:1,:,:])[:, :3])
                         grasses = (grasses > 0.5).float()
                 else:
                     with th.no_grad():
                         if self.noisy_observations:
-                            grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                            grasses = self.observation_model.sigmoid(self.observation_model(x[:,0:1,:,:])[:, :3])
                         else:
-                            grasses = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
+                            grasses = self.observation_model.sigmoid(self.observation_model(x[:,0:1,:,:])[:, :3])
                             grasses = (grasses > 0.5).float()
 
             else:

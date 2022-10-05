@@ -25,6 +25,7 @@ import time
 from pls.workflows.evaluate import load_model_and_env
 import json
 from time import sleep
+import cv2
 
 
 def sample_stuff(model, env, csv_path, deterministic=True, render=False, n_images=10, folder=None):
@@ -51,11 +52,11 @@ def sample_stuff(model, env, csv_path, deterministic=True, render=False, n_image
             gray_img = env.envs[0].render(mode="gray")
             gray_img = th.tensor(gray_img).unsqueeze(dim=0).unsqueeze(dim=1)
 
-            path = os.path.join(folder, f"img{n:06}.jpeg")
-            plt.imsave(path, img)
+            path = os.path.join(folder, f"img{n:06}.png")
 
+            plt.imsave(path, img)
             ground_truth_grass = get_ground_truth_of_grass(input=gray_img)
-            row = [f"img{n:06}.jpeg"] + ground_truth_grass.flatten().tolist()
+            row = [f"img{n:06}.png"] + ground_truth_grass.flatten().tolist()
             writer.writerow(row)
             f_csv.flush()
             n += 1
@@ -324,6 +325,10 @@ class Goal_Finding_Dataset(Dataset):
 
         img_name = os.path.join(self.root_dir, self.instances.iloc[idx, 0])
         image_raw = io.imread(img_name)[:self.image_dim,:self.image_dim,:]
+        # In case of grayScale images the len(img.shape) == 2
+        if len(image_raw.shape) > 2 and image_raw.shape[2] == 4:
+            #convert the image from RGBA2RGB
+            image_raw = cv2.cvtColor(image_raw, cv2.COLOR_BGRA2BGR)
         image = self.rgb2gray(image_raw)
         image = self.downsampling(image, self.downsampling_size).unsqueeze(dim=0)
         # from matplotlib import pyplot as plt
@@ -341,7 +346,7 @@ num_iters_train = 0
 num_iters_test1 = 0
 num_iters_test2 = 0
 
-def train(model, device, train_loader, optimizer, epoch, loss_function1, loss_function2, net_output_size, f_log, writer):
+def train(model, device, train_loader, optimizer, epoch, loss_function1, loss_function2, net_output_size, f_log, writer, use_agent_coord=True):
     start_time = time.time()
     model.train()
     global num_iters_train
@@ -350,10 +355,14 @@ def train(model, device, train_loader, optimizer, epoch, loss_function1, loss_fu
         optimizer.zero_grad()
         output = model(data)
         fire_labels = output[:, :net_output_size]
-        agent_coord = output[:, -2:]
         fire_loss = loss_function1(fire_labels, target[:, :net_output_size])
-        agent_coord_loss = loss_function2(agent_coord, target[:, -2:])
-        loss = fire_loss + agent_coord_loss
+
+        if use_agent_coord:
+            agent_coord = output[:, -2:]
+            agent_coord_loss = loss_function2(agent_coord, target[:, -2:])
+            loss = fire_loss + agent_coord_loss
+        else:
+            loss = fire_loss
         loss.backward()
         optimizer.step()
 
@@ -361,14 +370,15 @@ def train(model, device, train_loader, optimizer, epoch, loss_function1, loss_fu
         f_log.write(f'Train Epoch: {epoch} [{(batch_idx+1) * len(data)}/{len(train_loader.dataset)} ({100. * (batch_idx+1) / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}\n')
         writer.add_scalar('Loss/train', loss.item(), num_iters_train)
         writer.add_scalar('Loss/train_fire', fire_loss.item(), num_iters_train)
-        writer.add_scalar('Loss/train_agent_coord', agent_coord_loss.item(), num_iters_train)
+        if use_agent_coord:
+            writer.add_scalar('Loss/train_agent_coord', agent_coord_loss.item(), num_iters_train)
         num_iters_train += 1
     time_epoch = (time.time() - start_time)
     writer.add_scalar('Time/train_per_epoch', time_epoch, epoch)
 
 
 
-def test(model, device, test_loader, epoch, loss_function1, loss_function2, net_output_size, f_log, writer, use_train_set=False):
+def test(model, device, test_loader, epoch, loss_function1, loss_function2, net_output_size, f_log, writer, use_train_set=False, use_agent_coord=True):
     start_time = time.time()
     model.eval()
     avg_test_loss = 0
@@ -381,11 +391,14 @@ def test(model, device, test_loader, epoch, loss_function1, loss_function2, net_
             data, target = data.to(device), target.to(device).squeeze(1)
             output = model(data)
             fire_labels = output[:, :net_output_size]
-            agent_coord = output[:, -2:]
             fire_targets = target[:, :net_output_size]
             test_fire_loss = loss_function1(fire_labels, fire_targets).item()  # sum up batch loss
-            test_agent_coord_loss = loss_function2(agent_coord, target[:, -2:]).item()
-            test_loss = test_fire_loss + test_agent_coord_loss
+            if use_agent_coord:
+                agent_coord = output[:, -2:]
+                test_agent_coord_loss = loss_function2(agent_coord, target[:, -2:]).item()
+                test_loss = test_fire_loss + test_agent_coord_loss
+            else:
+                test_loss = test_fire_loss
             avg_test_loss += test_loss
             pred = (sig(fire_labels) > 0.5).float()
             correct += (fire_targets == pred).sum().item()
@@ -402,12 +415,14 @@ def test(model, device, test_loader, epoch, loss_function1, loss_function2, net_
             if not use_train_set:
                 writer.add_scalar('Loss/test', test_loss, num_iters_test1)
                 writer.add_scalar('Loss/test_fire_loss', test_fire_loss, num_iters_test1)
-                writer.add_scalar('Loss/test_agent_coord_loss', test_agent_coord_loss, num_iters_test1)
+                if use_agent_coord:
+                    writer.add_scalar('Loss/test_agent_coord_loss', test_agent_coord_loss, num_iters_test1)
                 num_iters_test1 += 1
             else:
                 writer.add_scalar('Loss/test (use trainset)', test_loss, num_iters_test2)
                 writer.add_scalar('Loss/test_fire_loss (use trainset)', test_fire_loss, num_iters_test2)
-                writer.add_scalar('Loss/test_agent_coord_loss (use trainset)', test_agent_coord_loss, num_iters_test2)
+                if use_agent_coord:
+                    writer.add_scalar('Loss/test_agent_coord_loss (use trainset)', test_agent_coord_loss, num_iters_test2)
                 num_iters_test2 += 1
 
 
@@ -459,7 +474,7 @@ def calculate_sample_weights(dataset, keys):
     return th.tensor(pos_weights)
 
 
-def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_size, net_output_size, image_dim, downsampling_size, epochs, keys):
+def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_size, net_output_size, image_dim, downsampling_size, epochs, keys, use_agent_coord=True):
     use_cuda = False
     batch_size = 8
     save_freq = 50
@@ -500,8 +515,8 @@ def pre_train(csv_file, root_dir, model_folder, n_train, net_class, net_input_si
     writer = SummaryWriter(log_dir=log_folder)
     f_log = open(log_path, "w")
     for epoch in range(1, epochs):
-        train(model, device, train_loader, optimizer, epoch, loss_function1, loss_function2, net_output_size, f_log, writer)
-        test(model, device, test_loader1, epoch, loss_function1, loss_function2, net_output_size, f_log, writer)
+        train(model, device, train_loader, optimizer, epoch, loss_function1, loss_function2, net_output_size, f_log, writer, use_agent_coord=use_agent_coord)
+        test(model, device, test_loader1, epoch, loss_function1, loss_function2, net_output_size, f_log, writer, use_agent_coord=use_agent_coord)
         test(model, device, test_loader2, epoch, loss_function1, loss_function2, net_output_size, f_log, writer, use_train_set=True)
         if epoch % save_freq == 0:
             path = os.path.join(log_folder, f"observation_{epoch}_steps.pt")
