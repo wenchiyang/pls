@@ -76,7 +76,7 @@ def load_policy_cr(folder, model_at_step):
 
 def generate_random_images_cr(csv_path, folder, n_images=10):
     policy_folder = os.path.join(os.path.dirname(__file__), "../../experiments_safety/carracing/map1/PPO/seed1")
-    model, env = load_policy_cr(policy_folder, model_at_step=300000)
+    model, env = load_policy_cr(policy_folder, model_at_step=600000)
 
     sample_stuff(
         model=model,
