@@ -286,9 +286,9 @@ def get_ground_truth_of_grass(
     # from matplotlib import pyplot as plt
     # arr = th.squeeze(input[:,0,:,:], dim=1)
     # temp = arr.clone()
-    # temp[:, 33:34, 22:23] = -1  # left
-    # temp[:, 33:34, 25:26] = -1  # right
-    # temp[:, 27:28, 23:25] = -1  # top
+    # temp[:, 33:34, 22:23] = 1  # left
+    # temp[:, 33:34, 25:26] = 1  # right
+    # temp[:, 27:28, 23:25] = 1  # top
     # plt.imshow(temp[0], cmap=plt.get_cmap('gray'), vmin=-1, vmax=1)
     # plt.show()
 
