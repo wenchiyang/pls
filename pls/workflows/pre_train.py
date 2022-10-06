@@ -28,7 +28,22 @@ from time import sleep
 import cv2
 
 
-def sample_stuff(model, env, csv_path, deterministic=True, render=False, n_images=10, folder=None):
+
+def load_policy_cr(folder, model_at_step):
+    path = os.path.join(folder, "config.json")
+    with open(path) as json_data_file:
+        config = json.load(json_data_file)
+    model, env = load_model_and_env(folder, config, model_at_step)
+    return model, env
+
+
+
+def generate_random_images_cr(csv_path, folder, n_images=10):
+    policy_folder = os.path.join(os.path.dirname(__file__), "../../experiments_safety/carracing/map1/PPO/seed1")
+    model, env = load_policy_cr(policy_folder, model_at_step=600000)
+
+    deterministic=False
+    render=True
     f_csv = open(csv_path, "w")
     writer = csv.writer(f_csv)
     writer.writerow(["image_name", "grass(in_front)","grass(on_the_left)", "grass(on_the_right)"])
@@ -63,30 +78,6 @@ def sample_stuff(model, env, csv_path, deterministic=True, render=False, n_image
 
         current_lengths += 1
 
-
-
-def load_policy_cr(folder, model_at_step):
-    path = os.path.join(folder, "config.json")
-    with open(path) as json_data_file:
-        config = json.load(json_data_file)
-    model, env = load_model_and_env(folder, config, model_at_step)
-    return model, env
-
-
-
-def generate_random_images_cr(csv_path, folder, n_images=10):
-    policy_folder = os.path.join(os.path.dirname(__file__), "../../experiments_safety/carracing/map1/PPO/seed1")
-    model, env = load_policy_cr(policy_folder, model_at_step=600000)
-
-    sample_stuff(
-        model=model,
-        env=env,
-        csv_path=csv_path,
-        deterministic=False,
-        render=True,
-        n_images=n_images,
-        folder=folder
-    )
 
 
 def sample_object_locations_sokoban(room_fixed, num_boxes):
