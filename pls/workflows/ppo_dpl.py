@@ -81,7 +81,7 @@ def setup_env(folder, config, eval=False):
         env = Carracing_Monitor(
             env,
             # vio_len = config["monitor_features"]["vio_len"],
-            vio_len = 1,
+            vio_len = 100,
             allow_early_resets=False
         )
 

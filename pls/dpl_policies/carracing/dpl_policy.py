@@ -89,12 +89,14 @@ class Carracing_Callback(ConvertCallback):
 
 class Carracing_Monitor(Monitor):
     def __init__(self, *args, vio_len, **kwargs):
-        # self.vio_len = vio_len # TODO
+        self.vio_len = vio_len # TODO
         super(Carracing_Monitor, self).__init__(*args, **kwargs)
 
     def reset(self, **kwargs) -> GymObs:
-        # self.violate_constraint = False # TODO
-        # self.violate_constraint_dequeue = deque(maxlen=self.vio_len)
+        self.violate_constraint = False # TODO
+        self.violate_constraint_dequeue = deque(maxlen=self.vio_len)
+        self.total_violate_len = 0
+        self.max_total_violate_len = 0
         output = super(Carracing_Monitor, self).reset(**kwargs)
         return output
 
@@ -105,15 +107,20 @@ class Carracing_Monitor(Monitor):
         observation, reward, done, info = self.env.step(action)
         self.rewards.append(reward)
 
-        # symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0)) # TODO
-        # violate_constraint = th.all(symbolic_state)
-        # self.violate_constraint_dequeue.append(bool(violate_constraint))
-        # if len(self.violate_constraint_dequeue) == self.vio_len and False not in set(self.violate_constraint_dequeue):
-        #     # if VIO_LEN frames violate the constraint
-        #     all_violate = True
-        # else:
-        #     all_violate = False
-        # self.violate_constraint = self.violate_constraint or all_violate
+        symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0)) # TODO
+        violate_constraint = th.all(symbolic_state)
+        self.violate_constraint_dequeue.append(bool(violate_constraint))
+        if violate_constraint == True:
+            self.total_violate_len += 1
+        else:
+            self.max_total_violate_len = max(self.total_violate_len, self.max_total_violate_len)
+            self.total_violate_len = 0
+        if len(self.violate_constraint_dequeue) == self.vio_len and False not in set(self.violate_constraint_dequeue):
+            # if VIO_LEN frames violate the constraint
+            all_violate = True
+        else:
+            all_violate = False
+        self.violate_constraint = self.violate_constraint or all_violate
 
         if done:
             symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0)) # TODO
@@ -127,8 +134,8 @@ class Carracing_Monitor(Monitor):
                 "l": ep_len,
                 "t": round(time.time() - self.t_start, 6),
                 "last_r": reward,
-                # "violate_constraint": self.violate_constraint,
-                "violate_constraint": violate_constraint,
+                "violate_constraint": self.violate_constraint,
+                # "violate_constraint": violate_constraint,
                 "is_success": info["is_success"]
             }
             for key in self.info_keywords:
@@ -216,6 +223,8 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
         self.program_path = path.join(self.folder, "../../../data", shielding_params["program_type"]+".pl")
 
         if self.program_path:
+            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_safety/carracing/data/carracing_grass3.pl")
+            # self.program_path = pp
             with open(self.program_path) as f:
                 self.program = f.read()
 
@@ -249,6 +258,7 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
             }
             query_struct = {"safe_action": {"do_nothing": 0, "accelerate": 1, "brake": 2, "turn_left": 3, "turn_right": 4}}
             pp = path.join(self.folder, "../../../data", "dpl_layer.p")
+            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_safety/carracing/data/dpl_layer.p")
             self.dpl_layer = self.get_layer(
                 pp, program=self.program, queries=self.queries, evidences=["safe_next"],
                 input_struct=input_struct, query_struct=query_struct
@@ -258,6 +268,7 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
                 device = th.device("cuda" if use_cuda else "cpu")
                 self.observation_model = Observation_Net_Carracing(input_size=self.net_input_dim*self.net_input_dim, output_size=3).to(device)
                 pp = path.join(self.folder, "../../data", self.observation_type)
+                # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_safety/carracing/map1/data", self.observation_type)
                 self.observation_model.load_state_dict(th.load(pp))
 
         debug_queries = ["safe_next"]
@@ -267,6 +278,7 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
             "action": [i for i in range(self.n_grass_locs, self.n_grass_locs + self.n_actions)]
         }
         pp = path.join(self.folder, "../../../data", "query_safety_layer.p")
+        # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_safety/carracing/data/query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
             pp, program=self.program, queries=debug_queries, evidences=[],
             input_struct=debug_input_struct,query_struct=debug_query_struct
