@@ -89,12 +89,12 @@ class Carracing_Callback(ConvertCallback):
 
 class Carracing_Monitor(Monitor):
     def __init__(self, *args, vio_len, **kwargs):
-        self.vio_len = vio_len # TODO
+        self.vio_len = vio_len
         super(Carracing_Monitor, self).__init__(*args, **kwargs)
 
     def reset(self, **kwargs) -> GymObs:
-        self.violate_constraint = False # TODO
-        self.violate_constraint_dequeue = deque(maxlen=self.vio_len)
+        # self.violate_constraint = False # TODO
+        # self.violate_constraint_dequeue = deque(maxlen=self.vio_len)
         self.total_violate_len = 0
         self.max_total_violate_len = 0
         output = super(Carracing_Monitor, self).reset(**kwargs)
@@ -109,22 +109,20 @@ class Carracing_Monitor(Monitor):
 
         symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0)) # TODO
         violate_constraint = th.all(symbolic_state)
-        self.violate_constraint_dequeue.append(bool(violate_constraint))
+        # self.violate_constraint_dequeue.append(bool(violate_constraint))
         if violate_constraint == True:
             self.total_violate_len += 1
         else:
             self.max_total_violate_len = max(self.total_violate_len, self.max_total_violate_len)
             self.total_violate_len = 0
-        if len(self.violate_constraint_dequeue) == self.vio_len and False not in set(self.violate_constraint_dequeue):
-            # if VIO_LEN frames violate the constraint
-            all_violate = True
-        else:
-            all_violate = False
-        self.violate_constraint = self.violate_constraint or all_violate
+        # if len(self.violate_constraint_dequeue) == self.vio_len and False not in set(self.violate_constraint_dequeue):
+        #     # if VIO_LEN frames violate the constraint
+        #     all_violate = True
+        # else:
+        #     all_violate = False
+        # self.violate_constraint = self.violate_constraint or all_violate
 
         if done:
-            symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0)) # TODO
-            violate_constraint = th.all(symbolic_state)
             self.needs_reset = True
             ep_rew = sum(self.rewards)
             ep_len = len(self.rewards)
@@ -134,7 +132,7 @@ class Carracing_Monitor(Monitor):
                 "l": ep_len,
                 "t": round(time.time() - self.t_start, 6),
                 "last_r": reward,
-                "violate_constraint": self.violate_constraint,
+                "violate_constraint": self.max_total_violate_len > self.vio_len,
                 # "violate_constraint": violate_constraint,
                 "is_success": info["is_success"]
             }
