@@ -19,14 +19,16 @@
   },
 
   "model_features": {
-    "name": "VSRLperf",
+    "name": "PLSnoisysfloss",
     "shield_params": {
       "n_grass_locs": 3,
       "alpha": 1,
-      "differentiable_shield": false,
+      "differentiable_shield": true,
       "program_type": "carracing_grass3",
-      "use_learned_observations": false,
-      "vsrl_use_renormalization": true
+      "use_learned_observations": true,
+      "train_observations": false,
+      "noisy_observations": true,
+      "observation_type": "observation_model_1000_examples/observation_100_steps.pt"
     },
     "params": {
       "log_interval": 1,
@@ -40,7 +42,8 @@
       "step_limit": 700000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
-      "net_arch_vf": [64, 64]
+      "net_arch_vf": [64, 64],
+      "safety_coef": 1
     }
   }
 }
