@@ -7,7 +7,7 @@
   "env_features": {
     "render": false,
     "num_maps": 1,
-    "seed": 567,
+    "seed": 890,
     "num_stacked_img": 4,
     "spikyness": [0.3333, 1],
     "n_rewardpoints": 500,
@@ -29,7 +29,7 @@
       "train_observations": false,
       "vsrl_use_renormalization": true,
       "noisy_observations": false,
-      "observation_type": "observation_model_2000_examples/observation_100_steps.pt"
+      "observation_type": "observation_model_500_examples/observation_100_steps.pt"
     },
     "params": {
       "log_interval": 1,
@@ -37,7 +37,7 @@
       "n_epochs": 15,
       "n_steps": 2048,
       "learning_rate": 0.0001,
-      "seed": 567,
+      "seed": 890,
       "clip_range": 0.1,
       "gamma": 0.99,
       "step_limit": 700000,
