@@ -41,7 +41,7 @@
       "use_learned_observations": true,
       "train_observations": false,
       "noisy_observations": false,
-      "observation_type": "observation_model_2000_examples/observation_100_steps.pt"
+      "observation_type": "observation_model_500_examples/observation_100_steps.pt"
     },
     "params": {
       "log_interval": 1,
