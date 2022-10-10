@@ -476,6 +476,38 @@ def get_time_sample_one_action(name, alpha):
 # safety_optimality_draw("goal_finding", n_step=500_000, x_axis_range=[0.6, 1.0], y_axis_range=[0.4, 1.0])
 # safety_optimality_draw("carracing", n_step=500_000, x_axis_range=[0.0, 0.3], y_axis_range=[0.0, 0.8])
 
+
+
+extract_values(domain_sokoban)
+graph_settings = [
+    {
+        "domain": "carracing",
+        "exp_names": [
+            ["PPO", "PLSperf", "VSRLperf"],
+            ["PPO", "PLSthres", "VSRLthres", "PLSnoisy"], # noisy
+            ["PPO", "PPOsfloss", "PLSperf"], # sf vs pls
+            ["PPO", "PLSnoisy", "PLSnoisysfloss"], # sf + pls
+        ],
+        "types": ["Violation", "Safety", "Return"],
+        "curve_types": [TAGS[1], TAGS[4], TAGS[0]]
+    }
+]
+
+POSTFIX = ["", "_Noisy", "_SF", "_Noisy_SF"]
+
+for domain in graph_settings["domain"]:
+    for n, exp_name in enumerate(graph_settings["exp_names"]):
+        for t in graph_settings["types"]:
+            fig_title = t + POSTFIX[n]
+            curves(domain,
+                   exp_names=exp_name,
+                   curve_type=TAGS[1], # violation_curves
+                   names=ALPHA_NAMES_LEARNING_CURVES,
+                   step_limit=500_000,
+                   fig_title_abbr=t,
+                   fig_title=t
+                   )
+            
 # WE USE THE FOLLOWING
 # STARS
 #
@@ -611,7 +643,7 @@ def get_time_sample_one_action(name, alpha):
 
 # SOKOOBAN
 
-extract_values(domain_sokoban)
+# extract_values(domain_sokoban)
 
 # curves("sokoban",
 #        exp_names=[
