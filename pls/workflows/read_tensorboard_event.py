@@ -478,9 +478,8 @@ def get_time_sample_one_action(name, alpha):
 
 
 
-extract_values(domain_sokoban)
-graph_settings = [
-    {
+# extract_values(domain_carracing)
+graph_settings = {
         "domain": "carracing",
         "exp_names": [
             ["PPO", "PLSperf", "VSRLperf"],
@@ -491,23 +490,27 @@ graph_settings = [
         "types": ["Violation", "Safety", "Return"],
         "curve_types": [TAGS[1], TAGS[4], TAGS[0]]
     }
-]
+
 
 POSTFIX = ["", "_Noisy", "_SF", "_Noisy_SF"]
 
 for domain in graph_settings["domain"]:
     for n, exp_name in enumerate(graph_settings["exp_names"]):
-        for t in graph_settings["types"]:
+        for j, t in enumerate(graph_settings["types"]):
             fig_title = t + POSTFIX[n]
+            # print(f"{exp_name}\n" + \
+            #       f"{graph_settings['curve_types'][j]}\n" + \
+            #       f"{t}\n" + \
+            #       f"{fig_title}\n")
             curves(domain,
                    exp_names=exp_name,
-                   curve_type=TAGS[1], # violation_curves
+                   curve_type=graph_settings["curve_types"][j], # violation_curves
                    names=ALPHA_NAMES_LEARNING_CURVES,
                    step_limit=500_000,
                    fig_title_abbr=t,
-                   fig_title=t
+                   fig_title=fig_title
                    )
-            
+
 # WE USE THE FOLLOWING
 # STARS
 #
