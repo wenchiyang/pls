@@ -18,6 +18,20 @@
     "render_mode": "gray"
   },
 
+  "eval_env_features": {
+    "render": true,
+    "num_maps": 1,
+    "seed": 567,
+    "num_stacked_img": 4,
+    "spikyness": [0.3333, 1],
+    "n_rewardpoints": 500,
+    "n_corners": 12,
+    "height": 48,
+    "width": 48,
+    "downsampling_size": 1,
+    "render_mode": "gray"
+  },
+
   "model_features": {
     "name": "PLSnoisysfloss",
     "shield_params": {
@@ -28,7 +42,7 @@
       "use_learned_observations": true,
       "train_observations": false,
       "noisy_observations": true,
-      "observation_type": "observation_model_1000_examples/observation_100_steps.pt"
+      "observation_type": "observation_model_500_examples/observation_100_steps.pt"
     },
     "params": {
       "log_interval": 1,
