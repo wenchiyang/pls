@@ -281,7 +281,6 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
                     else:
                         ghosts = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
                         ghosts = (ghosts > 0.5).float()
-
         else:
             ghosts = ground_truth_ghost
 
@@ -385,7 +384,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             results = self.query_safety_layer(
                 x={
                     "ghost": ghosts,
-                    "action": base_actions,
+                    "action": safeast_actions,
                 }
             )
             policy_safety = results["safe_next"]
