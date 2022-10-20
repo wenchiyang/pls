@@ -32,12 +32,12 @@ class RolloutBufferSamples_TinyGrid(NamedTuple):
     old_log_prob: th.Tensor
     advantages: th.Tensor
     returns: th.Tensor
-    safeties: th.Tensor
+    # safeties: th.Tensor
 
 class RolloutBuffer_TinyGrid(RolloutBuffer):
     def __init__(self, *args, tinygrid_space, **kwargs):
         self.tinygrid_shape = get_obs_shape(tinygrid_space)
-        self.safeties = None
+        # self.safeties = None
         super(RolloutBuffer_TinyGrid, self).__init__(*args, **kwargs)
 
     def reset(self) -> None:
@@ -45,9 +45,9 @@ class RolloutBuffer_TinyGrid(RolloutBuffer):
         self.tinygrids = np.zeros((self.buffer_size, self.n_envs) + self.tinygrid_shape, dtype=np.float32)
         self.safeties = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
 
-    def add(self, *args, tinygrid, safety, **kwargs) -> None:
+    def add(self, *args, tinygrid, **kwargs) -> None:
         self.tinygrids[self.pos] = np.array(tinygrid).copy()
-        self.safeties[self.pos] = np.array(safety).copy()
+        # self.safeties[self.pos] = np.array(safety).copy()
         super(RolloutBuffer_TinyGrid, self).add(*args, **kwargs)
 
     def get(self, batch_size: Optional[int] = None) -> Generator[RolloutBufferSamples_TinyGrid, None, None]:
@@ -64,7 +64,7 @@ class RolloutBuffer_TinyGrid(RolloutBuffer):
                 "log_probs",
                 "advantages",
                 "returns",
-                "safeties"
+                # "safeties"
             ]
 
             for tensor in _tensor_names:
@@ -89,7 +89,7 @@ class RolloutBuffer_TinyGrid(RolloutBuffer):
             self.log_probs[batch_inds].flatten(),
             self.advantages[batch_inds].flatten(),
             self.returns[batch_inds].flatten(),
-            self.safeties[batch_inds].flatten(),
+            # self.safeties[batch_inds].flatten(),
         )
         return RolloutBufferSamples_TinyGrid(*tuple(map(self.to_torch, data)))
 
@@ -407,7 +407,7 @@ class Pacman_DPLPPO(PPO):
             if callback.on_step() is False:
                 return False
 
-            safety = object_detect_probs["policy_safety"]
+            # safety = object_detect_probs["policy_safety"]
 
             if dones:
                 ep_len = infos[0]["episode"]["l"]
@@ -462,7 +462,7 @@ class Pacman_DPLPPO(PPO):
                 values,
                 log_probs,
                 tinygrid=tinygrid,
-                safety=safety
+                # safety=safety
             )
             self._last_obs = new_obs
             self._last_episode_starts = dones

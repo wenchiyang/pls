@@ -442,7 +442,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 x={
                     "box": boxes,
                     "corner": corners,
-                    "action": base_actions,
+                    "action": safeast_actions,
                 }
             )
             policy_safety = results["safe_next"]
