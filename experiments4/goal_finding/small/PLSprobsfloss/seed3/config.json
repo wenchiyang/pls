@@ -61,7 +61,7 @@
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
       "net_arch_vf": [64, 64],
-      "safety_coef": 1
+      "safety_coef": 0.01
     }
   }
 }
