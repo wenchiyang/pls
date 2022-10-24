@@ -190,19 +190,19 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         if self.alpha == 0: # NO shielding
             pass
         else: # HARD shielding and SOFT shielding
-            self.queries = ["safe_action(stay)", "safe_action(up)", "safe_action(down)",
-                            "safe_action(left)", "safe_action(right)"][: self.n_actions]
-            input_struct = {
-                "ghost": [i for i in range(self.n_ghost_locs)],
-                "action": [i for i in range(self.n_ghost_locs, self.n_ghost_locs + self.n_actions)]
-            }
-            query_struct = {"safe_action": {"stay": 0, "up": 1, "down": 2, "left": 3, "right": 4}}
-            pp = path.join(self.folder, "../../../data", "dpl_layer.p")
-            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/goal_finding/data/dpl_layer.p")
-            self.dpl_layer = self.get_layer(
-                pp, program=self.program, queries=self.queries, evidences=["safe_next"],
-                input_struct=input_struct, query_struct=query_struct
-            )
+            # self.queries = ["safe_action(stay)", "safe_action(up)", "safe_action(down)",
+            #                 "safe_action(left)", "safe_action(right)"][: self.n_actions]
+            # input_struct = {
+            #     "ghost": [i for i in range(self.n_ghost_locs)],
+            #     "action": [i for i in range(self.n_ghost_locs, self.n_ghost_locs + self.n_actions)]
+            # }
+            # query_struct = {"safe_action": {"stay": 0, "up": 1, "down": 2, "left": 3, "right": 4}}
+            # pp = path.join(self.folder, "../../../data", "dpl_layer.p")
+            # # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/goal_finding/data/dpl_layer.p")
+            # self.dpl_layer = self.get_layer(
+            #     pp, program=self.program, queries=self.queries, evidences=["safe_next"],
+            #     input_struct=input_struct, query_struct=query_struct
+            # )
             if self.use_learned_observations:
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
@@ -359,13 +359,17 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
                 return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
         if self.differentiable_shield: # PLS
-            results = self.dpl_layer(
+            results = self.query_safety_layer(
                 x={
                     "ghost": ghosts,
                     "action": base_actions,
                 }
             )
-            safeast_actions = results["safe_action"]
+            policy_safety = results["safe_next"]
+            object_detect_probs["policy_safety"] = policy_safety
+
+            safety_a = th.cat((th.ones((ghosts.size()[0], 1)),(1-ghosts)), 1)
+            safeast_actions = safety_a*base_actions/policy_safety
 
             alpha = self.alpha
             actions = alpha * safeast_actions + (1 - alpha) * base_actions
@@ -379,16 +383,6 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
 
             log_prob = mass.log_prob(actions)
             object_detect_probs["alpha"] = alpha
-
-
-            results = self.query_safety_layer(
-                x={
-                    "ghost": ghosts,
-                    "action": safeast_actions,
-                }
-            )
-            policy_safety = results["safe_next"]
-            object_detect_probs["policy_safety"] = policy_safety
 
             return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
