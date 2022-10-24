@@ -225,25 +225,25 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
         if self.alpha == 0: # NO shielding
             pass
         else: # HARD shielding and SOFT shielding
-            # IMPORTANT: THE ORDER OF QUERIES IS THE ORDER OF THE OUTPUT
-            self.queries = ["safe_action(no_op)", "safe_action(push_up)", "safe_action(push_down)",
-                            "safe_action(push_left)", "safe_action(push_right)", "safe_action(move_up)",
-                            "safe_action(move_down)", "safe_action(move_left)", "safe_action(move_right)"
-                           ][: self.n_actions]
-            input_struct = {
-                "box": [i for i in range(self.n_box_locs)],
-                "corner": [i for i in range(self.n_box_locs, self.n_box_locs + self.n_corner_locs)],
-                "action": [i for i in range(self.n_box_locs + self.n_corner_locs,
-                                            self.n_box_locs + self.n_corner_locs + self.n_actions)],
-            }
-            query_struct = {"safe_action": { "no_op": 0, "push_up": 1,
-                                             "push_down": 2, "push_left": 3, "push_right": 4}}
-            pp = path.join(self.folder, "../../../data", "dpl_layer.p")
-            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/dpl_layer.p")
-            self.dpl_layer = self.get_layer(
-                pp, program=self.program, queries=self.queries, evidences=["safe_next"],
-                input_struct=input_struct, query_struct=query_struct
-            )
+            # # IMPORTANT: THE ORDER OF QUERIES IS THE ORDER OF THE OUTPUT
+            # self.queries = ["safe_action(no_op)", "safe_action(push_up)", "safe_action(push_down)",
+            #                 "safe_action(push_left)", "safe_action(push_right)", "safe_action(move_up)",
+            #                 "safe_action(move_down)", "safe_action(move_left)", "safe_action(move_right)"
+            #                ][: self.n_actions]
+            # input_struct = {
+            #     "box": [i for i in range(self.n_box_locs)],
+            #     "corner": [i for i in range(self.n_box_locs, self.n_box_locs + self.n_corner_locs)],
+            #     "action": [i for i in range(self.n_box_locs + self.n_corner_locs,
+            #                                 self.n_box_locs + self.n_corner_locs + self.n_actions)],
+            # }
+            # query_struct = {"safe_action": { "no_op": 0, "push_up": 1,
+            #                                  "push_down": 2, "push_left": 3, "push_right": 4}}
+            # pp = path.join(self.folder, "../../../data", "dpl_layer.p")
+            # # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/sokoban/data/dpl_layer.p")
+            # self.dpl_layer = self.get_layer(
+            #     pp, program=self.program, queries=self.queries, evidences=["safe_next"],
+            #     input_struct=input_struct, query_struct=query_struct
+            # )
             if self.use_learned_observations:
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
@@ -369,7 +369,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                         actions = distribution.get_actions(deterministic=deterministic) # sample an action
                         # check if the action is safe
                         vsrl_actions_encoding = th.eye(self.n_actions)[actions][:, 1:] # TODO
-                        risky_actions = th.logical_and(object_detect_probs["ground_truth_box"], object_detect_probs["ground_truth_corner"])
+                        risky_actions = th.logical_and(object_detect_probs["box"], object_detect_probs["corner"])
                         actions_are_unsafe = th.logical_and(vsrl_actions_encoding, risky_actions)
                         if not th.any(actions_are_unsafe) or num_rejected_samples > self.max_num_rejected_samples:
                             break
@@ -383,7 +383,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 # ====== VSRL with mask =========
                 with th.no_grad():
                     num_rejected_samples = 0
-                    risky_actions = th.logical_and(object_detect_probs["ground_truth_box"], object_detect_probs["ground_truth_corner"])
+                    risky_actions = th.logical_and(boxes, corners)
                     acc = th.ones((risky_actions.size()[0], 1)) # extra dimension for action "stay"
                     mask = th.cat((acc, ~risky_actions.bool()), 1).bool()
                     masked_distr = distribution.distribution.probs * mask
@@ -416,14 +416,20 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                 return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
         if self.differentiable_shield:
-            results = self.dpl_layer(
+            results = self.query_safety_layer(
                 x={
                     "box": boxes,
                     "corner": corners,
                     "action": base_actions,
                 }
             )
-            safeast_actions = results["safe_action"]
+            policy_safety = results["safe_next"]
+            object_detect_probs["policy_safety"] = policy_safety
+
+            risky_actions = boxes * corners
+            acc = th.ones((risky_actions.size()[0], 1)) # extra dimension for action "stay"
+            safety_a = th.cat((acc, (1-risky_actions)), 1)
+            safeast_actions = safety_a*base_actions/policy_safety
 
             alpha = self.alpha
             actions = alpha * safeast_actions + (1 - alpha) * base_actions
@@ -437,16 +443,6 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
 
             log_prob = mass.log_prob(actions)
             object_detect_probs["alpha"] = alpha
-
-            results = self.query_safety_layer(
-                x={
-                    "box": boxes,
-                    "corner": corners,
-                    "action": safeast_actions,
-                }
-            )
-            policy_safety = results["safe_next"]
-            object_detect_probs["policy_safety"] = policy_safety
 
             return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
