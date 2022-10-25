@@ -75,13 +75,12 @@ def setup_env(folder, config, eval=False):
             allow_early_resets=False
         )
 
-
     elif "Car" in env_name:
         image_encoder_cls = Carracing_Encoder
         env = Carracing_Monitor(
             env,
-            # vio_len = config["monitor_features"]["vio_len"],
-            vio_len = 100,
+            vio_len = config["model_features"]["shield_params"]["vio_len"],
+            # vio_len = 100,
             allow_early_resets=False
         )
 

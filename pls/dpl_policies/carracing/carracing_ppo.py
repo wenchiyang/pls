@@ -24,19 +24,19 @@ class RolloutBufferSamples_TinyGrid(NamedTuple):
     old_log_prob: th.Tensor
     advantages: th.Tensor
     returns: th.Tensor
-    safeties: th.Tensor
+    # safeties: th.Tensor
 
 class RolloutBuffer_TinyGrid(RolloutBuffer):
     def __init__(self, *args, **kwargs):
-        self.safeties = None
+        # self.safeties = None
         super(RolloutBuffer_TinyGrid, self).__init__(*args, **kwargs)
 
     def reset(self) -> None:
         super(RolloutBuffer_TinyGrid, self).reset()
-        self.safeties = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+        # self.safeties = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
 
-    def add(self, *args, safety, **kwargs) -> None:
-        self.safeties[self.pos] = np.array(safety).copy()
+    def add(self, *args, **kwargs) -> None:
+        # self.safeties[self.pos] = np.array(safety).copy()
         super(RolloutBuffer_TinyGrid, self).add(*args, **kwargs)
 
     def get(self, batch_size: Optional[int] = None) -> Generator[RolloutBufferSamples_TinyGrid, None, None]:
@@ -52,7 +52,7 @@ class RolloutBuffer_TinyGrid(RolloutBuffer):
                 "log_probs",
                 "advantages",
                 "returns",
-                "safeties"
+                # "safeties"
             ]
 
             for tensor in _tensor_names:
@@ -76,7 +76,7 @@ class RolloutBuffer_TinyGrid(RolloutBuffer):
             self.log_probs[batch_inds].flatten(),
             self.advantages[batch_inds].flatten(),
             self.returns[batch_inds].flatten(),
-            self.safeties[batch_inds].flatten(),
+            # self.safeties[batch_inds].flatten(),
         )
         return RolloutBufferSamples_TinyGrid(*tuple(map(self.to_torch, data)))
 
@@ -142,6 +142,19 @@ class Carracing_DPLPPO(PPO):
                 fps = int(self.num_timesteps / (time.time() - self.start_time))
                 self.logger.record("time/iterations", iteration, exclude="tensorboard")
                 if len(self.ep_info_buffer) > 0 and len(self.ep_info_buffer[0]) > 0:
+                    self.logger.record(
+                        "safety/max_cont_in_grass_len",
+                        safe_mean([ep_info["max_cont_in_grass_len"] for ep_info in self.ep_info_buffer]),
+                    )
+                    self.logger.record(
+                        "safety/max_cont_violate_len",
+                        safe_mean([ep_info["max_cont_violate_len"] for ep_info in self.ep_info_buffer]),
+                    )
+                    self.logger.record(
+                        "safety/total_violate_len",
+                        safe_mean([ep_info["total_violate_len"] for ep_info in self.ep_info_buffer]),
+                    )
+
                     self.logger.record(
                         "rollout/ep_rew_mean",
                         safe_mean([ep_info["r"] for ep_info in self.ep_info_buffer]),
@@ -385,7 +398,7 @@ class Carracing_DPLPPO(PPO):
             if callback.on_step() is False:
                 return False
 
-            safety = object_detect_probs["policy_safety"]
+            # safety = object_detect_probs["policy_safety"]
 
             if dones:
                 ep_len = infos[0]["episode"]["l"]
@@ -439,7 +452,7 @@ class Carracing_DPLPPO(PPO):
                 self._last_episode_starts,
                 values,
                 log_probs,
-                safety=safety
+                # safety=safety
             )
             self._last_obs = new_obs
             self._last_episode_starts = dones

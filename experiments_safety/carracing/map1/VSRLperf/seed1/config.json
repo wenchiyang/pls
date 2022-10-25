@@ -18,6 +18,20 @@
     "render_mode": "gray"
   },
 
+  "eval_env_features": {
+    "render": false,
+    "num_maps": 1,
+    "seed": 567,
+    "num_stacked_img": 4,
+    "spikyness": [0.3333, 1],
+    "n_rewardpoints": 500,
+    "n_corners": 12,
+    "height": 48,
+    "width": 48,
+    "downsampling_size": 1,
+    "render_mode": "gray"
+  },
+
   "model_features": {
     "name": "VSRLperf",
     "shield_params": {
@@ -26,7 +40,8 @@
       "differentiable_shield": false,
       "program_type": "carracing_grass3",
       "use_learned_observations": false,
-      "vsrl_use_renormalization": true
+      "vsrl_use_renormalization": true,
+      "vio_len": 100
     },
     "params": {
       "log_interval": 1,
@@ -40,7 +55,8 @@
       "step_limit": 700000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
-      "net_arch_vf": [64, 64]
+      "net_arch_vf": [64, 64],
+      "safety_coef": 0
     }
   }
 }

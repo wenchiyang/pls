@@ -369,7 +369,7 @@ class Sokoban_DPLActorCriticPolicy(ActorCriticPolicy):
                         actions = distribution.get_actions(deterministic=deterministic) # sample an action
                         # check if the action is safe
                         vsrl_actions_encoding = th.eye(self.n_actions)[actions][:, 1:] # TODO
-                        risky_actions = th.logical_and(object_detect_probs["box"], object_detect_probs["corner"])
+                        risky_actions = th.logical_and(boxes, corners)
                         actions_are_unsafe = th.logical_and(vsrl_actions_encoding, risky_actions)
                         if not th.any(actions_are_unsafe) or num_rejected_samples > self.max_num_rejected_samples:
                             break

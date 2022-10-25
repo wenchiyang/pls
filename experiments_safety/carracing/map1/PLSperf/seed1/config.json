@@ -19,7 +19,7 @@
   },
 
   "eval_env_features": {
-    "render": true,
+    "render": false,
     "num_maps": 1,
     "seed": 567,
     "num_stacked_img": 4,
@@ -32,7 +32,6 @@
     "render_mode": "gray"
   },
 
-
   "model_features": {
     "name": "PLSperf",
     "shield_params": {
@@ -40,7 +39,8 @@
       "alpha": 1,
       "differentiable_shield": true,
       "program_type": "carracing_grass3",
-      "use_learned_observations": false
+      "use_learned_observations": false,
+      "vio_len": 100
     },
     "params": {
       "log_interval": 1,
@@ -54,7 +54,8 @@
       "step_limit": 700000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
-      "net_arch_vf": [64, 64]
+      "net_arch_vf": [64, 64],
+      "safety_coef": 0
     }
   }
 }

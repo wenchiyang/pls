@@ -95,8 +95,12 @@ class Carracing_Monitor(Monitor):
     def reset(self, **kwargs) -> GymObs:
         # self.violate_constraint = False # TODO
         # self.violate_constraint_dequeue = deque(maxlen=self.vio_len)
+        self.cont_in_grass_len = 0
+        self.max_cont_in_grass_len = 0
+
         self.total_violate_len = 0
-        self.max_total_violate_len = 0
+        self.cont_violate_len = 0
+        self.max_cont_violate_len = 0
         output = super(Carracing_Monitor, self).reset(**kwargs)
         return output
 
@@ -107,20 +111,25 @@ class Carracing_Monitor(Monitor):
         observation, reward, done, info = self.env.step(action)
         self.rewards.append(reward)
 
-        symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0)) # TODO
-        violate_constraint = th.all(symbolic_state)
-        # self.violate_constraint_dequeue.append(bool(violate_constraint))
-        if violate_constraint == True:
+        symbolic_state = get_ground_truth_of_grass(th.from_numpy(observation.copy()).unsqueeze(0))
+
+        is_in_grass = th.all(symbolic_state)
+        if is_in_grass == True:
+            self.cont_in_grass_len += 1
+        else:
+            self.cont_in_grass_len = 0
+        self.max_cont_in_grass_len = max(self.cont_in_grass_len, self.max_cont_in_grass_len)
+
+
+        left_grass_only = th.logical_and(symbolic_state[0,1].bool(), ~symbolic_state[0,2].bool())
+        right_grass_only = th.logical_and(~symbolic_state[0,1].bool(), symbolic_state[0,2].bool())
+        violate_cont = th.logical_or(left_grass_only, right_grass_only)
+        if violate_cont == True:
+            self.cont_violate_len += 1
             self.total_violate_len += 1
         else:
-            self.max_total_violate_len = max(self.total_violate_len, self.max_total_violate_len)
-            self.total_violate_len = 0
-        # if len(self.violate_constraint_dequeue) == self.vio_len and False not in set(self.violate_constraint_dequeue):
-        #     # if VIO_LEN frames violate the constraint
-        #     all_violate = True
-        # else:
-        #     all_violate = False
-        # self.violate_constraint = self.violate_constraint or all_violate
+            self.cont_violate_len = 0
+        self.max_cont_violate_len = max(self.cont_violate_len, self.max_cont_violate_len)
 
         if done:
             self.needs_reset = True
@@ -132,9 +141,12 @@ class Carracing_Monitor(Monitor):
                 "l": ep_len,
                 "t": round(time.time() - self.t_start, 6),
                 "last_r": reward,
-                "violate_constraint": self.max_total_violate_len > self.vio_len,
+                "violate_constraint": self.max_cont_in_grass_len > self.vio_len,
                 # "violate_constraint": violate_constraint,
-                "is_success": info["is_success"]
+                "is_success": info["is_success"],
+                "max_cont_in_grass_len": self.max_cont_in_grass_len,
+                "max_cont_violate_len": self.max_cont_violate_len,
+                "total_violate_len": self.total_violate_len
             }
             for key in self.info_keywords:
                 ep_info[key] = info[key]
@@ -247,20 +259,20 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
         if self.alpha == 0: # NO shielding
             pass
         else: # HARD shielding and SOFT shielding
-            self.queries = ["safe_action(do_nothing)", "safe_action(accelerate)",
-                            "safe_action(brake)", "safe_action(turn_left)",
-                            "safe_action(turn_right)"][: self.n_actions]
-            input_struct = {
-                "grass": [i for i in range(self.n_grass_locs)],
-                "action": [i for i in range(self.n_grass_locs, self.n_grass_locs + self.n_actions)]
-            }
-            query_struct = {"safe_action": {"do_nothing": 0, "accelerate": 1, "brake": 2, "turn_left": 3, "turn_right": 4}}
-            pp = path.join(self.folder, "../../../data", "dpl_layer.p")
-            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_safety/carracing/data/dpl_layer.p")
-            self.dpl_layer = self.get_layer(
-                pp, program=self.program, queries=self.queries, evidences=["safe_next"],
-                input_struct=input_struct, query_struct=query_struct
-            )
+            # self.queries = ["safe_action(do_nothing)", "safe_action(accelerate)",
+            #                 "safe_action(brake)", "safe_action(turn_left)",
+            #                 "safe_action(turn_right)"][: self.n_actions]
+            # input_struct = {
+            #     "grass": [i for i in range(self.n_grass_locs)],
+            #     "action": [i for i in range(self.n_grass_locs, self.n_grass_locs + self.n_actions)]
+            # }
+            # query_struct = {"safe_action": {"do_nothing": 0, "accelerate": 1, "brake": 2, "turn_left": 3, "turn_right": 4}}
+            # pp = path.join(self.folder, "../../../data", "dpl_layer.p")
+            # # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_safety/carracing/data/dpl_layer.p")
+            # self.dpl_layer = self.get_layer(
+            #     pp, program=self.program, queries=self.queries, evidences=["safe_next"],
+            #     input_struct=input_struct, query_struct=query_struct
+            # )
             if self.use_learned_observations:
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
@@ -405,8 +417,10 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
 
                     alpha = self.alpha
                     actions = alpha * safeast_actions + (1 - alpha) * base_actions
-
-                    mass = Categorical(probs=actions)
+                    try:
+                        mass = Categorical(probs=actions)
+                    except:
+                        mass = Categorical(probs=actions)
                     if not deterministic:
                         actions = mass.sample()
                     else:
@@ -428,13 +442,26 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
                 return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
         if self.differentiable_shield: # PLS
-            results = self.dpl_layer(
+            results = self.query_safety_layer(
                 x={
                     "grass": grasses,
                     "action": base_actions,
                 }
             )
-            safeast_actions = results["safe_action"]
+            policy_safety = results["safe_next"]
+            object_detect_probs["policy_safety"] = policy_safety
+
+            acc = th.ones((grasses.size()[0], 1)) # extra dimension for action "stay"
+            safety_a = th.cat((acc, (1-grasses[:, 0:1]), acc, (1-grasses[:, 1:])), 1)
+            safeast_actions = safety_a*base_actions/policy_safety
+
+            # results = self.dpl_layer(
+            #     x={
+            #         "grass": grasses,
+            #         "action": base_actions,
+            #     }
+            # )
+            # safeast_actions = results["safe_action"]
             alpha = self.alpha
             actions = alpha * safeast_actions + (1 - alpha) * base_actions
 
@@ -449,14 +476,14 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
             object_detect_probs["alpha"] = alpha
 
 
-            results = self.query_safety_layer(
-                x={
-                    "grass": grasses,
-                    "action": base_actions,
-                }
-            )
-            policy_safety = results["safe_next"]
-            object_detect_probs["policy_safety"] = policy_safety
+            # results = self.query_safety_layer(
+            #     x={
+            #         "grass": grasses,
+            #         "action": base_actions,
+            #     }
+            # )
+            # policy_safety = results["safe_next"]
+            # object_detect_probs["policy_safety"] = policy_safety
 
         return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
