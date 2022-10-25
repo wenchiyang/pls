@@ -410,7 +410,7 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
                 with th.no_grad():
                     num_rejected_samples = 0
                     acc = th.ones((grasses.size()[0], 1)) # extra dimension for action "stay"
-                    mask = th.cat((acc, ~grasses.bool()[:, 0:1], acc, ~grasses.bool()[:, 1:]), 1).bool()
+                    mask = th.cat((acc, acc, acc, ~grasses.bool()[:, 1:]), 1).bool()
                     masked_distr = distribution.distribution.probs * mask
                     safe_normalization_const = th.sum(masked_distr, dim=1,  keepdim=True)
                     safeast_actions = masked_distr / safe_normalization_const
@@ -452,16 +452,12 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
             object_detect_probs["policy_safety"] = policy_safety
 
             acc = th.ones((grasses.size()[0], 1)) # extra dimension for action "stay"
-            safety_a = th.cat((acc, (1-grasses[:, 0:1]), acc, (1-grasses[:, 1:])), 1)
+            safety_left = 1- (grasses[:, 1:2] * (1- grasses[:, 2:]))
+            safety_right = 1- ((1-grasses[:, 1:2]) * grasses[:, 2:])
+
+            safety_a = th.cat((acc, acc, acc, safety_left, safety_right), 1)
             safeast_actions = safety_a*base_actions/policy_safety
 
-            # results = self.dpl_layer(
-            #     x={
-            #         "grass": grasses,
-            #         "action": base_actions,
-            #     }
-            # )
-            # safeast_actions = results["safe_action"]
             alpha = self.alpha
             actions = alpha * safeast_actions + (1 - alpha) * base_actions
 
@@ -474,16 +470,6 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
 
             log_prob = mass.log_prob(actions)
             object_detect_probs["alpha"] = alpha
-
-
-            # results = self.query_safety_layer(
-            #     x={
-            #         "grass": grasses,
-            #         "action": base_actions,
-            #     }
-            # )
-            # policy_safety = results["safe_next"]
-            # object_detect_probs["policy_safety"] = policy_safety
 
         return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
