@@ -39,7 +39,7 @@
       "alpha": 0,
       "differentiable_shield": false,
       "program_type": "carracing_grass4",
-      "vio_len": 100
+      "vio_len": 200
     },
     "params": {
       "log_interval": 1,

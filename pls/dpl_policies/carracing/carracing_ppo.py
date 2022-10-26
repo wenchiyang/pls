@@ -176,6 +176,12 @@ class Carracing_DPLPPO(PPO):
                         ),
                     )
                     self.logger.record(
+                        "rollout/out_of_field",
+                        safe_mean(
+                            [ep_info["out_of_field"] for ep_info in self.ep_info_buffer]
+                        ),
+                    )
+                    self.logger.record(
                         "rollout/#violations",
                         safe_mean(
                             [ep_info["violate_constraint"] for ep_info in self.ep_info_buffer]

@@ -19,7 +19,7 @@
   },
 
   "eval_env_features": {
-    "render": false,
+    "render": true,
     "num_maps": 1,
     "seed": 567,
     "num_stacked_img": 4,

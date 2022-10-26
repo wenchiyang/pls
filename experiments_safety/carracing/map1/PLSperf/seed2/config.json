@@ -40,7 +40,7 @@
       "differentiable_shield": true,
       "program_type": "carracing_grass4",
       "use_learned_observations": false,
-      "vio_len": 100
+      "vio_len": 200
     },
     "params": {
       "log_interval": 1,

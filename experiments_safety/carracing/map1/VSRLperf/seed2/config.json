@@ -19,7 +19,7 @@
   },
 
   "eval_env_features": {
-    "render": false,
+    "render": true,
     "num_maps": 1,
     "seed": 567,
     "num_stacked_img": 4,
@@ -41,7 +41,7 @@
       "program_type": "carracing_grass4",
       "use_learned_observations": false,
       "vsrl_use_renormalization": true,
-      "vio_len": 100
+      "vio_len": 200
     },
     "params": {
       "log_interval": 1,
