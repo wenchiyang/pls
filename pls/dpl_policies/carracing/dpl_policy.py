@@ -410,7 +410,11 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
                 with th.no_grad():
                     num_rejected_samples = 0
                     acc = th.ones((grasses.size()[0], 1)) # extra dimension for action "stay"
-                    mask = th.cat((acc, acc, acc, ~grasses.bool()[:, 1:]), 1).bool()
+                    safety_left = ~th.logical_and(grasses.bool()[:, 1:2], ~grasses.bool()[:, 2:3])
+                    safety_right = ~th.logical_and(~grasses.bool()[:, 1:2], grasses.bool()[:, 2:3])
+                    safety_front = ~th.logical_or(~safety_left, ~safety_right)
+
+                    mask = th.cat((acc, safety_front, acc, safety_left,safety_right), 1).bool()
                     masked_distr = distribution.distribution.probs * mask
                     safe_normalization_const = th.sum(masked_distr, dim=1,  keepdim=True)
                     safeast_actions = masked_distr / safe_normalization_const
