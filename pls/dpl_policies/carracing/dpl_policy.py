@@ -234,8 +234,8 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
         self.program_path = path.join(self.folder, "../../../data", shielding_params["program_type"]+".pl")
 
         if self.program_path:
-            pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_safety/carracing/data/carracing_grass4.pl")
-            self.program_path = pp
+            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_safety/carracing/data/carracing_grass4.pl")
+            # self.program_path = pp
             with open(self.program_path) as f:
                 self.program = f.read()
 
@@ -278,8 +278,8 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
                 use_cuda = False
                 device = th.device("cuda" if use_cuda else "cpu")
                 self.observation_model = Observation_Net_Carracing(input_size=self.net_input_dim*self.net_input_dim, output_size=3).to(device)
-                # pp = path.join(self.folder, "../../data", self.observation_type)
-                pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_safety/carracing/map1/data", self.observation_type)
+                pp = path.join(self.folder, "../../data", self.observation_type)
+                # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_safety/carracing/map1/data", self.observation_type)
                 self.observation_model.load_state_dict(th.load(pp))
 
         debug_queries = ["safe_next"]
@@ -288,8 +288,8 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
             "grass": [i for i in range(self.n_grass_locs)],
             "action": [i for i in range(self.n_grass_locs, self.n_grass_locs + self.n_actions)]
         }
-        # pp = path.join(self.folder, "../../../data", "query_safety_layer.p")
-        pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_safety/carracing/data/query_safety_layer.p")
+        pp = path.join(self.folder, "../../../data", "query_safety_layer.p")
+        # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_safety/carracing/data/query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
             pp, program=self.program, queries=debug_queries, evidences=[],
             input_struct=debug_input_struct,query_struct=debug_query_struct
