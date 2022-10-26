@@ -452,10 +452,12 @@ class Carracing_DPLActorCriticPolicy(ActorCriticPolicy):
             object_detect_probs["policy_safety"] = policy_safety
 
             acc = th.ones((grasses.size()[0], 1)) # extra dimension for action "stay"
-            safety_left = 1- (grasses[:, 1:2] * (1- grasses[:, 2:]))
-            safety_right = 1- ((1-grasses[:, 1:2]) * grasses[:, 2:])
+            safety_left = 1 - (grasses[:, 1:2] * (1- grasses[:, 2:]))
+            safety_right = 1 - ((1-grasses[:, 1:2]) * grasses[:, 2:])
+            safety_front = 1 - ((1-safety_left)+(1-safety_right))
 
-            safety_a = th.cat((acc, acc, acc, safety_left, safety_right), 1)
+
+            safety_a = th.cat((acc, safety_front, acc, safety_left, safety_right), 1)
             safeast_actions = safety_a*base_actions/policy_safety
 
             alpha = self.alpha
