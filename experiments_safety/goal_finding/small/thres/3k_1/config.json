@@ -35,7 +35,7 @@
     "background": "bg_small.jpg"
   },
   "model_features": {
-    "name": "PLSthres",
+    "name": "VSRLthres",
     "shield_params": {
       "n_ghost_locs": 4,
       "alpha": 1,
@@ -44,6 +44,7 @@
       "tinygrid_dim": 15,
       "use_learned_observations": true,
       "train_observations": false,
+      "vsrl_use_renormalization": true,
       "noisy_observations": false,
       "observation_type": "observation_3k_examples_100_steps.pt"
     },
