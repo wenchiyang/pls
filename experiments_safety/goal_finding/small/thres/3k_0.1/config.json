@@ -39,7 +39,7 @@
     "shield_params": {
       "n_ghost_locs": 4,
       "alpha": 1,
-      "differentiable_shield": true,
+      "differentiable_shield": false,
       "program_type": "relative_loc_simple",
       "tinygrid_dim": 15,
       "use_learned_observations": true,
