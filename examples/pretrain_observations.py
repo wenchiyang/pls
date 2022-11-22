@@ -57,7 +57,7 @@ def pre_train_sokoban(n_train, net_class, epochs, downsampling_size=None):
     if not os.path.exists(img_folder):
         os.makedirs(img_folder)
 
-    model_folder = os.path.join(dir_path, "../experiments_trials3/sokoban/2box1map/data/")
+    model_folder = os.path.join(dir_path, "../experiments_safety/sokoban/2box1map/data/")
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
 
@@ -94,9 +94,9 @@ def main_cluster():
 if __name__ == "__main__":
     # generate_gf(num_imgs=1100)
     # pre_train_gf(n_train=1000, net_class=Observation_Net_Stars, downsampling_size=8, epochs=10000)
-    # generate_sokoban(num_imgs=20)
-    # pre_train_sokoban(n_train=1000, net_class=Observation_Net_Sokoban, downsampling_size=4, epochs=10)
-    generate_cr(num_imgs=4100)
+    # generate_sokoban(num_imgs=200)
+    pre_train_sokoban(n_train=100, net_class=Observation_Net_Sokoban, downsampling_size=4, epochs=10)
+    # generate_cr(num_imgs=4100)
     # pre_train_cr(n_train=501, net_class=Observation_Net_Carracing, downsampling_size=1, epochs=10)
     # main_cluster()
 
