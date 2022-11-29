@@ -38,11 +38,11 @@
       "n_grass_locs": 3,
       "alpha": 1,
       "differentiable_shield": true,
-      "program_type": "carracing_grass3",
+      "program_type": "carracing_grass4",
       "use_learned_observations": true,
       "train_observations": false,
       "noisy_observations": true,
-      "observation_type": "observation_model_1000_examples/observation_100_steps.pt",
+      "observation_type": "observation_model_2000_examples/observation_100_steps.pt",
       "vio_len": 200
     },
     "params": {
@@ -51,7 +51,7 @@
       "n_epochs": 15,
       "n_steps": 2048,
       "learning_rate": 0.0001,
-      "seed": 567,
+      "seed": 111,
       "clip_range": 0.1,
       "gamma": 0.99,
       "step_limit": 700000,
