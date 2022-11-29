@@ -29,7 +29,8 @@
       "train_observations": false,
       "vsrl_use_renormalization": true,
       "noisy_observations": false,
-      "observation_type": "observation_model_1000_examples/observation_100_steps.pt"
+      "observation_type": "observation_model_1000_examples/observation_100_steps.pt",
+      "vio_len": 200
     },
     "params": {
       "log_interval": 1,
