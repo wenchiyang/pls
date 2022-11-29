@@ -40,7 +40,8 @@
       "alpha": 1,
       "differentiable_shield": true,
       "program_type": "carracing_grass3",
-      "use_learned_observations": false
+      "use_learned_observations": false,
+      "vio_len": 200
     },
     "params": {
       "log_interval": 1,

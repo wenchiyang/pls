@@ -26,7 +26,8 @@
       "differentiable_shield": false,
       "program_type": "carracing_grass3",
       "use_learned_observations": false,
-      "vsrl_use_renormalization": true
+      "vsrl_use_renormalization": true,
+      "vio_len": 200
     },
     "params": {
       "log_interval": 1,
