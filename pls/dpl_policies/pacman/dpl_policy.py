@@ -90,8 +90,9 @@ class Pacman_Callback(ConvertCallback):
             self.locals["n_risky_states"].append(0)
 
 class Pacman_Monitor(Monitor):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, stochastic_actions, **kwargs):
         super(Pacman_Monitor, self).__init__(*args, **kwargs)
+        self.stochastic_actions = stochastic_actions
 
 
     def reset(self, **kwargs) -> GymObs:
@@ -101,6 +102,16 @@ class Pacman_Monitor(Monitor):
     def step(self, action: Union[np.ndarray, int]) -> GymStepReturn:
         if self.needs_reset:
             raise RuntimeError("Tried to step environment that needs reset")
+
+        if self.stochastic_actions:
+            rdm = random()
+            if rdm >= 0.2:
+                action = [0, 1, 2, 3, 4][action]
+            elif rdm >= 0.1:
+                action = [0, 3, 3, 1, 1][action]
+            else:
+                action = [0, 4, 4, 2, 2][action]
+
         observation, reward, done, info = self.env.step(action)
         self.rewards.append(reward)
 

@@ -48,10 +48,12 @@ def setup_env(folder, config, eval=False):
     env = gym.make(env_name, **env_args)
 
     if "Pacman" in env_name:
+        stochastic_actions = config["model_features"]["stochastic_actions"] if "stochastic_actions" in config["model_features"] else False
         image_encoder_cls = Pacman_Encoder
         env = Pacman_Monitor(
             env,
-            allow_early_resets=False
+            allow_early_resets=False,
+            stochastic_actions=stochastic_actions
         )
 
     elif "Sokoban" in env_name or "Boxoban" in env_name:
