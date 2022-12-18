@@ -41,13 +41,9 @@
     "shield_params": {
       "n_ghost_locs": 4,
       "alpha": 0,
-      "differentiable_shield": true,
+      "differentiable_shield": false,
       "program_type": "relative_loc_simple",
-      "tinygrid_dim": 15,
-      "use_learned_observations": true,
-      "train_observations": false,
-      "noisy_observations": true,
-      "observation_type": "observation_3k_examples_100_steps.pt"
+      "tinygrid_dim": 15
     },
     "params": {
       "log_interval": 1,
