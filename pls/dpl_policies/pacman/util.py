@@ -123,3 +123,7 @@ def get_ground_wall(input, center_color, detect_color):
 
     res2 = (neighbors == detect_color).float()
     return res2
+
+def get_agent_coord(input, agent_color):
+    centers = (input == agent_color).nonzero()[:, 1:]
+    return int(centers[0][0]), int(centers[0][1])

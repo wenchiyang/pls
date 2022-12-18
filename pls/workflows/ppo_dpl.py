@@ -6,12 +6,6 @@ import carracing_gym
 import torch as th
 from torch import nn
 import os
-from pls.dpl_policies.goal_finding.dpl_policy import (
-    GoalFinding_Encoder,
-    GoalFinding_Monitor,
-    GoalFinding_DPLActorCriticPolicy,
-    GoalFinding_Callback,
-)
 from pls.dpl_policies.pacman.dpl_policy import (
     Pacman_Encoder,
     Pacman_Monitor,
@@ -31,7 +25,6 @@ from pls.dpl_policies.carracing.dpl_policy import (
     Carracing_Callback
 )
 
-from pls.dpl_policies.goal_finding.goal_finding_ppo import GoalFinding_DPLPPO
 from pls.dpl_policies.pacman.pacman_ppo import Pacman_DPLPPO
 from pls.dpl_policies.sokoban.sokoban_ppo import Sokoban_DPLPPO
 from pls.dpl_policies.carracing.carracing_ppo import Carracing_DPLPPO
@@ -54,14 +47,7 @@ def setup_env(folder, config, eval=False):
         env_args["cache_root"] = cache_root
     env = gym.make(env_name, **env_args)
 
-    if "GoalFinding" in env_name:
-        image_encoder_cls = GoalFinding_Encoder
-        env = GoalFinding_Monitor(
-            env,
-            allow_early_resets=False
-        )
-
-    elif "Pacman" in env_name:
+    if "Pacman" in env_name:
         image_encoder_cls = Pacman_Encoder
         env = Pacman_Monitor(
             env,
@@ -102,11 +88,7 @@ def main(folder, config):
 
     env_name = config["env_type"]
     custom_callback = None
-    if "GoalFinding" in env_name:
-        model_cls = GoalFinding_DPLPPO
-        policy_cls = GoalFinding_DPLActorCriticPolicy
-        custom_callback = GoalFinding_Callback(custom_callback)
-    elif "Pacman" in env_name:
+    if "Pacman" in env_name:
         model_cls = Pacman_DPLPPO
         policy_cls = Pacman_DPLActorCriticPolicy
         custom_callback = Pacman_Callback(custom_callback)
@@ -183,9 +165,7 @@ def load_model_and_env(folder, config, model_at_step, eval=True):
         folder, config, program_path, eval=eval
     )
     env_name = config["env_type"]
-    if "GoalFinding" in env_name:
-        model_cls = GoalFinding_DPLPPO
-    elif "Sokoban" in env_name:
+    if "Sokoban" in env_name:
         model_cls = Sokoban_DPLPPO
 
     path = os.path.join(folder, "model_checkpoints", f"rl_model_{model_at_step}_steps.zip")

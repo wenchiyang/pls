@@ -9,7 +9,6 @@ from pls.workflows.ppo_dpl import setup_env
 from time import sleep
 
 
-from pls.dpl_policies.goal_finding.goal_finding_ppo import GoalFinding_DPLPPO
 from pls.dpl_policies.sokoban.sokoban_ppo import Sokoban_DPLPPO
 from pls.dpl_policies.pacman.pacman_ppo import Pacman_DPLPPO
 from pls.dpl_policies.carracing.carracing_ppo import Carracing_DPLPPO
@@ -18,9 +17,7 @@ from pls.dpl_policies.carracing.carracing_ppo import Carracing_DPLPPO
 def load_model_and_env(folder, config, model_at_step, eval=True):
     env, image_encoder_cls = setup_env(folder, config, eval)
     env_name = config["env_type"]
-    if "GoalFinding" in env_name:
-        model_cls = GoalFinding_DPLPPO
-    elif "Pacman" in env_name:
+    if "Pacman" in env_name:
         model_cls = Pacman_DPLPPO
     elif "oban" in env_name:
         model_cls = Sokoban_DPLPPO

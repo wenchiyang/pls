@@ -7,7 +7,7 @@ import gym
 import pacman_gym
 from pacman_gym.envs.goal_finding import sample_layout
 import csv
-from pls.dpl_policies.goal_finding.util import get_ground_wall, get_agent_coord
+from pls.dpl_policies.pacman.util import get_ground_wall, get_agent_coord
 from pls.dpl_policies.sokoban.util import get_ground_truth_of_box, get_ground_truth_of_corners
 from pls.dpl_policies.sokoban.util import get_agent_coord as get_agent_coord_sokoban
 from pls.dpl_policies.carracing.util import get_ground_truth_of_grass
