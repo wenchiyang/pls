@@ -11,35 +11,39 @@
     "num_stacked_img": 4,
     "spikyness": [0.3333, 1],
     "n_rewardpoints": 500,
-    "n_corners": 12
-  },
-
-  "monitor_features": {
-    "vio_len": 1
+    "n_corners": 12,
+    "height": 48,
+    "width": 48,
+    "downsampling_size": 1,
+    "render_mode": "gray"
   },
 
   "model_features": {
-    "name": "hard_shielding",
+    "name": "PLSnoisysfloss",
+    "shield_params": {
+      "n_grass_locs": 3,
+      "alpha": 1,
+      "differentiable_shield": true,
+      "program_type": "carracing_grass3",
+      "use_learned_observations": true,
+      "train_observations": false,
+      "noisy_observations": true,
+      "observation_type": "observation_model_1000_examples/observation_100_steps.pt"
+    },
     "params": {
       "log_interval": 1,
       "batch_size": 512,
       "n_epochs": 15,
       "n_steps": 2048,
-      "learning_rate": 0.001,
+      "learning_rate": 0.0001,
       "seed": 772,
       "clip_range": 0.1,
       "gamma": 0.99,
-      "step_limit": 1000000,
-      "program_type": "carracing_grass",
-      "debug_program_type": "carracing_grass",
-      "alpha": 1,
-      "n_grass_locs": 3,
-      "differentiable_shield": true,
+      "step_limit": 700000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
       "net_arch_vf": [64, 64],
-      "sensor_noise": 0,
-      "max_num_rejected_samples": 100000
+      "safety_coef": 0.1
     }
   }
 }
