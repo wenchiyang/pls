@@ -48,7 +48,8 @@ def setup_env(folder, config, eval=False):
     env = gym.make(env_name, **env_args)
 
     if "Pacman" in env_name:
-        stochastic_actions = config["model_features"]["stochastic_actions"] if "stochastic_actions" in config["model_features"] else False
+        stochastic_actions = config["model_features"]["stochastic_actions"] if "stochastic_actions" in config["model_features"] else 0
+        assert type(stochastic_actions) == float
         image_encoder_cls = Pacman_Encoder
         env = Pacman_Monitor(
             env,

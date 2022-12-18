@@ -103,14 +103,13 @@ class Pacman_Monitor(Monitor):
         if self.needs_reset:
             raise RuntimeError("Tried to step environment that needs reset")
 
-        if self.stochastic_actions:
-            rdm = random()
-            if rdm >= 0.2:
-                action = [0, 1, 2, 3, 4][action]
-            elif rdm >= 0.1:
-                action = [0, 3, 3, 1, 1][action]
-            else:
-                action = [0, 4, 4, 2, 2][action]
+        rdm = random()
+        if rdm >= 2*self.stochastic_actions:
+            action = [0, 1, 2, 3, 4][action]
+        elif rdm >= self.stochastic_actions:
+            action = [0, 3, 3, 1, 1][action]
+        else:
+            action = [0, 4, 4, 2, 2][action]
 
         observation, reward, done, info = self.env.step(action)
         self.rewards.append(reward)
