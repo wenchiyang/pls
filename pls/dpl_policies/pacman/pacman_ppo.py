@@ -381,7 +381,7 @@ class Pacman_DPLPPO(PPO):
                     values,
                     log_probs,
                     mass,
-                    (object_detect_probs, base_policy),
+                    (object_detect_probs, base_policy, shielded_policy),
                 ) = self.policy.forward(obs_tensor, tinygrid)
 
             actions = actions.cpu().numpy()

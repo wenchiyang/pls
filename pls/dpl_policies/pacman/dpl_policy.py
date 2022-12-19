@@ -42,7 +42,7 @@ class Pacman_Callback(ConvertCallback):
         super(Pacman_Callback, self).__init__(callback)
     def on_step(self) -> bool:
         logger = self.locals["self"].logger
-        mass = self.locals["mass"]
+        shielded_policy = self.locals["shielded_policy"]
         action_lookup = self.locals["action_lookup"]
         object_detect_probs = self.locals["object_detect_probs"]
         base_policy = self.locals["base_policy"]
@@ -50,7 +50,7 @@ class Pacman_Callback(ConvertCallback):
         for act in range(self.locals["self"].action_space.n):
             logger.record(
                 f"policy/shielded {action_lookup[act]}",
-                float(mass.probs[0][act]),
+                float(shielded_policy[0][act]),
             )
         if object_detect_probs.get("alpha") is not None:
             logger.record(
@@ -58,7 +58,7 @@ class Pacman_Callback(ConvertCallback):
                 float(object_detect_probs.get("alpha")),
             )
         abs_safe_next_shielded = policy.get_step_safety(
-            mass.probs,
+            shielded_policy,
             object_detect_probs["ground_truth_ghost"],
         )
         abs_safe_next_base = policy.get_step_safety(
@@ -66,7 +66,7 @@ class Pacman_Callback(ConvertCallback):
             object_detect_probs["ground_truth_ghost"],
         )
         rel_safe_next_shielded = policy.get_step_safety(
-            mass.probs,
+            shielded_policy,
             object_detect_probs["ghost"]
         )
         rel_safe_next_base = policy.get_step_safety(
@@ -271,7 +271,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             policy_safety = self.get_policy_safety(ghosts, base_actions)
             object_detect_probs["policy_safety"] = policy_safety
 
-            return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions])
+            return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions, base_actions])
 
         if not self.differentiable_shield: # VSRL
             # if not self.vsrl_use_renormalization:
@@ -300,16 +300,16 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
 
                 action_safeties = self.get_action_safeties(ghosts)
                 mask = action_safeties > 0.5
-                safeast_actions = distribution.distribution.probs * mask / th.sum(distribution.distribution.probs * mask, dim=1,  keepdim=True)
+                safeast_actions = base_actions * mask / th.sum(base_actions * mask, dim=1,  keepdim=True)
 
                 alpha = self.alpha
                 actions = alpha * safeast_actions + (1 - alpha) * base_actions
 
-                mass = Categorical(probs=actions)
+                shielded_policy = Categorical(probs=actions)
                 if not deterministic:
-                    actions = mass.sample()
+                    actions = shielded_policy.sample()
                 else:
-                    actions = th.argmax(mass.probs, dim=1)
+                    actions = th.argmax(shielded_policy.probs, dim=1)
 
             log_prob = distribution.log_prob(actions)
             object_detect_probs["num_rejected_samples"] = num_rejected_samples
@@ -318,7 +318,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             policy_safety = self.get_policy_safety(ghosts, base_actions)
             object_detect_probs["policy_safety"] = policy_safety
 
-            return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
+            return (actions, values, log_prob, distribution.distribution, [object_detect_probs, base_actions, shielded_policy.probs])
 
         if self.differentiable_shield: # PLS
             policy_safety = self.get_policy_safety(ghosts, base_actions)
@@ -334,16 +334,16 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             actions = alpha * safeast_actions + (1 - alpha) * base_actions
 
             # TODO: This is incorrect? This should be the shielded policy distribution (of type CategoricalDistribution)
-            mass = Categorical(probs=actions)
+            shielded_policy = Categorical(probs=actions)
             if not deterministic:
-                actions = mass.sample()
+                actions = shielded_policy.sample()
             else:
-                actions = th.argmax(mass.probs, dim=1)
+                actions = th.argmax(shielded_policy.probs, dim=1)
 
-            log_prob = mass.log_prob(actions)
+            log_prob = shielded_policy.log_prob(actions)
             object_detect_probs["alpha"] = alpha
 
-            return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
+            return (actions, values, log_prob, shielded_policy, [object_detect_probs, base_actions, shielded_policy.probs])
 
     def get_policy_safety(self, ghosts, base_actions):
         results = self.query_safety_layer(
@@ -384,40 +384,8 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         :return: estimated value, log likelihood of taking those actions
             and entropy of the action distribution.
         """
-        # if not self.differentiable_shield:
-        #     obs = self.image_encoder(x)
-        #     features = self.extract_features(obs)
-        #     latent_pi, latent_vf = self.mlp_extractor(features)
-        #     distribution = self._get_action_dist_from_latent(latent_pi)
-        #     log_prob = distribution.log_prob(actions)
-        #     values = self.value_net(latent_vf)
-        #     base_actions = distribution.distribution.probs
-        #     with th.no_grad():
-        #         ground_truth_ghost = get_ground_wall(tinygrid, PACMAN_COLOR, GHOST_COLOR) if tinygrid is not None else None
-        #
-        #     if self.alpha != 0 and self.use_learned_observations:
-        #         if self.train_observations:
-        #             if self.noisy_observations:
-        #                 ghosts = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
-        #             else:
-        #                 ghosts = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
-        #                 ghosts = (ghosts > 0.5).float()
-        #         else:
-        #             with th.no_grad():
-        #                 if self.noisy_observations:
-        #                     ghosts = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
-        #                 else:
-        #                     ghosts = self.observation_model.sigmoid(self.observation_model(x.unsqueeze(1))[:, :4])
-        #                     ghosts = (ghosts > 0.5).float()
-        #
-        #     else:
-        #         ghosts = ground_truth_ghost
-        #
-        #     policy_safety = self.get_policy_safety(ghosts, base_actions)
-        #
-        #     return values, log_prob, distribution.entropy(), policy_safety
 
-        _, values, _, mass, [object_detect_probs, _] = self.forward(x, tinygrid=tinygrid)
+        _, values, _, mass, [object_detect_probs, _, _] = self.forward(x, tinygrid=tinygrid)
         log_prob = mass.log_prob(actions)
         policy_safety = object_detect_probs["policy_safety"]
         return values, log_prob, mass.entropy(), policy_safety
