@@ -60,7 +60,7 @@ class DeepProbLogLayer_Approx(nn.Module):
                 w_queries.append(q_tensor)
                 valid_w.append(w[r])
 
-        w_queries = th.stack(w_queries, dim=0)
+        w_queries = th.stack(w_queries, dim=0)[:, 0]
         self.w_queries = w_queries
         self.w = th.stack(valid_w, dim=0)
         self.w_facts = self.w[:, 0:self.n_facts]
@@ -93,16 +93,19 @@ class DeepProbLogLayer_Approx(nn.Module):
 
     def forward(self, x):
         xx = self.dict_to_tensor(self.input_struct, x)
+        p_facts = xx[:, :self.n_facts]
+        p_ads = xx[:, self.n_facts:]
         eps = 1e-9
-        lp = th.log(xx + eps)
-        lnp = th.log(1 - xx + eps)
-        w = self.w.float()
+        lp_facts = th.log(p_facts + eps)
+        lnp_facts = th.log(1 - p_facts + eps)
+        lp_ads = th.log(p_ads + eps)
+        # w = self.w.float()
+        w_facts = self.w_facts.float()
         w_queries = self.w_queries.float()
-        w_queries = w_queries[:, 0]
-        logp = lp @ w.T + lnp @ (1 - w.T)
-        p = th.exp(logp)
-        temp = p @ w_queries / th.sum(p, axis=1, keepdim=True)
-        results = self.tensor_to_dict(temp)
+        lp_w = lp_facts @ w_facts.T + lnp_facts @ (1 - w_facts.T) + lp_ads @ self.w_actions.T
+        p_w = th.exp(lp_w)
+        p_queries = p_w @ w_queries
+        results = self.tensor_to_dict(p_queries)
 
         return results
 

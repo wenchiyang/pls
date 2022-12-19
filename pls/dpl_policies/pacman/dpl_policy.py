@@ -90,9 +90,9 @@ class Pacman_Callback(ConvertCallback):
             self.locals["n_risky_states"].append(0)
 
 class Pacman_Monitor(Monitor):
-    def __init__(self, *args, stochastic_actions, **kwargs):
+    def __init__(self, *args, stochasticity, **kwargs):
         super(Pacman_Monitor, self).__init__(*args, **kwargs)
-        self.stochastic_actions = stochastic_actions
+        self.stochasticity = stochasticity
 
 
     def reset(self, **kwargs) -> GymObs:
@@ -104,9 +104,9 @@ class Pacman_Monitor(Monitor):
             raise RuntimeError("Tried to step environment that needs reset")
 
         rdm = random()
-        if rdm >= 2*self.stochastic_actions:
+        if rdm >= 2*self.stochasticity:
             action = [0, 1, 2, 3, 4][action]
-        elif rdm >= self.stochastic_actions:
+        elif rdm >= self.stochasticity:
             action = [0, 3, 3, 1, 1][action]
         else:
             action = [0, 4, 4, 2, 2][action]
@@ -173,7 +173,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         self.program_path = path.join(self.folder, "../../../data", shielding_params["program_type"]+".pl")
 
         if self.program_path:
-            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/goal_finding/data/relative_loc_simple.pl")
+            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments5/goal_finding_sto/data/relative_loc_simple.pl")
             # self.program_path = pp
             with open(self.program_path) as f:
                 self.program = f.read()
@@ -218,7 +218,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
                 device = th.device("cuda" if use_cuda else "cpu")
                 self.observation_model = Observation_Net_Stars(input_size=self.net_input_dim * self.net_input_dim, output_size=4).to(device)
                 pp = path.join(self.folder, "../../data", self.observation_type)
-                # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/goal_finding/small/data", self.observation_type)
+                # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments5/goal_finding_sto/small2/data", self.observation_type)
                 self.observation_model.load_state_dict(th.load(pp))
 
         debug_queries = ["safe_next"]
@@ -227,8 +227,12 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             "ghost": [i for i in range(self.n_ghost_locs)],
             "action": [i for i in range(self.n_ghost_locs, self.n_ghost_locs + self.n_actions)]
         }
+        # debug_input_struct = {
+        #     "ghost": [i for i in range(2)],
+        #     "action": [i for i in range(2, 4)]
+        # }
         pp = path.join(self.folder, "../../../data", "query_safety_layer.p")
-        # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments_trials3/goal_finding/data/query_safety_layer.p")
+        # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments5/goal_finding_sto/data/query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
             pp, program=self.program, queries=debug_queries, evidences=[],
             input_struct=debug_input_struct, query_struct=debug_query_struct
@@ -380,6 +384,9 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
 
             safety_a = th.cat((th.ones((ghosts.size()[0], 1)),(1-ghosts)), 1)
             safeast_actions = safety_a*base_actions/policy_safety
+
+            assert(safeast_actions.max() <= 1.0)
+            assert(safeast_actions.min() >= 0.0)
 
             alpha = self.alpha
             actions = alpha * safeast_actions + (1 - alpha) * base_actions

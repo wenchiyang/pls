@@ -95,7 +95,7 @@ class RolloutBuffer_TinyGrid(RolloutBuffer):
 
 
 class Pacman_DPLPPO(PPO):
-    def __init__(self, *args, safety_coef, **kwargs):
+    def __init__(self, *args, safety_coef=0, **kwargs):
         self.safety_coef = safety_coef
         super(Pacman_DPLPPO, self).__init__(*args, **kwargs)
 
