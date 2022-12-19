@@ -38,14 +38,15 @@
 
   "model_features": {
     "name": "PPOsfloss",
-    "stochasticity": 0.1,
+    "stochasticity": 0.00,
 
     "shield_params": {
       "n_ghost_locs": 4,
       "alpha": 0,
       "differentiable_shield": false,
       "program_type": "relative_loc_simple",
-      "tinygrid_dim": 15
+      "tinygrid_dim": 15,
+      "use_learned_observations": false
     },
     "params": {
       "log_interval": 1,

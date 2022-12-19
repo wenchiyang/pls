@@ -18,7 +18,6 @@
     "downsampling_size": 8,
     "background": "bg_small.jpg"
   },
-
   "eval_env_features": {
     "layout": "small",
     "reward_goal": 10,
@@ -35,18 +34,22 @@
     "downsampling_size": 8,
     "background": "bg_small.jpg"
   },
-
   "model_features": {
-    "name": "PPOsfloss",
+    "name": "PLSnoisy",
     "stochasticity": 0.05,
 
     "shield_params": {
       "n_ghost_locs": 4,
       "alpha": 0,
-      "differentiable_shield": false,
+      "differentiable_shield": true,
       "program_type": "relative_loc_simple",
-      "tinygrid_dim": 15
+      "tinygrid_dim": 15,
+      "use_learned_observations": true,
+      "train_observations": false,
+      "noisy_observations": true,
+      "observation_type": "observation_3k_examples_100_steps.pt"
     },
+
     "params": {
       "log_interval": 1,
       "batch_size": 512,
