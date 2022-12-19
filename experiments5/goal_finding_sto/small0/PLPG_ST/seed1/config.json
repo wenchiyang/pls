@@ -36,7 +36,7 @@
   },
   "model_features": {
     "name": "PLSnoisy",
-    "stochasticity": 0.05,
+    "stochasticity": 0.0,
 
     "shield_params": {
       "n_ghost_locs": 4,
@@ -63,7 +63,7 @@
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
       "net_arch_vf": [64, 64],
-      "safety_coef": 1
+      "safety_coef": 0
     }
   }
 }

@@ -18,6 +18,7 @@
     "downsampling_size": 8,
     "background": "bg_small.jpg"
   },
+
   "eval_env_features": {
     "layout": "small",
     "reward_goal": 10,
@@ -34,20 +35,17 @@
     "downsampling_size": 8,
     "background": "bg_small.jpg"
   },
+
   "model_features": {
-    "name": "PLSnoisy",
-    "stochasticity": 0.05,
+    "name": "PPO",
+    "stochasticity": 0.1,
 
     "shield_params": {
       "n_ghost_locs": 4,
-      "alpha": 1,
-      "differentiable_shield": true,
+      "alpha": 0,
+      "differentiable_shield": false,
       "program_type": "relative_loc_simple",
-      "tinygrid_dim": 15,
-      "use_learned_observations": true,
-      "train_observations": false,
-      "noisy_observations": true,
-      "observation_type": "observation_3k_examples_100_steps.pt"
+      "tinygrid_dim": 15
     },
 
     "params": {
@@ -62,8 +60,7 @@
       "step_limit": 700000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
-      "net_arch_vf": [64, 64],
-      "safety_coef": 1
+      "net_arch_vf": [64, 64]
     }
   }
 }

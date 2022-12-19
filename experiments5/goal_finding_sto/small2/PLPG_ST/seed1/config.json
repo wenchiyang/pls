@@ -36,7 +36,7 @@
   },
   "model_features": {
     "name": "PLSnoisy",
-    "stochastic_actions": 0.05,
+    "stochasticity": 0.05,
 
     "shield_params": {
       "n_ghost_locs": 4,
