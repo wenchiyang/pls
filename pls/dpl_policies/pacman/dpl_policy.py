@@ -311,12 +311,12 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
                 else:
                     actions = th.argmax(mass.probs, dim=1)
 
-                log_prob = distribution.log_prob(actions)
-                object_detect_probs["num_rejected_samples"] = num_rejected_samples
-                object_detect_probs["alpha"] = alpha
+            log_prob = distribution.log_prob(actions)
+            object_detect_probs["num_rejected_samples"] = num_rejected_samples
+            object_detect_probs["alpha"] = alpha
 
-                policy_safety = self.get_policy_safety(ghosts, base_actions)
-                object_detect_probs["policy_safety"] = policy_safety
+            policy_safety = self.get_policy_safety(ghosts, base_actions)
+            object_detect_probs["policy_safety"] = policy_safety
 
             return (actions, values, log_prob, mass, [object_detect_probs, base_actions])
 
