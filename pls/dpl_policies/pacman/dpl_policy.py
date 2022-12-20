@@ -16,11 +16,9 @@ from stable_baselines3.common.type_aliases import (
 from os import path
 import pickle
 from gym.spaces import Box
-from pls.deepproblog.light import DeepProbLogLayer, DeepProbLogLayer_Approx
+from pls.deepproblog.light import DeepProbLogLayer_Approx
 from .util import get_ground_wall
-from matplotlib import pyplot as plt
-from skimage.measure import block_reduce
-from pls.observation_nets.observation_nets import Observation_net, Observation_Net_Stars
+from pls.observation_nets.observation_nets import Observation_Net_Stars
 from random import random
 
 WALL_COLOR = 0.25
@@ -96,8 +94,7 @@ class Pacman_Monitor(Monitor):
 
 
     def reset(self, **kwargs) -> GymObs:
-        output = super(Pacman_Monitor, self).reset(**kwargs)
-        return output
+        return super(Pacman_Monitor, self).reset(**kwargs)
 
     def step(self, action: Union[np.ndarray, int]) -> GymStepReturn:
         if self.needs_reset:

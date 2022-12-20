@@ -8,7 +8,7 @@
     "reward_crash": 0,
     "reward_food": 1,
     "reward_time": -0.1,
-    "render": true,
+    "render": false,
     "max_steps": 200,
     "num_maps": 1,
     "seed": 567,
