@@ -174,44 +174,6 @@ def get_ground_truth_of_corners(
     res = th.all(neighbor_center_forward_side,dim=2).float()
     return res
 
-def stuck(
-        input,
-        box_color,
-        obsacle_colors
-):
-    # box_color = box_colors
-    centers = th.isclose(input, box_color, atol=1e-03).nonzero()[:, 1:]
-    if centers.nelement() == 0:
-        return False
-
-    neighbors = th.stack(
-        (
-            input[th.arange(input.size(0)), centers[:, 0] - 1, centers[:, 1]],
-            input[th.arange(input.size(0)), centers[:, 0] + 1, centers[:, 1]],
-            input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] - 1],
-            input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] + 1],
-        ), dim=1)
-    box_surrendings = th.any(
-        th.stack(
-            (
-                th.isclose(neighbors, obsacle_colors[0], atol=1e-03).float(),
-                th.isclose(neighbors, obsacle_colors[1], atol=1e-03).float(),
-                th.isclose(neighbors, obsacle_colors[2], atol=1e-03).float()
-            ), dim=2)
-        , dim=2).float()
-    corners = th.tensor([
-        [1, 0, 1, 0], [1, 1, 1, 0], [1, 0, 1, 1], [1, 1, 1, 1], # up, left
-        [1, 0, 0, 1], [1, 1, 0, 1], # up, right
-        [0, 1, 1, 0], [0, 1, 1, 1], # down, left
-        [0, 1, 0, 1] # down, right
-    ])
-    box_in_corner = False
-    for i in range(box_surrendings.size(0)):
-        if th.any(th.all((box_surrendings[i] == corners), dim=1)):
-            box_in_corner = True
-
-    return box_in_corner
-
 def get_ground_truth_of_box(
     input,
     agent_colors,

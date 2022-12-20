@@ -18,7 +18,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.buffers import RolloutBuffer
 from pls.dpl_policies.sokoban.util import safe_max, safe_min
 from stable_baselines3.common.preprocessing import get_obs_shape
-from pls.dpl_policies.sokoban.dpl_policy import box_stuck_in_corner
+# from pls.dpl_policies.sokoban.dpl_policy import box_stuck_in_corner
 
 
 class RolloutBufferSamples_TinyGrid(NamedTuple):
@@ -378,7 +378,7 @@ class Sokoban_DPLPPO(PPO):
                     values,
                     log_probs,
                     mass,
-                    (object_detect_probs, base_policy),
+                    (object_detect_probs, base_policy, shielded_policy),
                 ) = self.policy.forward(obs_tensor, tinygrid)
 
             actions = actions.cpu().numpy()

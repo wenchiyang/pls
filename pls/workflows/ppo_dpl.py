@@ -58,10 +58,13 @@ def setup_env(folder, config, eval=False):
         )
 
     elif "Sokoban" in env_name or "Boxoban" in env_name:
+        stochasticity = config["model_features"]["stochasticity"] if "stochasticity" in config["model_features"] else 0
+        assert type(stochasticity) == float
         image_encoder_cls = Sokoban_Encoder
         env = Sokoban_Monitor(
             env,
-            allow_early_resets=False
+            allow_early_resets=False,
+            stochasticity=stochasticity
         )
 
     elif "Car" in env_name:
