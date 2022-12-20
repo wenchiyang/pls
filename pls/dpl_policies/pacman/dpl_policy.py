@@ -327,8 +327,8 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             action_safeties = self.get_action_safeties(ghosts)
             safeast_actions = action_safeties * base_actions / policy_safety
 
-            assert(safeast_actions.max() <= 1.0)
-            assert(safeast_actions.min() >= 0.0)
+            assert(safeast_actions.max() <=  1.00001), f"{safeast_actions} violates MAX"
+            assert(safeast_actions.min() >= -0.00001), f"{safeast_actions} violates MIN"
 
             alpha = self.alpha
             actions = alpha * safeast_actions + (1 - alpha) * base_actions
