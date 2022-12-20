@@ -172,6 +172,8 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         self.folder = path.join(path.dirname(__file__), "../../..", folder)
         self.program_path = path.join(self.folder, "../../../data", shielding_params["program_type"]+".pl")
 
+        if not self.differentiable_shield and self.alpha > 0:
+            self.vsrl_eps = shielding_params["vsrl_eps"] if "vsrl_eps" in shielding_params else 0
         if self.program_path:
             # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments5/goal_finding_sto/data/relative_loc_simple.pl")
             # self.program_path = pp
@@ -298,8 +300,12 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             with th.no_grad():
                 num_rejected_samples = 0
 
-                action_safeties = self.get_action_safeties(ghosts)
-                mask = action_safeties > 0.5
+                rn = random()
+                if rn >= self.vsrl_eps:
+                    action_safeties = self.get_action_safeties(ghosts)
+                    mask = action_safeties > 0.5
+                else:
+                    mask = th.ones(( ghosts.size(0), 5))
                 safeast_actions = base_actions * mask / th.sum(base_actions * mask, dim=1,  keepdim=True)
 
                 alpha = self.alpha
