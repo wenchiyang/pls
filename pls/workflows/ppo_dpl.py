@@ -68,12 +68,15 @@ def setup_env(folder, config, eval=False):
         )
 
     elif "Car" in env_name:
+        stochasticity = config["model_features"]["stochasticity"] if "stochasticity" in config["model_features"] else 0
+        assert type(stochasticity) == float
         image_encoder_cls = Carracing_Encoder
         env = Carracing_Monitor(
             env,
             vio_len = config["model_features"]["shield_params"]["vio_len"],
             # vio_len = 100,
-            allow_early_resets=False
+            allow_early_resets=False,
+            stochasticity=stochasticity
         )
 
 
