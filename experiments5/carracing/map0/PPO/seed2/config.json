@@ -29,14 +29,15 @@
     "downsampling_size": 1,
     "render_mode": "gray"
   },
+
   "model_features": {
-    "name": "PLSnoisy",
+    "name": "PPO",
     "stochasticity": 0.0,
 
     "shield_params": {
       "n_grass_locs": 3,
-      "alpha": 1,
-      "differentiable_shield": true,
+      "alpha": 0,
+      "differentiable_shield": false,
       "program_type": "carracing_grass4",
       "use_learned_observations": false,
       "vio_len": 200
@@ -54,8 +55,7 @@
       "step_limit": 700000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
-      "net_arch_vf": [64, 64],
-      "safety_coef": 0.1
+      "net_arch_vf": [64, 64]
     }
   }
 }

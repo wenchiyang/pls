@@ -30,7 +30,7 @@
     "render_mode": "gray"
   },
   "model_features": {
-    "name": "PLSnoisy",
+    "name": "PLSperf",
     "stochasticity": 0.0,
 
     "shield_params": {
@@ -54,8 +54,7 @@
       "step_limit": 700000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
-      "net_arch_vf": [64, 64],
-      "safety_coef": 0.1
+      "net_arch_vf": [64, 64]
     }
   }
 }

@@ -38,7 +38,10 @@
       "alpha": 1,
       "differentiable_shield": true,
       "program_type": "carracing_grass4",
-      "use_learned_observations": false,
+      "use_learned_observations": true,
+      "train_observations": false,
+      "noisy_observations": true,
+      "observation_type": "observation_model_2000_examples/observation_100_steps.pt",
       "vio_len": 200
     },
 
@@ -48,14 +51,14 @@
       "n_epochs": 15,
       "n_steps": 2048,
       "learning_rate": 0.0001,
-      "seed": 111,
+      "seed": 890,
       "clip_range": 0.1,
       "gamma": 0.99,
       "step_limit": 700000,
       "net_arch_shared": [],
       "net_arch_pi": [64, 64],
       "net_arch_vf": [64, 64],
-      "safety_coef": 0.1
+      "safety_coef": 0
     }
   }
 }
