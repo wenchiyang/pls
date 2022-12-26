@@ -1,0 +1,61 @@
+{
+  "workflow_name": "ppo",
+  "env_type": "CarRacing-v1",
+
+  "env_features": {
+    "render": false,
+    "num_maps": 1,
+    "seed": 567,
+    "num_stacked_img": 4,
+    "spikyness": [0.2, 1.5],
+    "n_rewardpoints": 500,
+    "n_corners": 12,
+    "height": 48,
+    "width": 48,
+    "downsampling_size": 1,
+    "render_mode": "gray"
+  },
+
+  "eval_env_features": {
+    "render": false,
+    "num_maps": 1,
+    "seed": 567,
+    "num_stacked_img": 4,
+    "spikyness": [0.3333, 1],
+    "n_rewardpoints": 500,
+    "n_corners": 12,
+    "height": 48,
+    "width": 48,
+    "downsampling_size": 1,
+    "render_mode": "gray"
+  },
+  "model_features": {
+    "name": "PLSnoisy",
+    "stochasticity": 0.0,
+
+    "shield_params": {
+      "n_grass_locs": 3,
+      "alpha": 1,
+      "differentiable_shield": true,
+      "program_type": "carracing_grass4",
+      "use_learned_observations": false,
+      "vio_len": 200
+    },
+
+    "params": {
+      "log_interval": 1,
+      "batch_size": 512,
+      "n_epochs": 15,
+      "n_steps": 2048,
+      "learning_rate": 0.0001,
+      "seed": 34,
+      "clip_range": 0.1,
+      "gamma": 0.99,
+      "step_limit": 700000,
+      "net_arch_shared": [],
+      "net_arch_pi": [64, 64],
+      "net_arch_vf": [64, 64],
+      "safety_coef": 0.1
+    }
+  }
+}
