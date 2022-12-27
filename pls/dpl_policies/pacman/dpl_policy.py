@@ -161,6 +161,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         ###############################
         self.image_encoder = image_encoder
         self.n_ghost_locs = shielding_params["n_ghost_locs"]
+        self.ghost_distance = shielding_params["ghost_distance"] if "ghost_distance" in shielding_params else 1
         self.alpha = shielding_params["alpha"]
         self.differentiable_shield = shielding_params["differentiable_shield"]
         self.net_input_dim = net_input_dim
@@ -239,7 +240,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         base_actions = distribution.distribution.probs
 
         with th.no_grad():
-            ground_truth_ghost = get_ground_wall(tinygrid, PACMAN_COLOR, GHOST_COLOR) if tinygrid is not None else None
+            ground_truth_ghost = get_ground_wall(tinygrid, PACMAN_COLOR, GHOST_COLOR, self.ghost_distance) if tinygrid is not None else None
 
         if self.use_learned_observations:
             if self.train_observations:
