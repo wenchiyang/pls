@@ -44,6 +44,7 @@
 
     "shield_params": {
       "n_ghost_locs": 4,
+      "ghost_distance": 2,
       "alpha": 0,
       "differentiable_shield": false,
       "program_type": "relative_loc_simple",
