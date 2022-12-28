@@ -18,7 +18,6 @@ transition(down,down).
 
 
 unsafe_next :- action(A), transition(A,NextPos), ghost(NextPos).
-unsafe_next :- ghost(_), action(stay).
 safe_next :- \+ unsafe_next.
 
 safe_action(A):- action(A).
