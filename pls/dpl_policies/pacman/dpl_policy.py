@@ -198,7 +198,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             "ghost": [i for i in range(self.n_ghost_locs)],
             "action": [i for i in range(self.n_ghost_locs, self.n_ghost_locs + self.n_actions)]
         }
-        pp = path.join(self.folder, "../../../data", "query_safety_layer.p")
+        pp = path.join(self.folder, "../../../data", f"{shielding_params['program_type']}.p")
         # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments5/goal_finding_sto/data/query_safety_layer.p")
         self.query_safety_layer = self.get_layer(
             pp, program=self.program, queries=debug_queries, evidences=[],

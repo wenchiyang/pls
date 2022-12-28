@@ -139,7 +139,28 @@ def get_ground_wall(input, center_color, detect_color, ghost_distance):
                 ), dim=1)
             res2 = (neighbors == detect_color).float()
             results = th.logical_or(results, res2).float()
-        return results
+        if ghost_distance == 2:
+            # check clockwise neighbors
+            neighbors = th.stack(
+                (
+                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] - 1 , centers[:, 1] + 1],
+                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] + 1, centers[:, 1] - 1],
+                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] - 1 , centers[:, 1] - 1],
+                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] + 1, centers[:, 1] + 1]
+                ), dim=1)
+            res2 = (neighbors == detect_color).float()
+            results = th.logical_or(results, res2).float()
+            # check counter clockwise neighbors
+            neighbors = th.stack(
+                (
+                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] - 1 , centers[:, 1] - 1],
+                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] + 1, centers[:, 1] + 1],
+                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] + 1 , centers[:, 1] - 1],
+                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] - 1, centers[:, 1] + 1]
+                ), dim=1)
+            res2 = (neighbors == detect_color).float()
+            results = th.logical_or(results, res2).float()
+            return results
 
 def get_agent_coord(input, agent_color):
     centers = (input == agent_color).nonzero()[:, 1:]
