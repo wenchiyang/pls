@@ -188,6 +188,82 @@ def generate_random_images_sokoban(csv_path, folder, n_images=10):
 
     f_csv.close()
 
+
+def generate_random_images_pacman(csv_path, folder, n_images=10, ghost_distance=1):
+    WALL_COLOR = 0.25
+    GHOST_COLOR = 0.5
+    PACMAN_COLOR = 0.75
+    FOOD_COLOR = 1
+    f_csv = open(csv_path, "w")
+    writer = csv.writer(f_csv)
+    writer.writerow(["image_name", "ghost(up)", "ghost(down)", "ghost(left)", "ghost(right)", "agent_r", "agent_c"])
+    config = {
+        "env_type": "GoalFinding-v0",
+        "env_features":{
+            "layout": "small",
+            "reward_goal": 10,
+            "reward_crash": 0,
+            "reward_food": 0,
+            "reward_time": -0.1,
+            "render": False,
+            "max_steps": 2000,
+            "num_maps": 0,
+            "seed": 567,
+            'render_mode': "gray",
+            "height": 482,
+            "width": 482,
+            "downsampling_size": 1,
+            "background": "bg_small.jpg"
+        }
+    }
+    env_name = config["env_type"]
+    env_args = config["env_features"]
+    env = gym.make(env_name, **env_args)
+    env.env.gameDisplay = env.env.display
+    env.env.rules.quiet = False
+
+    for n in range(n_images):
+        layout = sample_layout(
+            env.layout.width,
+            env.layout.height,
+            30, #env.env.num_agents,
+            30, #env.env.num_food,
+            env.env.non_wall_positions,
+            env.env.wall_positions,
+            env.env.all_edges,
+            check_valid=False
+        )
+        env.env.game = env.rules.newGame(
+            layout,
+            env.env.pacman,
+            env.env.ghosts,
+            env.env.gameDisplay,
+            env.env.beQuiet,
+            env.env.catchExceptions,
+            env.env.symX,
+            env.env.symY,
+            env.env.background
+        )
+        env.game.start_game()
+        env.env.render()
+
+
+        img = env.game.compose_img("rgb")
+        path = os.path.join(folder, f"img{n:06}.jpeg")
+        plt.imsave(path, img)
+
+        tinyGrid = env.game.compose_img("tinygrid")
+        tinyGrid = th.tensor(tinyGrid).unsqueeze(0)
+        ground_truth_ghost = get_ground_wall(tinyGrid, PACMAN_COLOR, GHOST_COLOR, ghost_distance)
+        agent_r, agent_c = get_agent_coord(tinyGrid, PACMAN_COLOR)
+        row = [f"img{n:06}.jpeg"] + ground_truth_ghost.flatten().tolist() + [agent_r, agent_c]
+        writer.writerow(row)
+        f_csv.flush()
+        if n % 10 == 0:
+            print('Produce: {}/{} [({:.0f}%)]'.format(n, n_images, float(n)/n_images))
+
+    f_csv.close()
+
 def generate_random_images_gf(csv_path, folder, n_images=10):
     WALL_COLOR = 0.25
     GHOST_COLOR = 0.5
