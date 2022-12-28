@@ -7,6 +7,7 @@ import torch as th
 from pathlib import Path
 import numpy as np
 
+WALL_COLOR = 0.25
 def safe_max(arr) :
     """
     Compute the mean of an array if there is at least one element.
@@ -116,23 +117,25 @@ def get_ground_wall(input, center_color, detect_color, ghost_distance):
     centers = (input == center_color).nonzero()[:, 1:]
     neighbors = th.stack(
         (
-            input[th.arange(input.size(0)), centers[:, 0] - ghost_distance , centers[:, 1]],
-            input[th.arange(input.size(0)), centers[:, 0] + ghost_distance, centers[:, 1]],
-            input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] - ghost_distance],
-            input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] + ghost_distance]
+            input[th.arange(input.size(0)), centers[:, 0] - 1 , centers[:, 1]],
+            input[th.arange(input.size(0)), centers[:, 0] + 1, centers[:, 1]],
+            input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] - 1],
+            input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] + 1]
         ), dim=1)
     results = (neighbors == detect_color).float()
 
     if ghost_distance == 1:
         return results
     else:
-        for i in range(1, ghost_distance):
+        padded_input = th.nn.functional.pad(input, (ghost_distance-1,ghost_distance-1,ghost_distance-1,ghost_distance-1), "constant", WALL_COLOR)
+        centers = (padded_input == center_color).nonzero()[:, 1:]
+        for i in range(2, ghost_distance+1):
             neighbors = th.stack(
                 (
-                    input[th.arange(input.size(0)), centers[:, 0] - i , centers[:, 1]],
-                    input[th.arange(input.size(0)), centers[:, 0] + i, centers[:, 1]],
-                    input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] - i],
-                    input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] + i]
+                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] - i , centers[:, 1]],
+                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] + i, centers[:, 1]],
+                    padded_input[th.arange(padded_input.size(0)), centers[:, 0], centers[:, 1] - i],
+                    padded_input[th.arange(padded_input.size(0)), centers[:, 0], centers[:, 1] + i]
                 ), dim=1)
             res2 = (neighbors == detect_color).float()
             results = th.logical_or(results, res2).float()
