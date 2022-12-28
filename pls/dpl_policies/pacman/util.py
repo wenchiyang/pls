@@ -126,41 +126,86 @@ def get_ground_wall(input, center_color, detect_color, ghost_distance):
 
     if ghost_distance == 1:
         return results
-    else:
-        padded_input = th.nn.functional.pad(input, (ghost_distance-1,ghost_distance-1,ghost_distance-1,ghost_distance-1), "constant", WALL_COLOR)
-        centers = (padded_input == center_color).nonzero()[:, 1:]
-        for i in range(2, ghost_distance+1):
-            neighbors = th.stack(
-                (
-                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] - i , centers[:, 1]],
-                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] + i, centers[:, 1]],
-                    padded_input[th.arange(padded_input.size(0)), centers[:, 0], centers[:, 1] - i],
-                    padded_input[th.arange(padded_input.size(0)), centers[:, 0], centers[:, 1] + i]
-                ), dim=1)
-            res2 = (neighbors == detect_color).float()
-            results = th.logical_or(results, res2).float()
-        if ghost_distance == 2:
-            # check clockwise neighbors
-            neighbors = th.stack(
-                (
-                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] - 1 , centers[:, 1] + 1],
-                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] + 1, centers[:, 1] - 1],
-                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] - 1 , centers[:, 1] - 1],
-                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] + 1, centers[:, 1] + 1]
-                ), dim=1)
-            res2 = (neighbors == detect_color).float()
-            results = th.logical_or(results, res2).float()
-            # check counter clockwise neighbors
-            neighbors = th.stack(
-                (
-                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] - 1 , centers[:, 1] - 1],
-                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] + 1, centers[:, 1] + 1],
-                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] + 1 , centers[:, 1] - 1],
-                    padded_input[th.arange(padded_input.size(0)), centers[:, 0] - 1, centers[:, 1] + 1]
-                ), dim=1)
-            res2 = (neighbors == detect_color).float()
-            results = th.logical_or(results, res2).float()
-            return results
+
+    padded_input = th.nn.functional.pad(input, (ghost_distance-1,ghost_distance-1,ghost_distance-1,ghost_distance-1), "constant", WALL_COLOR)
+    l = th.arange(padded_input.size(0))
+    centers = (padded_input == center_color).nonzero()[:, 1:]
+    for i in range(2, ghost_distance+1):
+        neighbors = th.stack(
+            (
+                padded_input[l, centers[:, 0] - i , centers[:, 1]],
+                padded_input[l, centers[:, 0] + i, centers[:, 1]],
+                padded_input[l, centers[:, 0], centers[:, 1] - i],
+                padded_input[l, centers[:, 0], centers[:, 1] + i]
+            ), dim=1)
+        res2 = (neighbors == detect_color).float()
+        results = th.logical_or(results, res2).float()
+
+
+    # check clockwise neighbors, upperleft, upperright, ...
+    neighbors = th.stack(
+        (
+            padded_input[l, centers[:, 0] - 1 , centers[:, 1] + 1],
+            padded_input[l, centers[:, 0] + 1,  centers[:, 1] - 1],
+            padded_input[l, centers[:, 0] - 1 , centers[:, 1] - 1],
+            padded_input[l, centers[:, 0] + 1,  centers[:, 1] + 1]
+        ), dim=1)
+    res2 = (neighbors == detect_color).float()
+    results = th.logical_or(results, res2).float()
+    # check counter clockwise neighbors
+    neighbors = th.stack(
+        (
+            padded_input[l, centers[:, 0] - 1 , centers[:, 1] - 1],
+            padded_input[l, centers[:, 0] + 1,  centers[:, 1] + 1],
+            padded_input[l, centers[:, 0] + 1 , centers[:, 1] - 1],
+            padded_input[l, centers[:, 0] - 1,  centers[:, 1] + 1]
+        ), dim=1)
+    res2 = (neighbors == detect_color).float()
+    results = th.logical_or(results, res2).float()
+
+    if ghost_distance == 2:
+        return results
+
+    # check clockwise neighbors, upperleft, upperright, ...
+    up = th.stack(
+        (
+            padded_input[l, centers[:, 0] - 1 , centers[:, 1] - 2],
+            padded_input[l, centers[:, 0] - 2 , centers[:, 1] - 1],
+            padded_input[l, centers[:, 0] - 2 , centers[:, 1] + 1],
+            padded_input[l, centers[:, 0] - 1 , centers[:, 1] + 2]
+        ), dim=1)
+    down = th.stack(
+        (
+            padded_input[l, centers[:, 0] + 1 , centers[:, 1] - 2],
+            padded_input[l, centers[:, 0] + 2 , centers[:, 1] - 1],
+            padded_input[l, centers[:, 0] + 2 , centers[:, 1] + 1],
+            padded_input[l, centers[:, 0] + 1 , centers[:, 1] + 2]
+        ), dim=1)
+    left = th.stack(
+        (
+            padded_input[l, centers[:, 0] - 2 , centers[:, 1] - 1],
+            padded_input[l, centers[:, 0] - 1 , centers[:, 1] - 2],
+            padded_input[l, centers[:, 0] + 1 , centers[:, 1] - 2],
+            padded_input[l, centers[:, 0] + 2 , centers[:, 1] - 1]
+        ), dim=1)
+    right = th.stack(
+        (
+            padded_input[l, centers[:, 0] - 2 , centers[:, 1] + 1],
+            padded_input[l, centers[:, 0] - 1 , centers[:, 1] + 2],
+            padded_input[l, centers[:, 0] + 1 , centers[:, 1] + 2],
+            padded_input[l, centers[:, 0] + 2 , centers[:, 1] + 1]
+        ), dim=1)
+    res2 = th.stack(
+        (
+            th.any((up == detect_color), dim=1),
+            th.any((down == detect_color), dim=1),
+            th.any((left == detect_color), dim=1),
+            th.any((right == detect_color), dim=1)
+        ), dim=1).float()
+
+    results = th.logical_or(results, res2).float()
+    if ghost_distance == 3:
+        return results
 
 def get_agent_coord(input, agent_color):
     centers = (input == agent_color).nonzero()[:, 1:]
