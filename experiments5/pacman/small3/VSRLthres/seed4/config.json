@@ -47,8 +47,6 @@
       "differentiable_shield": false,
       "program_type": "relative_loc_simple",
       "tinygrid_dim": 15,
-      "use_learned_observations": false,
-      "vsrl_use_renormalization": true,
       "use_learned_observations": true,
       "train_observations": false,
       "vsrl_use_renormalization": true,
