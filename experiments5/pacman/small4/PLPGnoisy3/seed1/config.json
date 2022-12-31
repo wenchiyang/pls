@@ -3,7 +3,7 @@
   "env_type": "Pacman-v0",
 
   "env_features": {
-    "layout": "small",
+    "layout": "small3",
     "reward_goal": 10,
     "reward_crash": 0,
     "reward_food": 1,
@@ -16,10 +16,11 @@
     "height": 482,
     "width": 482,
     "downsampling_size": 8,
-    "background": "bg_small.jpg"
+    "background": "bg_small.jpg",
+    "move_ghosts": true
   },
   "eval_env_features": {
-    "layout": "small",
+    "layout": "small3",
     "reward_goal": 10,
     "reward_crash": 0,
     "reward_food": 1,
@@ -32,7 +33,8 @@
     "height": 482,
     "width": 482,
     "downsampling_size": 8,
-    "background": "bg_small.jpg"
+    "background": "bg_small.jpg",
+    "move_ghosts": true
   },
   "model_features": {
     "name": "PLSnoisy",
@@ -40,6 +42,7 @@
 
     "shield_params": {
       "n_ghost_locs": 4,
+      "ghost_distance": 2,
       "alpha": 1,
       "differentiable_shield": true,
       "program_type": "relative_loc_simple",
@@ -47,7 +50,7 @@
       "use_learned_observations": true,
       "train_observations": false,
       "noisy_observations": true,
-      "observation_type": "observation_3k_examples_100_steps.pt"
+      "observation_type": "observation_model_5000_examples/observation_200_steps.pt"
     },
 
     "params": {
