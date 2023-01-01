@@ -322,9 +322,9 @@ def curves(domain_name, curve_type, exp_names, names, step_limit, figure_height=
         )
     )
     c = alt.layer(band, line).resolve_legend(color='independent')
-    c.show()
+    # c.show()
     fig_path = os.path.join(domain, f"{DOMAIN_ABBR[domain_name]}_{fig_title}{setting}.svg")
-    # c.save(fig_path)
+    c.save(fig_path)
 
 def safety_optimality_df(domain_name, exp_names, n_step):
     norm = NORMS_REW[domain_name]
