@@ -6,58 +6,75 @@ from altair import Column
 import numpy as np
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-domain_goal_finding = os.path.join(dir_path, "../..", "experiments5", "goal_finding", "small0")
-domain_sokoban = os.path.join(dir_path, "../..", "experiments5", "sokoban", "2box1map1")
-domain_pacman = os.path.join(dir_path, "../..", "experiments5", "pacman", "small4")
-domain_carracing = os.path.join(dir_path, "../..", "experiments5", "carracing", "map2")
+domain_goal_finding1 = os.path.join(dir_path, "../..", "experiments5", "goal_finding", "small0")
+domain_goal_finding2 = os.path.join(dir_path, "../..", "experiments5", "goal_finding", "small2")
+domain_pacman1 = os.path.join(dir_path, "../..", "experiments5", "pacman", "small3")
+domain_pacman2 = os.path.join(dir_path, "../..", "experiments5", "pacman", "small4")
+domain_carracing1 = os.path.join(dir_path, "../..", "experiments5", "carracing", "map0")
+domain_carracing2 = os.path.join(dir_path, "../..", "experiments5", "carracing", "map2")
 
 NAMES = {
-    "sokoban": domain_sokoban,
-    "goal_finding": domain_goal_finding,
-    "carracing": domain_carracing
+    "goal_finding1": domain_goal_finding1,
+    "goal_finding2": domain_goal_finding2,
+    "pacman1": domain_pacman1,
+    "pacman2": domain_pacman2,
+    "carracing1": domain_carracing1,
+    "carracing3": domain_carracing2,
 }
-DOMAIN_ABBR= {
-    "sokoban": "Sokoban",
-    "goal_finding": "Stars",
-    "carracing": "CR"
+DOMAIN_ABBR = {
+    "goal_finding1": "Stars1",
+    "goal_finding2": "Stars2",
+    "pacman1": "pacman1",
+    "pacman2": "pacman2",
+    "carracing1": "CR1",
+    "carracing2": "CR2"
 }
 NORMS_REW = {
-    "sokoban": {"low": -12, "high": 4},
-    "goal_finding": {"low": 0, "high": 45},
-    "carracing": {"low": 0, "high": 900}
+    "goal_finding1": {"low": 0, "high": 45},
+    "goal_finding2": {"low": 0, "high": 45},
+    "pacman1": {"low": 0, "high": 40},
+    "pacman2": {"low": 0, "high": 40},
+    "carracing1": {"low": 0, "high": 900},
+    "carracing2": {"low": 0, "high": 900}
 }
-ALPHA_NAMES_DIFF = {
-    "vsrl": "VSRL",
-    "hard_shielding": "PLS",
-    "no_shielding": "PPO"
+
+NORMS_VIO = {
+    "goal_finding1": {"low": 0, "high": 15000},
+    "goal_finding2": {"low": 0, "high": 15000},
+    "pacman1": {"low": 3500, "high": 7000},
+    "pacman2": {"low": 3500, "high": 15000},
+    "carracing1": {"low": 0, "high": 1000},
+    "carracing2": {"low": 0, "high": 1000}
 }
 
 ALPHA_NAMES_LEARNING_CURVES = {
     "PPO": "PPO",
-    "PLSperf": "PLSperf",
-    "VSRLperf": "VSRLperf",
-    "PLPG": "PLPG",
-    "VSRLthres": "VSRLthres",
-    "PLPG_LT": "PLPG_LT",
-    "PLPG_ST": "PLPG_ST"
+    "PLPGperf": "PLPG",
+    "VSRLperf": "VSRL",
+    "VSRLthres": "VSRL",
+    "PLPGnoisy": "PLPG",
+    "PLPG_LTperf": "PLPG_LTperf",
+    "PLPG_STperf": "PLPG_STperf",
+    "PLPG_LTnoisy": "PLPG_LTnoisy",
+    "PLPG_STnoisy": "PLPG_STnoisy",
+    "epsVSRLthres0.005": "$\epsilon$-VSRL"
 }
 NEW_TAGS = [
     "Return",
+    "Violation",
     "Safety",
-    "Rejected Samples"
 ]
 TAGS = [
     "rollout/ep_rew_mean",
-    "rollout/#violations",
-    "safety/num_rejected_samples_max",
+    "safety/n_deaths",
     "safety/ep_rel_safety_shielded",
 ]
 SEEDS = [
     "seed1", 
-    "seed2", 
-    "seed3", 
-    "seed4", 
-    "seed5"
+    # "seed2",
+    # "seed3",
+    # "seed4",
+    # "seed5"
 ]
 
 def load_dataframe_from_file(path, tag):
@@ -84,7 +101,7 @@ def normalize_rew(v, norm):
     return (v-norm["low"])/(norm["high"]-norm["low"])
 
 def normalize_vio(v, norm=None):
-    return 1-v
+    return (v-norm["low"])/(norm["high"]-norm["low"])
 
 def normalize_rej(v, norm=None):
     # return 1- (v/100000)
@@ -105,20 +122,17 @@ def load_step_value(folder, tag, n_step):
     value = get_largest_step_value_in_dataframe(df, steps=n_step)
     return value
 
-def extract_values(folder):
-
+def extract_values(folder, name):
     exp_names = [
-        #"PPO",
+        "PPO",
         #"VSRLperf",
-        #"PLPG_STperf",
-        "PLPGperf",
-        "PLPGperf2",
-        #"VSRLthres",
-        #"epsVSRLthres0.005",
+        # "PLPGperf",
+        # "PLPGperf3",
+        # "VSRLthres",
+        # "epsVSRLthres0.005",
         #"epsVSRLthres0.1",
         #"PLPGnoisy",
-        #"PLPGnoisy3"
-        #"PLPG_STnoisy"
+        # "PLPGnoisy3"
     ]
     exp_namesdd = [
         "PLPG_LTperf",
@@ -135,7 +149,8 @@ def extract_values(folder):
     tags = [
         "rollout/ep_rew_mean", 
         "safety/ep_rel_safety_shielded", 
-        "safety/n_deaths"]
+        "safety/n_deaths"
+    ]
 
     results = {}
     for exp in exp_names:
@@ -143,13 +158,10 @@ def extract_values(folder):
         for seed in SEEDS:
             exp_folder = os.path.join(folder, exp, seed)
             r = load_step_value(exp_folder, tags[0], 600_000)
-            #s = load_step_value(exp_folder, tags[1], 600_000)
             v = load_step_value(exp_folder, tags[2], 600_000)
             rs.append(r)
-            #ss.append(s)
             vs.append(v)
         avg_r = sum(rs)/len(rs)
-        #avg_s = sum(ss)/len(ss)
         avg_v = sum(vs)/len(vs)
 
         results[exp] = {
@@ -160,10 +172,10 @@ def extract_values(folder):
         print(f"\t{exp}", end =" ")
     print()
     for exp in exp_names:
-        print(f"\t{(results[exp]['r'])/44:.2f}", end =" ")
+        print(f"\t{normalize_rew(results[exp]['r'], NORMS_REW[name]):.2f}", end =" ")
     print()
     for exp in exp_names:
-        print(f"\t{(results[exp]['v']-00)/(15000-00):.2f}", end =" ")
+        print(f"\t{normalize_vio(results[exp]['v'], NORMS_VIO[name]):.2f}", end =" ")
     print()
 
 
@@ -243,13 +255,13 @@ def draw(dd, fig_path):
     c = charts[0] | charts[1] | charts[2]
     c.show()
 
-def curves(domain_name, curve_type, exp_names, names, step_limit, fig_title_abbr, figure_height=100, fig_title=""):
+def curves(domain_name, curve_type, exp_names, names, step_limit, figure_height=100, fig_title="", setting=""):
     """
     Plot a safety or reward curve of the experiment of "domain_name/alpha" until "step_limit" steps
     curve_type: "rollout/ep_rew_mean" or "rollout/#violations"
     """
     domain = NAMES[domain_name]
-    norm = NORMS_REW[domain_name]
+    norm_rew = NORMS_REW[domain_name]
     df_list = []
     for exp_name in exp_names:
         folder = os.path.join(domain, exp_name)
@@ -257,7 +269,8 @@ def curves(domain_name, curve_type, exp_names, names, step_limit, fig_title_abbr
             path = os.path.join(folder, seed)
             df = load_dataframe(path, curve_type, smooth=True)
             if curve_type==TAGS[0]:
-                df["value"] = df["value"].apply(lambda x: normalize_rew(x, norm))
+                df["value"] = df["value"].apply(lambda x: normalize_rew(x, norm_rew))
+                df["value"] = df["value"].cummax()
             df["seed"] = seed
             df["alpha"] = names[exp_name]
             # take only step_limit steps
@@ -266,6 +279,14 @@ def curves(domain_name, curve_type, exp_names, names, step_limit, fig_title_abbr
 
     df_main = pd.concat(df_list)
     df_main["step"] = df_main["step"] / 100_000
+
+    if len(exp_names) == 3:
+        legendX = 25
+        legendY = -35
+    elif len(exp_names) == 4:
+        legendX = -10
+        legendY = -35
+
 
     line = alt.Chart(df_main).mark_line().encode(
         x=alt.X("step",
@@ -276,29 +297,27 @@ def curves(domain_name, curve_type, exp_names, names, step_limit, fig_title_abbr
                     grid=False)),
         y=alt.Y("mean(value)",
                 axis=alt.Axis(
-                    # format='~s',
-                    title=f"Avg {fig_title_abbr} / Epis",
+                    format='.1',
                     grid=False)),
         color=alt.Color("alpha",
                         legend=alt.Legend(
-                            title=f"Avg {fig_title_abbr} on {DOMAIN_ABBR[domain_name]}",
+                            title=f"{fig_title} on {DOMAIN_ABBR[domain_name]}{setting}",
                             orient='none',
                             direction='horizontal',
-                            legendX=-10, legendY=-35,
+                            legendX=legendX, legendY=legendY,
                             titleAnchor='middle'
                         ),
-                        scale=alt.Scale(domain=exp_names, range=["red", "blue", "gray", "green"][:len(exp_names)])
+                        scale=alt.Scale(domain=[names[exp_name] for exp_name in exp_names], range=["red", "blue", "gray", "green"][:len(exp_names)])
                         )
     ).properties(
-            width=200, #200
-            height=figure_height #100
+            width=200,
+            height=figure_height
         )
     band = alt.Chart(df_main).mark_errorband(extent='ci', opacity=0.1).encode(
         x=alt.X("step"),
-        y=alt.Y("value",title=""),
-        color=alt.Color("alpha", 
-                         #sort=["PPO", "PLSperf", "PLSnoisy", "PLSthres"],
-                         sort = exps_names,
+        y=alt.Y("value", title=""),
+        color=alt.Color("alpha",
+                         sort = [names[exp_name] for exp_name in exp_names],
                          legend=None
         )
     )
@@ -431,106 +450,29 @@ def get_time_sample_one_action(name, alpha):
     return avg_time/500000
 
 
-# SEEDS=["PPO"]
-# print(get_time_sample_one_action("goal_finding", "hard_shielding"))
-# print(get_time_sample_one_action("sokoban", "hard_shielding"))
-# print(get_time_sample_one_action("carracing", "hard_shielding"))
-#
-# print(get_time_sample_one_action("goal_finding", "vsrl"))
-# print(get_time_sample_one_action("sokoban", "vsrl"))
-# print(get_time_sample_one_action("carracing", "vsrl"))
 
-# print(get_number_of_rejected_samples("goal_finding"))
-# print(get_number_of_rejected_samples("sokoban"))
-# print(get_number_of_rejected_samples("carracing"))
-
-
-#SEEDS=["seed1"]
-#curves("sokoban",
-#       exp_names=[
-#           "PPO", "PLSthres", "VSRLthres", "PLSnoisy"
-#       ],
-#       curve_type=TAGS[1], # violation_curves
-#       names=ALPHA_NAMES_LEARNING_CURVES,
-#       step_limit=1_000_000,
-#       fig_title_abbr="Violation",
-#       fig_title="Violation_Noisy"
-#       )
-#
-#curves("sokoban",
-#       exp_names=[
-#           "PPO", "PLSthres", "VSRLthres", "PLSnoisy"
-#       ],
-#       curve_type=TAGS[4], # safety
-#       names=ALPHA_NAMES_LEARNING_CURVES,
-#       step_limit=1_000_000,
-#       fig_title_abbr="Safety",
-#       fig_title="Safety_Noisy"
-#       )
-#
-#curves("sokoban",
-#       exp_names=[
-#           "PPO", "PLSthres", "VSRLthres", "PLSnoisy"
-#       ],
-#       curve_type=TAGS[0], # learning_curves
-#       names=ALPHA_NAMES_LEARNING_CURVES,
-#       step_limit=1_000_000,
-#       fig_title_abbr="Return",
-#       fig_title="Return_Noisy")
-
-
-
-#
-# curves("carracing",
-#        alphas=[
-#            "no_shielding",
-#            "hard_shielding",
-#            "alpha_0.5",
-#            "vsrl"
-#        ],
-#        curve_type=TAGS[1], # violation_curves
-#        names=ALPHA_NAMES_LEARNING_CURVES,
-#        step_limit=500_000,
-#        fig_title="violation_curves",
-#        fig_title_abbr="Violation")
-#
-# curves("carracing",
-#       alphas=[
-#            "no_shielding",
-#            "hard_shielding",
-#            "alpha_0.5",
-#            "vsrl"
-#        ],
-#        curve_type=TAGS[0], # learning_curves
-#        names=ALPHA_NAMES_LEARNING_CURVES, # ALPHA_NAMES_LEARNING_CURVES
-#        step_limit=500_000,
-#        fig_title="learning_curves",
-#        fig_title_abbr="Return")
-
-# safety_optimality_draw("sokoban", n_step=500_000, x_axis_range=[0.0, 1.0], y_axis_range=[0.0, 0.6])
-# safety_optimality_draw("goal_finding", n_step=500_000, x_axis_range=[0.6, 1.0], y_axis_range=[0.4, 1.0])
-# safety_optimality_draw("carracing", n_step=500_000, x_axis_range=[0.0, 0.3], y_axis_range=[0.0, 0.8])
-
-
-
-#extract_values(domain_goal_finding)
-#extract_values(domain_pacman)
-#extract_values(domain_sokoban)
-#extract_values(domain_carracing)
+# extract_values(domain_goal_finding1, "goal_finding1")
+# extract_values(domain_goal_finding2, "goal_finding2")
+# extract_values(domain_pacman1, "pacman1")
+# extract_values(domain_pacman2, "pacman2")
+# extract_values(domain_carracing1, "carracing1")
+# extract_values(domain_carracing2, "carracing2")
 
 graph_settings = {
         "domain": [
-            "goal_finding",
-            #"sokoban"
-            #"carracing"
+            "goal_finding1",
+            # "goal_finding2",
+            # "pacman1",
+            # "pacman2"
+            # "carracing1",
+            # "carracing2"
         ],
         "exp_names": [
             ["PPO", "VSRLperf", "PLPGperf"], # det. safety
             ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"], # prob. safety
-            #["PPO", "PPOsfloss", "PLSprob", "PLSprobsfloss"], # 
         ],
-        "types": ["Violation", "Safety", "Return"],
-        "curve_types": [TAGS[1], TAGS[3], TAGS[0]]
+        "types": ["Acc Violation", "P(safety)", "Avg Return"],
+        "curve_types": [TAGS[1], TAGS[2], TAGS[0]]
     }
 
 
@@ -539,17 +481,15 @@ POSTFIX = [" (perf)", " (noisy)"]
 for domain in graph_settings["domain"]:
     for n, exp_name in enumerate(graph_settings["exp_names"]):
         for j, t in enumerate(graph_settings["types"]):
-            fig_title = t + POSTFIX[n]
             print(f"{exp_name}\n" + \
                   f"{graph_settings['curve_types'][j]}\n" + \
-                  f"{t}\n" + \
-                  f"{fig_title}\n")
+                  f"{t}\n")
             curves(domain,
                    exp_names=exp_name,
-                   curve_type=graph_settings["curve_types"][j], # violation_curves
+                   curve_type=graph_settings["curve_types"][j],
                    names=ALPHA_NAMES_LEARNING_CURVES,
                    step_limit=700_000,
-                   fig_title_abbr=t,
-                   fig_title=fig_title
+                   fig_title=t,
+                   setting=POSTFIX[n]
                    )
 
