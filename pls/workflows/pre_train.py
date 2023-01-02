@@ -189,7 +189,7 @@ def generate_random_images_sokoban(csv_path, folder, n_images=10):
     f_csv.close()
 
 
-def generate_random_images_pacman(csv_path, folder, n_images=10, ghost_distance=1):
+def generate_random_images_pacman(csv_path, folder, n_images=10, ghost_distance=1, map_name="small"):
     WALL_COLOR = 0.25
     GHOST_COLOR = 0.5
     PACMAN_COLOR = 0.75
@@ -200,7 +200,7 @@ def generate_random_images_pacman(csv_path, folder, n_images=10, ghost_distance=
     config = {
         "env_type": "GoalFinding-v0",
         "env_features":{
-            "layout": "small",
+            "layout": map_name,
             "reward_goal": 10,
             "reward_crash": 0,
             "reward_food": 0,
@@ -222,12 +222,14 @@ def generate_random_images_pacman(csv_path, folder, n_images=10, ghost_distance=
     env.env.gameDisplay = env.env.display
     env.env.rules.quiet = False
 
+    num_ghosts = 30 if map_name == "small" else env.env.num_agents
+    num_food = 30 if map_name == "small" else env.env.num_food
     for n in range(n_images):
         layout = sample_layout(
             env.layout.width,
             env.layout.height,
-            30, #env.env.num_agents,
-            30, #env.env.num_food,
+            num_ghosts,
+            num_food,
             env.env.non_wall_positions,
             env.env.wall_positions,
             env.env.all_edges,
