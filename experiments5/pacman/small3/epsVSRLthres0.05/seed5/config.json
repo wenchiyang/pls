@@ -1,0 +1,73 @@
+{
+  "workflow_name": "ppo",
+  "env_type": "Pacman-v0",
+
+  "env_features": {
+    "layout": "small4",
+    "reward_goal": 10,
+    "reward_crash": 0,
+    "reward_food": 1,
+    "reward_time": -0.1,
+    "render": false,
+    "max_steps": 200,
+    "num_maps": 1,
+    "seed": 567,
+    "render_mode": "gray",
+    "height": 482,
+    "width": 482,
+    "downsampling_size": 8,
+    "background": "bg_small.jpg",
+    "move_ghosts": true
+  },
+  "eval_env_features": {
+    "layout": "small4",
+    "reward_goal": 10,
+    "reward_crash": 0,
+    "reward_food": 1,
+    "reward_time": -0.1,
+    "render": true,
+    "max_steps": 200,
+    "num_maps": 1,
+    "seed": 567,
+    "render_mode": "gray",
+    "height": 482,
+    "width": 482,
+    "downsampling_size": 8,
+    "background": "bg_small.jpg",
+    "move_ghosts": true
+  },
+  "model_features": {
+    "name": "VSRLperf",
+    "stochasticity": 0.0,
+
+    "shield_params": {
+      "n_ghost_locs": 4,
+      "ghost_distance": 2,
+      "alpha": 1,
+      "differentiable_shield": false,
+      "program_type": "relative_loc_simple",
+      "tinygrid_dim": 15,
+      "use_learned_observations": true,
+      "train_observations": false,
+      "vsrl_use_renormalization": true,
+      "noisy_observations": false,
+      "observation_type": "observation_model_5000_examples/observation_200_steps.pt",
+      "vsrl_eps": 0.05
+    },
+
+    "params": {
+      "log_interval": 1,
+      "batch_size": 512,
+      "n_epochs": 15,
+      "n_steps": 2048,
+      "learning_rate": 0.0001,
+      "seed": 772,
+      "clip_range": 0.1,
+      "gamma": 0.99,
+      "step_limit": 700000,
+      "net_arch_shared": [],
+      "net_arch_pi": [64, 64],
+      "net_arch_vf": [64, 64]
+    }
+  }
+}
