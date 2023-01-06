@@ -19,7 +19,7 @@ NAMES = {
     "pacman1": domain_pacman1,
     "pacman2": domain_pacman2,
     "carracing1": domain_carracing1,
-    "carracing3": domain_carracing2,
+    "carracing2": domain_carracing2,
 }
 DOMAIN_ABBR = {
     "goal_finding1": "Stars1",
@@ -50,14 +50,18 @@ NORMS_VIO = {
 ALPHA_NAMES_LEARNING_CURVES = {
     "PPO": "PPO",
     "PLPGperf": "PLPG",
+    "PLPGperf3": "PLPG",
     "VSRLperf": "VSRL",
     "VSRLthres": "VSRL",
     "PLPGnoisy": "PLPG",
+    "PLPGnoisy3": "PLPG",
     "PLPG_LTperf": "PLPG_LTperf",
     "PLPG_STperf": "PLPG_STperf",
     "PLPG_LTnoisy": "PLPG_LTnoisy",
     "PLPG_STnoisy": "PLPG_STnoisy",
-    "epsVSRLthres0.005": "$\epsilon$-VSRL"
+    "epsVSRLthres0.005": "ε-VSRL",
+    "epsVSRLthres0.01": "ε-VSRL",
+    "epsVSRLthres0.1": "ε-VSRL",
 }
 NEW_TAGS = [
     "Return",
@@ -71,10 +75,10 @@ TAGS = [
 ]
 SEEDS = [
     "seed1", 
-    # "seed2",
-    # "seed3",
-    # "seed4",
-    # "seed5"
+    "seed2",
+    #"seed3",
+    "seed4",
+    "seed5"
 ]
 
 def load_dataframe_from_file(path, tag):
@@ -125,26 +129,32 @@ def load_step_value(folder, tag, n_step):
 def extract_values(folder, name):
     exp_names = [
         "PPO",
-        #"VSRLperf",
+        "VSRLperf",
         # "PLPGperf",
-        # "PLPGperf3",
-        # "VSRLthres",
-        # "epsVSRLthres0.005",
+        "PLPGperf3",
+        "VSRLthres",
+        "epsVSRLthres0.005",
         #"epsVSRLthres0.1",
         #"PLPGnoisy",
-        # "PLPGnoisy3"
+        "PLPGnoisy3"
     ]
-    exp_namesdd = [
+    exp_names = [
         "PLPG_LTperf",
         "PLPG_STperf",
-        "PLPGperf",
+        "PLPGperf3",
         "PLPG_LTnoisy",
         "PLPG_STnoisy",
-        "PLPGnoisy"
+        "PLPGnoisy3"
     ]
-    exp_names_4 = [
-        "PLPGperf",
-        "PLPGnoisy"
+    exp_names = [
+        #"epsVSRLthres0.005",
+        #"epsVSRLthres0.01",
+        "epsVSRLthres0.05",
+        #"epsVSRLthres0.1"
+        #"PLPGperf4",
+        #"PLPGperf3",
+        #"PLPGperf5",
+        #"PLPGperf2"
     ]
     tags = [
         "rollout/ep_rew_mean", 
@@ -172,10 +182,7 @@ def extract_values(folder, name):
         print(f"\t{exp}", end =" ")
     print()
     for exp in exp_names:
-        print(f"\t{normalize_rew(results[exp]['r'], NORMS_REW[name]):.2f}", end =" ")
-    print()
-    for exp in exp_names:
-        print(f"\t{normalize_vio(results[exp]['v'], NORMS_VIO[name]):.2f}", end =" ")
+        print(f"\t{normalize_rew(results[exp]['r'], NORMS_REW[name]):.2f} / {normalize_vio(results[exp]['v'], NORMS_VIO[name]):.2f}", end =" ")
     print()
 
 
@@ -453,23 +460,23 @@ def get_time_sample_one_action(name, alpha):
 
 # extract_values(domain_goal_finding1, "goal_finding1")
 # extract_values(domain_goal_finding2, "goal_finding2")
-# extract_values(domain_pacman1, "pacman1")
-# extract_values(domain_pacman2, "pacman2")
-# extract_values(domain_carracing1, "carracing1")
+#extract_values(domain_pacman1, "pacman1")
+#extract_values(domain_pacman2, "pacman2")
+extract_values(domain_carracing1, "carracing1")
 # extract_values(domain_carracing2, "carracing2")
 
 graph_settings = {
         "domain": [
-            "goal_finding1",
-            # "goal_finding2",
-            # "pacman1",
-            # "pacman2"
-            # "carracing1",
-            # "carracing2"
+            #"goal_finding1",
+            #"goal_finding2",
+            #"pacman1",
+            #"pacman2"
+            #"carracing1",
+            #"carracing2"
         ],
         "exp_names": [
-            ["PPO", "VSRLperf", "PLPGperf"], # det. safety
-            ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"], # prob. safety
+            ["PPO", "VSRLperf", "PLPGperf3"], # det. safety
+            ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"], # prob. safety
         ],
         "types": ["Acc Violation", "P(safety)", "Avg Return"],
         "curve_types": [TAGS[1], TAGS[2], TAGS[0]]
