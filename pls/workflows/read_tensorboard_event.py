@@ -20,8 +20,8 @@ FOLDERS = {
 DOMAIN_ABBR = {
     "goal_finding1": "Stars1",
     "goal_finding2": "Stars2",
-    "pacman1": "pacman1",
-    "pacman2": "pacman2",
+    "pacman1": "Pac1",
+    "pacman2": "Pac2",
     "carracing1": "CR1",
     "carracing2": "CR2"
 }
@@ -68,10 +68,10 @@ TAGS = [
 ]
 SEEDS = [
     "seed1", 
-    "seed2",
-    "seed3",
-    "seed4",
-    "seed5"
+    # "seed2",
+    # "seed3",
+    # "seed4",
+    # "seed5"
 ]
 
 # def load_dataframe_from_file(path, tag):
@@ -366,71 +366,106 @@ def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
     fig_path = os.path.join(FOLDERS[domain_name], f"{domain_name}_safety_return.svg")
     c.save(fig_path)
 
-
-
-#extract_values("goal_finding1", exp_names)
-#extract_values(domain_goal_finding2, "goal_finding2")
-#extract_values(domain_pacman1, "pacman1")
-#extract_values(domain_pacman2, "pacman2")
-#extract_values(domain_carracing1, "carracing1")
-#extract_values(domain_carracing2, "carracing2")
-
-graph_settings = {
-    "goal_finding1": {
-        "perf": ["PPO", "VSRLperf", "PLPGperf"],
-        "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"]
-    },
-    "goal_finding2": {
-        "perf": ["PPO", "VSRLperf", "PLPGperf"],
-        "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"]
-    },
-    "pacman1":{
-        "perf": ["PPO", "VSRLperf", "PLPGperf3"],
-        "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"]
-    },
-    "pacman2": {
-        "perf": ["PPO", "VSRLperf", "PLPGperf3"],
-        "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"]
-    },
-    "carracing1": {
-        "perf": ["PPO", "VSRLperf", "PLPGperf"],
-        "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"]
-    },
-    "carracing2": {
-        "perf": ["PPO", "VSRLperf", "PLPGperf"],
-        "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"]
-    },
+def create_graphs(type="perf"):
+    graph_settings = {
+        "goal_finding1": {
+            "perf": ["PPO", "VSRLperf", "PLPGperf"],
+            "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"]
+        },
+        "goal_finding2": {
+            "perf": ["PPO", "VSRLperf", "PLPGperf"],
+            "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"]
+        },
+        "pacman1":{
+            "perf": ["PPO", "VSRLperf", "PLPGperf3"],
+            "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"]
+        },
+        "pacman2": {
+            "perf": ["PPO", "VSRLperf", "PLPGperf3"],
+            "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"]
+        },
+        "carracing1": {
+            "perf": ["PPO", "VSRLperf", "PLPGperf"],
+            "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"]
+        },
+        "carracing2": {
+            "perf": ["PPO", "VSRLperf", "PLPGperf"],
+            "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"]
+        },
     }
 
-chart_rows = []
-for row, domain in enumerate(graph_settings):
-    print(domain)
-    chart_row = curves(domain,
-           exp_names=graph_settings[domain]["perf"],
-           names=ALPHA_NAMES_LEARNING_CURVES,
-           step_limit=600_000,
-           row = row
-           )
-    chart_rows.append(chart_row)
+    chart_rows = []
+    for row, domain in enumerate(graph_settings):
+        print(domain)
+        chart_row = curves(domain,
+                           exp_names=graph_settings[domain]["perf"],
+                           names=ALPHA_NAMES_LEARNING_CURVES,
+                           step_limit=600_000,
+                           row = row
+                           )
+        chart_rows.append(chart_row)
 
-c = altair.vconcat(*chart_rows, title="Perfect Sensors"
-).configure_axisY(
-    titleAngle=0,
-    titleAlign="left",
-    titleY=50,
-    titleX=-60,
-).configure_view(stroke=None
-).configure_legend(
-    orient="none",
-    legendX=500,
-    legendY=-40,
-    direction='horizontal',
-).configure_title(
-    anchor="middle"
-)
-# c.show()
-svg_path = os.path.join(dir_path, "../..", "experiments5")
-fig_path = os.path.join(svg_path, f"perfect.svg")
-c.save(fig_path)
+    c = altair.vconcat(*chart_rows, title="Perfect Sensors"
+                       ).configure_axisY(
+        titleAngle=0,
+        titleAlign="left",
+        titleY=50,
+        titleX=-60,
+    ).configure_view(stroke=None
+                     ).configure_legend(
+        orient="none",
+        legendX=250,
+        legendY=-40,
+        direction='horizontal',
+    ).configure_title(
+        anchor="middle"
+    )
+    c.show()
+    svg_path = os.path.join(dir_path, "../..", "experiments5")
+    fig_path = os.path.join(svg_path, f"perfect.svg")
+    # c.save(fig_path)
+
+def create_tables(type):
+    table_settings = {
+        "goal_finding1": {
+            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1"],
+            "perf": ["PLPG_STperf", "PLPGperf2", "PLPGperf4", "PLPGperf", "PLPGperf3"],
+            "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
+        },
+        "goal_finding2": {
+            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1"],
+            "perf": ["PLPG_STperf", "PLPGperf2", "PLPGperf4", "PLPGperf", "PLPGperf3"],
+            "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
+        },
+        "pacman1": {
+            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1"],
+            "perf": ["PLPG_STperf", "PLPGperf3", "PLPGperf5", "PLPGperf", "PLPGperf2"],
+            "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
+        },
+        "pacman2": {
+            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1"],
+            "perf": ["PLPG_STperf", "PLPGperf3", "PLPGperf4", "PLPGperf", "PLPGperf2"],
+            "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
+        },
+        "carracing1": {
+            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1"],
+            "perf": ["PLPG_STperf", "PLPGperf", "PLPGperf2", "PLPGperf3", "PLPGperf4"],
+            "noisy": ["PLPG_STnoisy", "PLPGnoisy", "PLPGnoisy2", "PLPGnoisy3", "PLPGnoisy4"],
+        },
+        "carracing2": {
+            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1"],
+            "perf": ["PLPG_STperf", "PLPGperf", "PLPGperf2", "PLPGperf3", "PLPGperf4"],
+            "noisy": ["PLPG_STnoisy", "PLPGnoisy", "PLPGnoisy2", "PLPGnoisy3", "PLPGnoisy4"],
+        },
+    }
+    for row, domain in enumerate(table_settings):
+        extract_values(domain, table_settings[domain][type])
+
+
+
+create_tables(type="eps")
+
+
+
 
 
