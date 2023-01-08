@@ -473,7 +473,7 @@ def create_tables(type):
     for row, domain in enumerate(table_settings):
         extract_values(domain, table_settings[domain][type])
 
-def draw_Q5(type="perf",ALPHA_OR_EPS=None):
+def draw_Q5(type="perf",ALPHA_OR_EPS=None, symbol="ɑ"):
     data_rew, data_vio = {}, {}
     for domain in table_settings:
         data_rew[DOMAIN_ABBR[domain]]={
@@ -492,8 +492,8 @@ def draw_Q5(type="perf",ALPHA_OR_EPS=None):
                 # # Renormalize reward
                 n_r = normalize_rew(r, NORMS_REW[domain])
                 n_v = normalize_vio(v, NORMS_VIO[domain])
-                data_rew[DOMAIN_ABBR[domain]][seed][ALPHA_OR_EPS[i_alpha]] = n_r
-                data_vio[DOMAIN_ABBR[domain]][seed][ALPHA_OR_EPS[i_alpha]] = n_v
+                data_rew[DOMAIN_ABBR[domain]][seed][i_alpha] = n_r
+                data_vio[DOMAIN_ABBR[domain]][seed][i_alpha] = n_v
 
     df_rew = pd.DataFrame.from_records(
         [
@@ -513,13 +513,20 @@ def draw_Q5(type="perf",ALPHA_OR_EPS=None):
         ],
         columns=['domain', 'seed', 'alpha', 'value']
     )
+    axis_labels = (
+        f"datum.label == 0 ? {ALPHA_OR_EPS[0]} : \
+        datum.label == 1 ? {ALPHA_OR_EPS[1]}: \
+        datum.label == 2 ? {ALPHA_OR_EPS[2]}: \
+        datum.label == 3 ? {ALPHA_OR_EPS[3]}:  {ALPHA_OR_EPS[4]} "
+    )
     for df, title in [(df_rew, "Return"), (df_vio, "Violation")]:
         line = alt.Chart(df, title="").mark_line().encode(
-            x=alt.X("alpha",
-                    title="ɑ",
+            x=alt.X("alpha:Q",
+                    title=symbol,
                     axis=alt.Axis(
                         format='.1',
-                        values=ALPHA_OR_EPS,
+                        labelExpr=axis_labels,
+                        # values=ALPHA_OR_EPS,
                         grid=False)),
             y=alt.Y("mean(value)",
                     axis=alt.Axis(title=title, grid=False)),
@@ -538,21 +545,20 @@ def draw_Q5(type="perf",ALPHA_OR_EPS=None):
         c = alt.layer(band, line)
         svg_path = os.path.join(dir_path, "../..", "experiments5")
         fig_path = os.path.join(svg_path, f"Q5{type}{title}.svg")
-        c.save(fig_path)
-        # c.show()
+        # c.save(fig_path)
+        c.show()
     return data_rew, data_vio
 
 
-create_tables(type="Q1")
-
-create_tables(type="LTST")
+# create_tables(type="Q1")
+# create_tables(type="LTST")
 
 
 ALPHA = [0, 0.1, 0.5, 1, 5]
 EPS = [0, 0.005, 0.01, 0.05, 0.1]
-draw_Q5("perf", ALPHA)
-draw_Q5("noisy", ALPHA)
-draw_Q5("eps", EPS)
+draw_Q5("perf", ALPHA, symbol="ɑ")
+# draw_Q5("noisy", ALPHA, symbol="ɑ")
+# draw_Q5("eps", EPS, symbol="ε")
 
 
 # create_graphs("perf")
