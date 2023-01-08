@@ -68,10 +68,10 @@ TAGS = [
 ]
 SEEDS = [
     "seed1", 
-    # "seed2",
-    # "seed3",
-    # "seed4",
-    # "seed5"
+    "seed2",
+    "seed3",
+    "seed4",
+    "seed5"
 ]
 
 # def load_dataframe_from_file(path, tag):
@@ -156,6 +156,7 @@ def extract_values(name, exp_names):
     for exp in exp_names:
         print(f"\t{normalize_rew(results[exp]['r'], NORMS_REW[name]):.2f} / {normalize_vio(results[exp]['v'], NORMS_VIO[name]):.2f}", end =" ")
     print()
+    return results
 
 
 def curves_old(domain_name, curve_type, exp_names, names, step_limit, figure_height=100, fig_title="", setting=""):
@@ -425,47 +426,136 @@ def create_graphs(type="perf"):
     fig_path = os.path.join(svg_path, f"perfect.svg")
     # c.save(fig_path)
 
-def create_tables(type):
-    table_settings = {
+table_settings = {
         "goal_finding1": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1"],
             "perf": ["PLPG_STperf", "PLPGperf2", "PLPGperf4", "PLPGperf", "PLPGperf3"],
             "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
+            "Q1": ["PPO", "VSRLperf", "PLPGperf4", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"],
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
         },
         "goal_finding2": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1"],
             "perf": ["PLPG_STperf", "PLPGperf2", "PLPGperf4", "PLPGperf", "PLPGperf3"],
             "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
+            "Q1": ["PPO", "VSRLperf", "PLPGperf", "VSRLthres", "epsVSRLthres0.01", "PLPGnoisy"],
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
         },
         "pacman1": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1"],
             "perf": ["PLPG_STperf", "PLPGperf3", "PLPGperf5", "PLPGperf", "PLPGperf2"],
             "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
+            "Q1": ["PPO", "VSRLperf", "PLPGperf3", "VSRLthres", "epsVSRLthres0.05", "PLPGnoisy4"],
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"]
         },
         "pacman2": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1"],
             "perf": ["PLPG_STperf", "PLPGperf3", "PLPGperf4", "PLPGperf", "PLPGperf2"],
             "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
+            "Q1": ["PPO", "VSRLperf", "PLPGperf4", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"],
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
         },
         "carracing1": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1"],
             "perf": ["PLPG_STperf", "PLPGperf", "PLPGperf2", "PLPGperf3", "PLPGperf4"],
             "noisy": ["PLPG_STnoisy", "PLPGnoisy", "PLPGnoisy2", "PLPGnoisy3", "PLPGnoisy4"],
+            "Q1": ["PPO", "VSRLperf", "PLPGperf2", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"],
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf2", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
         },
         "carracing2": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1"],
             "perf": ["PLPG_STperf", "PLPGperf", "PLPGperf2", "PLPGperf3", "PLPGperf4"],
             "noisy": ["PLPG_STnoisy", "PLPGnoisy", "PLPGnoisy2", "PLPGnoisy3", "PLPGnoisy4"],
+            "Q1": ["PPO", "VSRLperf", "PLPGperf", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy2"],
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy2"]
         },
     }
+
+def create_tables(type):
     for row, domain in enumerate(table_settings):
         extract_values(domain, table_settings[domain][type])
 
+def draw_Q5(type="perf",ALPHA_OR_EPS=None):
+    data_rew, data_vio = {}, {}
+    for domain in table_settings:
+        data_rew[DOMAIN_ABBR[domain]]={
+            "seed1": {}, "seed2": {}, "seed3": {}, "seed4": {}, "seed5": {}
+        }
+        data_vio[DOMAIN_ABBR[domain]]={
+            "seed1": {}, "seed2": {}, "seed3": {}, "seed4": {}, "seed5": {}
+        }
+    for domain in table_settings:
+        folder = FOLDERS[domain]
+        for i_alpha, exp in enumerate(table_settings[domain][type]):
+            exp_folder = os.path.join(folder, exp)
+            for seed in SEEDS:
+                exp_folder_path = os.path.join(exp_folder, seed)
+                r, v = load_step_values(exp_folder_path, TAGS[0:2], 600_000)
+                # # Renormalize reward
+                n_r = normalize_rew(r, NORMS_REW[domain])
+                n_v = normalize_vio(v, NORMS_VIO[domain])
+                data_rew[DOMAIN_ABBR[domain]][seed][ALPHA_OR_EPS[i_alpha]] = n_r
+                data_vio[DOMAIN_ABBR[domain]][seed][ALPHA_OR_EPS[i_alpha]] = n_v
+
+    df_rew = pd.DataFrame.from_records(
+        [
+            (domain, seed, alpha, value)
+            for domain, seeds in data_rew.items()
+            for seed, alphas in seeds.items()
+            for alpha, value in alphas.items()
+        ],
+        columns=['domain', 'seed', 'alpha', 'value']
+    )
+    df_vio = pd.DataFrame.from_records(
+        [
+            (domain, seed, alpha, value)
+            for domain, seeds in data_vio.items()
+            for seed, alphas in seeds.items()
+            for alpha, value in alphas.items()
+        ],
+        columns=['domain', 'seed', 'alpha', 'value']
+    )
+    for df, title in [(df_rew, "Return"), (df_vio, "Violation")]:
+        line = alt.Chart(df, title="").mark_line().encode(
+            x=alt.X("alpha",
+                    title="ɑ",
+                    axis=alt.Axis(
+                        format='.1',
+                        values=ALPHA_OR_EPS,
+                        grid=False)),
+            y=alt.Y("mean(value)",
+                    axis=alt.Axis(title=title, grid=False)),
+            color=alt.Color("domain",
+                            legend=altair.Legend(title=None),
+                            scale=alt.Scale(scheme="category10"))
+        ).properties(
+            width=150,
+            height=150
+        )
+        band = alt.Chart(df).mark_errorband(extent='ci', opacity=0.2).encode(
+            x=alt.X("alpha"),
+            y=alt.Y("value", title=""),
+            color=alt.Color("domain")
+        )
+        c = alt.layer(band, line)
+        svg_path = os.path.join(dir_path, "../..", "experiments5")
+        fig_path = os.path.join(svg_path, f"Q5{type}{title}.svg")
+        c.save(fig_path)
+        # c.show()
+    return data_rew, data_vio
 
 
-create_tables(type="eps")
+create_tables(type="Q1")
+
+create_tables(type="LTST")
 
 
+ALPHA = [0, 0.1, 0.5, 1, 5]
+EPS = [0, 0.005, 0.01, 0.05, 0.1]
+draw_Q5("perf", ALPHA)
+draw_Q5("noisy", ALPHA)
+draw_Q5("eps", EPS)
 
 
+# create_graphs("perf")
 
