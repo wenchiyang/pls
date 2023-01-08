@@ -150,9 +150,7 @@ def extract_values(name, exp_names):
             "r": avg_r, "v": avg_v
         }
 
-    for exp in exp_names: 
-        print(f"\t{exp}", end =" ")
-    print()
+
     for exp in exp_names:
         print(f"\t{normalize_rew(results[exp]['r'], NORMS_REW[name]):.2f} / {normalize_vio(results[exp]['v'], NORMS_VIO[name]):.2f}", end =" ")
     print()
