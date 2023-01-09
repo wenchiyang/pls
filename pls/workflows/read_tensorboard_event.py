@@ -536,8 +536,8 @@ def draw_Q5(type="perf",ALPHA_OR_EPS=None, symbol="ɑ"):
             datum.label == 3 ? {ALPHA_OR_EPS[3]}: \
              {ALPHA_OR_EPS[4]}"
         )
-
-    for df, title in [(df_rew, "Return"), (df_vio, "Violation"), (df_vio, "")]:
+    cs = []
+    for df in [df_rew, df_vio]:
         line = alt.Chart(df, title="").mark_line().encode(
             x=alt.X("alpha:Q",
                     title=symbol,
@@ -547,7 +547,7 @@ def draw_Q5(type="perf",ALPHA_OR_EPS=None, symbol="ɑ"):
                         # values=ALPHA_OR_EPS,
                         grid=False)),
             y=alt.Y("mean(value)",
-                    axis=alt.Axis(title=title, grid=False)),
+                    axis=alt.Axis(title="", grid=False)),
             color=alt.Color("domain",
                             legend=altair.Legend(title=None),
                             scale=alt.Scale(scheme="category10"))
@@ -561,18 +561,18 @@ def draw_Q5(type="perf",ALPHA_OR_EPS=None, symbol="ɑ"):
             color=alt.Color("domain")
         )
         c = alt.layer(band, line)
-        svg_path = os.path.join(dir_path, "../..", "experiments5")
-        fig_path = os.path.join(svg_path, f"Q5{type}{title}.svg")
-        c.save(fig_path)
-        # c.show()
-    return c
+        cs.append(c)
+    return cs
 
 def draw_Q5_together():
     ALPHA = [0, 0.1, 0.5, 1, 5]
     EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
-    eps = draw_Q5("eps", EPS, symbol="ε")
-    alpha = draw_Q5("noisy", ALPHA, symbol="ɑ")
-    c = altair.hconcat(eps, alpha, title="Violation"
+    eps_rew, eps_vio= draw_Q5("eps", EPS, symbol="ε")
+    alpha_rew, alpha_vio = draw_Q5("noisy", ALPHA, symbol="ɑ")
+
+    violation_c = altair.hconcat(eps_vio, alpha_vio, title="Violation")
+    return_c = altair.hconcat(eps_vio, alpha_vio, title="Return")
+    c = altair.vconcat(violation_c, return_c
     ).configure_view(stroke=None
     ).configure_legend(
         orient="top",
@@ -580,10 +580,11 @@ def draw_Q5_together():
     ).configure_title(
         anchor="middle"
     )
+
     svg_path = os.path.join(dir_path, "../..", "experiments5")
-    fig_path = os.path.join(svg_path, f"Q5_comb.svg")
+    fig_path = os.path.join(svg_path, f"Q5.svg")
     c.save(fig_path)
-    c.show()
+    # c.show()
 
 
 
@@ -596,10 +597,10 @@ EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
 # draw_Q5("perf", ALPHA, symbol="ɑ")
 # draw_Q5("noisy", ALPHA, symbol="ɑ")
 # draw_Q5("eps", EPS, symbol="ε")
-# draw_Q5_together()
+draw_Q5_together()
 
 
 
-create_graphs("perf")
-create_graphs("nooisy")
+# create_graphs("perf")
+# create_graphs("nooisy")
 
