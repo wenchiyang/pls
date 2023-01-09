@@ -47,18 +47,25 @@ NORMS_VIO = {
 ALPHA_NAMES_LEARNING_CURVES = {
     "PPO": "PPO",
     "PLPGperf": "PLPG",
+    "PLPGperf2": "PLPG",
     "PLPGperf3": "PLPG",
+    "PLPGperf4": "PLPG",
     "VSRLperf": "VSRL",
     "VSRLthres": "VSRL",
     "PLPGnoisy": "PLPG",
+    "PLPGnoisy2": "PLPG",
     "PLPGnoisy3": "PLPG",
+    "PLPGnoisy4": "PLPG",
     "PLPG_LTperf": "PLPG_LTperf",
     "PLPG_STperf": "PLPG_STperf",
     "PLPG_LTnoisy": "PLPG_LTnoisy",
     "PLPG_STnoisy": "PLPG_STnoisy",
     "epsVSRLthres0.005": "ε-VSRL",
     "epsVSRLthres0.01": "ε-VSRL",
+    "epsVSRLthres0.05": "ε-VSRL",
     "epsVSRLthres0.1": "ε-VSRL",
+    "epsVSRLthres0.2": "ε-VSRL",
+    "epsVSRLthres0.5": "ε-VSRL",
 }
 
 TAGS = [
@@ -256,8 +263,6 @@ def curves(domain_name, exp_names, names, step_limit, row):
             df_list_violation.append(new_dfs[1])
             df_list_safety.append(new_dfs[2])
 
-
-
     charts = []
     for i, df in enumerate([df_list_rew, df_list_violation, df_list_safety]):
         df_main = pd.concat(df)
@@ -266,7 +271,7 @@ def curves(domain_name, exp_names, names, step_limit, row):
         elif row == 0 and i == 1:
             title = "Acc. Violation"
         elif row == 0 and i == 2:
-            title = "P(Safe|s)"
+            title = "Policy Safety"
         else:
             title = ""
         line = alt.Chart(df_main,title=title).mark_line().encode(
@@ -284,8 +289,9 @@ def curves(domain_name, exp_names, names, step_limit, row):
                         grid=False)),
             color=alt.Color("alpha",
                             legend=altair.Legend(title=None),
-                            scale=alt.Scale(domain=[names[exp_name] for exp_name in exp_names], range=["gray", "blue", "green"]),
-                            # scale=alt.Scale(scheme="category10")
+                            sort = [names[exp_name] for exp_name in exp_names],
+                            # scale=alt.Scale(domain=[names[exp_name] for exp_name in exp_names], range=["gray", "blue", "green"]),
+                            scale=alt.Scale(scheme="category10")
                             )
         ).properties(
             width=200,
@@ -294,7 +300,7 @@ def curves(domain_name, exp_names, names, step_limit, row):
         band = alt.Chart(df_main).mark_errorband(extent='ci', opacity=0.2).encode(
             x=alt.X("step"),
             y=alt.Y("value", title=""),
-            color=alt.Color("alpha")
+            color=alt.Color("alpha", sort = [names[exp_name] for exp_name in exp_names],)
         )
         c = alt.layer(band, line)#.resolve_scale(color="independent")
         charts.append(c)
@@ -368,28 +374,28 @@ def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
 def create_graphs(type="perf"):
     graph_settings = {
         "goal_finding1": {
-            "perf": ["PPO", "VSRLperf", "PLPGperf"],
+            "perf": ["PPO", "VSRLperf", "PLPGperf4"],
             "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"]
         },
         "goal_finding2": {
             "perf": ["PPO", "VSRLperf", "PLPGperf"],
-            "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"]
+            "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.01", "PLPGnoisy"]
         },
         "pacman1":{
             "perf": ["PPO", "VSRLperf", "PLPGperf3"],
-            "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"]
+            "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.05", "PLPGnoisy4"]
         },
         "pacman2": {
-            "perf": ["PPO", "VSRLperf", "PLPGperf3"],
+            "perf": ["PPO", "VSRLperf", "PLPGperf4"],
             "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"]
         },
         "carracing1": {
-            "perf": ["PPO", "VSRLperf", "PLPGperf"],
-            "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"]
+            "perf": ["PPO", "VSRLperf", "PLPGperf2"],
+            "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy3"]
         },
         "carracing2": {
             "perf": ["PPO", "VSRLperf", "PLPGperf"],
-            "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"]
+            "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy2"]
         },
     }
 
@@ -397,76 +403,74 @@ def create_graphs(type="perf"):
     for row, domain in enumerate(graph_settings):
         print(domain)
         chart_row = curves(domain,
-                           exp_names=graph_settings[domain]["perf"],
+                           exp_names=graph_settings[domain][type],
                            names=ALPHA_NAMES_LEARNING_CURVES,
                            step_limit=600_000,
-                           row = row
+                           row=row
                            )
         chart_rows.append(chart_row)
 
-    c = altair.vconcat(*chart_rows, title="Perfect Sensors"
+    c = altair.vconcat(*chart_rows, title=""
                        ).configure_axisY(
         titleAngle=0,
         titleAlign="left",
         titleY=50,
         titleX=-60,
     ).configure_view(stroke=None
-                     ).configure_legend(
-        orient="none",
-        legendX=250,
-        legendY=-40,
+    ).configure_legend(
+        orient="top",
         direction='horizontal',
     ).configure_title(
         anchor="middle"
     )
     # c.show()
     svg_path = os.path.join(dir_path, "../..", "experiments5")
-    fig_path = os.path.join(svg_path, f"perfect.svg")
+    fig_path = os.path.join(svg_path, f"{type}.svg")
     c.save(fig_path)
 
 table_settings = {
         "goal_finding1": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
-            "perf": ["PLPG_STperf", "PLPGperf2"],#, "PLPGperf4", "PLPGperf", "PLPGperf3"],
+            "perf": ["PLPG_STperf", "PLPGperf2", "PLPGperf4", "PLPGperf", "PLPGperf3"],
             "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
             "Q1": ["PPO", "VSRLperf", "PLPGperf4", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"],
             "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
         },
         "goal_finding2": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
-            "perf": ["PLPG_STperf", "PLPGperf2"], #, "PLPGperf4", "PLPGperf", "PLPGperf3"],
+            "perf": ["PLPG_STperf", "PLPGperf2", "PLPGperf4", "PLPGperf", "PLPGperf3"],
             "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
             "Q1": ["PPO", "VSRLperf", "PLPGperf", "VSRLthres", "epsVSRLthres0.01", "PLPGnoisy"],
             "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
         },
-        # "pacman1": {
-        #     "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
-        #     "perf": ["PLPG_STperf", "PLPGperf3", "PLPGperf5", "PLPGperf", "PLPGperf2"],
-        #     "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
-        #     "Q1": ["PPO", "VSRLperf", "PLPGperf3", "VSRLthres", "epsVSRLthres0.05", "PLPGnoisy4"],
-        #     "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"]
-        # },
-        # "pacman2": {
-        #     "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
-        #     "perf": ["PLPG_STperf", "PLPGperf3", "PLPGperf4", "PLPGperf", "PLPGperf2"],
-        #     "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
-        #     "Q1": ["PPO", "VSRLperf", "PLPGperf4", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"],
-        #     "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
-        # },
-        # "carracing1": {
-        #     "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
-        #     "perf": ["PLPG_STperf", "PLPGperf", "PLPGperf2", "PLPGperf3", "PLPGperf4"],
-        #     "noisy": ["PLPG_STnoisy", "PLPGnoisy", "PLPGnoisy2", "PLPGnoisy3", "PLPGnoisy4"],
-        #     "Q1": ["PPO", "VSRLperf", "PLPGperf2", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"],
-        #     "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf2", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
-        # },
-        # "carracing2": {
-        #     "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
-        #     "perf": ["PLPG_STperf", "PLPGperf", "PLPGperf2", "PLPGperf3", "PLPGperf4"],
-        #     "noisy": ["PLPG_STnoisy", "PLPGnoisy", "PLPGnoisy2", "PLPGnoisy3", "PLPGnoisy4"],
-        #     "Q1": ["PPO", "VSRLperf", "PLPGperf", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy2"],
-        #     "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy2"]
-        # },
+        "pacman1": {
+            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
+            "perf": ["PLPG_STperf", "PLPGperf3", "PLPGperf5", "PLPGperf", "PLPGperf2"],
+            "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
+            "Q1": ["PPO", "VSRLperf", "PLPGperf3", "VSRLthres", "epsVSRLthres0.05", "PLPGnoisy4"],
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"]
+        },
+        "pacman2": {
+            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
+            "perf": ["PLPG_STperf", "PLPGperf3", "PLPGperf4", "PLPGperf", "PLPGperf2"],
+            "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
+            "Q1": ["PPO", "VSRLperf", "PLPGperf4", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"],
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
+        },
+        "carracing1": {
+            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
+            "perf": ["PLPG_STperf", "PLPGperf", "PLPGperf2", "PLPGperf3", "PLPGperf4"],
+            "noisy": ["PLPG_STnoisy", "PLPGnoisy", "PLPGnoisy2", "PLPGnoisy3", "PLPGnoisy4"],
+            "Q1": ["PPO", "VSRLperf", "PLPGperf2", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy3"],
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf2", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
+        },
+        "carracing2": {
+            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
+            "perf": ["PLPG_STperf", "PLPGperf", "PLPGperf2", "PLPGperf3", "PLPGperf4"],
+            "noisy": ["PLPG_STnoisy", "PLPGnoisy", "PLPGnoisy2", "PLPGnoisy3", "PLPGnoisy4"],
+            "Q1": ["PPO", "VSRLperf", "PLPGperf", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy2"],
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy2"]
+        },
     }
 
 def create_tables(type):
@@ -592,9 +596,10 @@ EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
 # draw_Q5("perf", ALPHA, symbol="ɑ")
 # draw_Q5("noisy", ALPHA, symbol="ɑ")
 # draw_Q5("eps", EPS, symbol="ε")
-draw_Q5_together()
+# draw_Q5_together()
 
 
 
-# create_graphs("perf")
+create_graphs("perf")
+create_graphs("nooisy")
 
