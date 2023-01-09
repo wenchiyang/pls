@@ -571,7 +571,7 @@ def draw_Q5_together():
     alpha_rew, alpha_vio = draw_Q5("noisy", ALPHA, symbol="ɑ")
 
     violation_c = altair.hconcat(eps_vio, alpha_vio, title="Violation")
-    return_c = altair.hconcat(eps_vio, alpha_vio, title="Return")
+    return_c = altair.hconcat(eps_rew, alpha_rew, title="Return")
     c = altair.vconcat(violation_c, return_c
     ).configure_view(stroke=None
     ).configure_legend(
