@@ -81,16 +81,6 @@ SEEDS = [
     "seed5"
 ]
 
-# def load_dataframe_from_file(path, tag):
-#     ea = event_accumulator.EventAccumulator(path)
-#     ea.Reload()
-#     df = pd.DataFrame(ea.Scalars(tag))
-#     return df
-#
-# def smooth_dataframe(df, tsboard_smoothing):
-#     df["value"] = df["value"].ewm(alpha=(1 - tsboard_smoothing)).mean()
-#     return df
-
 def load_dataframe(folder, tags):
     """This function loads an event file from folder and returns len(tags) dataframes."""
     n_events = 0
@@ -312,20 +302,57 @@ def curves(domain_name, exp_names, names, step_limit, row):
     # fig_path = os.path.join(domain, f"svg")
     # c.save(fig_path)
 
-def safety_optimality_df(domain_name, exp_names, n_step):
-    norm = NORMS_REW[domain_name]
-    domain = FOLDERS[domain_name]
-    data = []
-    for exp_name in exp_names:
-        for seed in SEEDS:
-            folder = os.path.join(domain, exp_name, seed)
-            safety = load_step_value(folder, TAGS[1], n_step)
-            optimality = load_step_value(folder, TAGS[0], n_step)
-            safety = normalize_vio(safety)
-            optimality = normalize_rew(optimality, norm)
-            data.append([ALPHA_NAMES[exp_name], seed, safety, optimality])
-    df = pd.DataFrame(data, columns=["alpha", "seed", "safety", "optimality"])
-    return df
+def violation_return(type="Q1perf"):
+    data = {}
+    for domain in table_settings:
+        data[DOMAIN_ABBR[domain]] = {}
+
+    for domain in table_settings:
+        folder = FOLDERS[domain]
+        for i_alpha, exp in enumerate(table_settings[domain][type]):
+            data[DOMAIN_ABBR[domain]][exp] = {}
+            exp_folder = os.path.join(folder, exp)
+            for seed in SEEDS:
+                data[DOMAIN_ABBR[domain]][exp][seed] = {}
+                exp_folder_path = os.path.join(exp_folder, seed)
+                r, v = load_step_values(exp_folder_path, TAGS[0:2], 600_000)
+                # Normalize reward and violation
+                n_r = normalize_rew(r, NORMS_REW[domain])
+                n_v = normalize_vio(v, NORMS_VIO[domain])
+                data[DOMAIN_ABBR[domain]][exp][seed]["return"] = n_r
+                data[DOMAIN_ABBR[domain]][exp][seed]["violation"] = n_v
+
+    df = pd.DataFrame.from_records(
+        [
+            (domain, ALPHA_NAMES_LEARNING_CURVES[exp], seed, keys["violation"], keys["return"])
+            for domain, exps in data.items()
+            for exp, seeds in exps.items()
+            for seed, keys in seeds.items()
+        ],
+        columns=['domain', 'agent', 'seed', 'violation', 'return']
+    )
+
+    c = alt.Chart(df, title="").mark_point().encode(
+        x=alt.X("violation",
+                axis=alt.Axis(
+                    format='.1',
+                    grid=False)),
+        y=alt.Y("return",
+                axis=alt.Axis(
+                    format='.1',
+                    grid=False)),
+        color=alt.Color("agent",
+                        scale=alt.Scale(scheme='category10')),
+        shape=alt.Shape('domain', scale=alt.Scale(range=['circle', 'square', 'triangle-right', 'diamond']))
+    ).properties(
+        width=200,
+        height=200
+    )
+    c.show()
+    # fig_path = os.path.join(domain, f"violation_return_{type}.svg")
+    # c.save(fig_path)
+
+    return
 
 def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
     """
@@ -338,14 +365,14 @@ def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
     y_tick_range = [int(v*10) for v in y_axis_range]
     y_tick_values = [v/10 for v in range(y_tick_range[0], y_tick_range[1]+1)]
     c = alt.Chart(df, title=f"Safety-Return on {DOMAIN_ABBR[domain_name]}").mark_point().encode(
-        x=alt.X("safety",
+        x=alt.X("violation",
                 scale=alt.Scale(domain=x_axis_range),
                 axis=alt.Axis(
                     format='.1',
                     values=x_tick_values,
                     title="Safety",
                     grid=False)),
-        y=alt.Y("optimality", title=None,
+        y=alt.Y("return", title=None,
                 scale=alt.Scale(domain=y_axis_range),
                 axis=alt.Axis(
                     format='.1',
@@ -371,7 +398,7 @@ def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
     fig_path = os.path.join(FOLDERS[domain_name], f"{domain_name}_safety_return.svg")
     c.save(fig_path)
 
-def create_graphs(type="perf"):
+def curves_combined(type="perf"):
     graph_settings = {
         "goal_finding1": {
             "perf": ["PPO", "VSRLperf", "PLPGperf4"],
@@ -434,6 +461,8 @@ table_settings = {
             "perf": ["PLPG_STperf", "PLPGperf2", "PLPGperf4", "PLPGperf", "PLPGperf3"],
             "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
             "Q1": ["PPO", "VSRLperf", "PLPGperf4", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"],
+            "Q1perf": ["PPO", "VSRLperf", "PLPGperf4"],
+            "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"],
             "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
         },
         "goal_finding2": {
@@ -441,6 +470,8 @@ table_settings = {
             "perf": ["PLPG_STperf", "PLPGperf2", "PLPGperf4", "PLPGperf", "PLPGperf3"],
             "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
             "Q1": ["PPO", "VSRLperf", "PLPGperf", "VSRLthres", "epsVSRLthres0.01", "PLPGnoisy"],
+            "Q1perf": ["PPO", "VSRLperf", "PLPGperf"],
+            "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.01", "PLPGnoisy"],
             "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
         },
         "pacman1": {
@@ -448,6 +479,8 @@ table_settings = {
             "perf": ["PLPG_STperf", "PLPGperf3", "PLPGperf5", "PLPGperf", "PLPGperf2"],
             "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
             "Q1": ["PPO", "VSRLperf", "PLPGperf3", "VSRLthres", "epsVSRLthres0.05", "PLPGnoisy4"],
+            "Q1perf":  ["PPO", "VSRLperf", "PLPGperf3"],
+            "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.05", "PLPGnoisy4"],
             "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"]
         },
         "pacman2": {
@@ -455,6 +488,8 @@ table_settings = {
             "perf": ["PLPG_STperf", "PLPGperf3", "PLPGperf4", "PLPGperf", "PLPGperf2"],
             "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
             "Q1": ["PPO", "VSRLperf", "PLPGperf4", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"],
+            "Q1perf": ["PPO", "VSRLperf", "PLPGperf4"],
+            "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"],
             "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
         },
         "carracing1": {
@@ -462,6 +497,8 @@ table_settings = {
             "perf": ["PLPG_STperf", "PLPGperf", "PLPGperf2", "PLPGperf3", "PLPGperf4"],
             "noisy": ["PLPG_STnoisy", "PLPGnoisy", "PLPGnoisy2", "PLPGnoisy3", "PLPGnoisy4"],
             "Q1": ["PPO", "VSRLperf", "PLPGperf2", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy3"],
+            "Q1perf": ["PPO", "VSRLperf", "PLPGperf2"],
+            "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy3"],
             "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf2", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
         },
         "carracing2": {
@@ -469,6 +506,8 @@ table_settings = {
             "perf": ["PLPG_STperf", "PLPGperf", "PLPGperf2", "PLPGperf3", "PLPGperf4"],
             "noisy": ["PLPG_STnoisy", "PLPGnoisy", "PLPGnoisy2", "PLPGnoisy3", "PLPGnoisy4"],
             "Q1": ["PPO", "VSRLperf", "PLPGperf", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy2"],
+            "Q1perf": ["PPO", "VSRLperf", "PLPGperf"],
+            "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy2"],
             "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy2"]
         },
     }
@@ -493,7 +532,7 @@ def draw_Q5(type="perf",ALPHA_OR_EPS=None, symbol="ɑ"):
             for seed in SEEDS:
                 exp_folder_path = os.path.join(exp_folder, seed)
                 r, v = load_step_values(exp_folder_path, TAGS[0:2], 600_000)
-                # # Renormalize reward
+                # Normalize reward and violation
                 n_r = normalize_rew(r, NORMS_REW[domain])
                 n_v = normalize_vio(v, NORMS_VIO[domain])
                 data_rew[DOMAIN_ABBR[domain]][seed][i_alpha] = n_r
@@ -597,10 +636,10 @@ EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
 # draw_Q5("perf", ALPHA, symbol="ɑ")
 # draw_Q5("noisy", ALPHA, symbol="ɑ")
 # draw_Q5("eps", EPS, symbol="ε")
-draw_Q5_together()
+# draw_Q5_together()
+violation_return(type="Q1perf")
 
 
-
-# create_graphs("perf")
-# create_graphs("nooisy")
+# curves_combined("perf")
+# curves_combined("noisy")
 
