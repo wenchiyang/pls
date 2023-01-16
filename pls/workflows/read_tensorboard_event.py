@@ -348,9 +348,9 @@ def violation_return(type="Q1perf"):
         width=200,
         height=200
     )
-    c.show()
-    # fig_path = os.path.join(domain, f"violation_return_{type}.svg")
-    # c.save(fig_path)
+    # c.show()
+    fig_path = os.path.join(domain, f"violation_return_{type}.svg")
+    c.save(fig_path)
 
     return
 
