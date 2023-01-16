@@ -302,7 +302,7 @@ def curves(domain_name, exp_names, names, step_limit, row):
     # fig_path = os.path.join(domain, f"svg")
     # c.save(fig_path)
 
-def violation_return(type="Q1perf"):
+def violation_return(type="Q1perf", title="Perfect Sensors"):
     data = {}
     for domain in table_settings:
         data[DOMAIN_ABBR[domain]] = {}
@@ -324,15 +324,15 @@ def violation_return(type="Q1perf"):
 
     df = pd.DataFrame.from_records(
         [
-            (domain, ALPHA_NAMES_LEARNING_CURVES[exp], seed, keys["violation"], keys["return"])
+            (domain[:-1], domain, ALPHA_NAMES_LEARNING_CURVES[exp], seed, keys["violation"], keys["return"])
             for domain, exps in data.items()
             for exp, seeds in exps.items()
             for seed, keys in seeds.items()
         ],
-        columns=['domain', 'agent', 'seed', 'violation', 'return']
+        columns=['symbol', 'domain', 'agent', 'seed', 'violation', 'return']
     )
 
-    c = alt.Chart(df, title="").mark_point().encode(
+    c = alt.Chart(df, title=title).mark_point().encode(
         x=alt.X("violation",
                 axis=alt.Axis(
                     format='.1',
@@ -343,60 +343,31 @@ def violation_return(type="Q1perf"):
                     grid=False)),
         color=alt.Color("agent",
                         scale=alt.Scale(scheme='category10')),
-        shape=alt.Shape('domain', scale=alt.Scale(range=['circle', 'square', 'triangle-right', 'diamond']))
+        shape=alt.Shape('symbol', scale=alt.Scale(range=['circle', 'square', 'triangle-right']))
     ).properties(
         width=200,
         height=200
     )
-    # c.show()
-    fig_path = os.path.join(domain, f"violation_return_{type}.svg")
-    c.save(fig_path)
 
+    return c
+
+def violation_return_combined():
+    cs = []
+    for type, title in [("Q1perf", "Perfect Sensors"), ("Q1noisy", "Noisy Sensors")]:
+        c = violation_return(type, title)
+        cs.append(c)
+    cc = altair.hconcat(*cs).configure_legend(
+        orient="top",
+        direction='horizontal',
+    ).configure_title(
+        anchor="middle"
+    )
+    # cc.show()
+    svg_path = os.path.join(dir_path, "../..", "experiments5")
+    fig_path = os.path.join(svg_path, f"violation_return.svg")
+    cc.save(fig_path)
     return
 
-def safety_optimality_draw(domain_name, n_step, x_axis_range, y_axis_range):
-    """
-    Draw a 2D safety-optimality figure of the experiment of "domain_name" at "n_step" steps
-    """
-    exp_names = ["no_shielding", "alpha_0.1", "alpha_0.3", "alpha_0.5", "alpha_0.7", "alpha_0.9", "hard_shielding"]
-    df = safety_optimality_df(domain_name, exp_names, n_step)
-    x_tick_range = [int(v*10) for v in x_axis_range]
-    x_tick_values = [v/10 for v in range(x_tick_range[0], x_tick_range[1]+1)]
-    y_tick_range = [int(v*10) for v in y_axis_range]
-    y_tick_values = [v/10 for v in range(y_tick_range[0], y_tick_range[1]+1)]
-    c = alt.Chart(df, title=f"Safety-Return on {DOMAIN_ABBR[domain_name]}").mark_point().encode(
-        x=alt.X("violation",
-                scale=alt.Scale(domain=x_axis_range),
-                axis=alt.Axis(
-                    format='.1',
-                    values=x_tick_values,
-                    title="Safety",
-                    grid=False)),
-        y=alt.Y("return", title=None,
-                scale=alt.Scale(domain=y_axis_range),
-                axis=alt.Axis(
-                    format='.1',
-                    values=y_tick_values,
-                    title="Return",
-                    grid=False)),
-        color=alt.Color("alpha",
-                        legend=alt.Legend(
-                            title=None,
-                            orient='none',
-                            direction='horizontal',
-                            #legendX=10, legendY=70,
-                            legendX=20, legendY=-30,
-                            columns=4,
-                            titleAnchor='middle'
-                        ),
-                        scale=alt.Scale(scheme='redblue')),
-    ).properties(
-        width=200,
-        height=200
-    )
-    # c.show()
-    fig_path = os.path.join(FOLDERS[domain_name], f"{domain_name}_safety_return.svg")
-    c.save(fig_path)
 
 def curves_combined(type="perf"):
     graph_settings = {
@@ -637,7 +608,7 @@ EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
 # draw_Q5("noisy", ALPHA, symbol="ɑ")
 # draw_Q5("eps", EPS, symbol="ε")
 # draw_Q5_together()
-violation_return(type="Q1perf")
+violation_return_combined()
 
 
 # curves_combined("perf")
