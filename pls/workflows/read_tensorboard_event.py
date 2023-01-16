@@ -359,17 +359,17 @@ def violation_return(type="Q1perf", title="Perfect Sensors"):
     tick_axis = alt.Axis(labels=False, domain=False, ticks=False)
 
     x_ticks = alt.Chart(df, title='').mark_tick().encode(
-        alt.X('violation', axis=tick_axis),
-        alt.Y('agent', title='', axis=tick_axis),
-        color=alt.Color('agent')
+        alt.X('Violation', axis=tick_axis),
+        alt.Y('Agent', title='', axis=tick_axis),
+        color=alt.Color('Agent')
     ).properties(
         width=200
     )
 
     y_ticks = base.mark_tick().encode(
-        alt.X('agent', title='', axis=tick_axis),
-        alt.Y('return', axis=tick_axis),
-        color=alt.Color('agent')
+        alt.X('Agent', title='', axis=tick_axis),
+        alt.Y('Return', axis=tick_axis),
+        color=alt.Color('Agent')
     ).properties(
         height=200
     )
