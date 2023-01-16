@@ -395,6 +395,22 @@ def violation_return_combined():
     cc.save(fig_path)
     return
 
+def violationn_return_LTST():
+    cs = []
+    for type, title in [("LTSTperf", "Perfect Sensors"), ("LTSTnoisy", "Noisy Sensors")]:
+        c = violation_return(type, title)
+        cs.append(c)
+    cc = altair.hconcat(*cs).configure_legend(
+        orient="top",
+        direction='horizontal',
+    ).configure_title(
+        anchor="middle"
+    )
+    cc.show()
+    svg_path = os.path.join(dir_path, "../..", "experiments5")
+    fig_path = os.path.join(svg_path, f"violation_return.svg")
+    cc.save(fig_path)
+    return
 
 def curves_combined(type="perf"):
     graph_settings = {
@@ -461,7 +477,9 @@ table_settings = {
             "Q1": ["PPO", "VSRLperf", "PLPGperf4", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"],
             "Q1perf": ["PPO", "VSRLperf", "PLPGperf4"],
             "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"],
-            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"],
+            "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4"],
+            "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
         },
         "goal_finding2": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
@@ -470,7 +488,9 @@ table_settings = {
             "Q1": ["PPO", "VSRLperf", "PLPGperf", "VSRLthres", "epsVSRLthres0.01", "PLPGnoisy"],
             "Q1perf": ["PPO", "VSRLperf", "PLPGperf"],
             "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.01", "PLPGnoisy"],
-            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"],
+            "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf"],
+            "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
         },
         "pacman1": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
@@ -479,7 +499,9 @@ table_settings = {
             "Q1": ["PPO", "VSRLperf", "PLPGperf3", "VSRLthres", "epsVSRLthres0.05", "PLPGnoisy4"],
             "Q1perf":  ["PPO", "VSRLperf", "PLPGperf3"],
             "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.05", "PLPGnoisy4"],
-            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"]
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"],
+            "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3"],
+            "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"]
         },
         "pacman2": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
@@ -488,7 +510,9 @@ table_settings = {
             "Q1": ["PPO", "VSRLperf", "PLPGperf4", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"],
             "Q1perf": ["PPO", "VSRLperf", "PLPGperf4"],
             "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"],
-            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"],
+            "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4"],
+            "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
         },
         "carracing1": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
@@ -497,7 +521,9 @@ table_settings = {
             "Q1": ["PPO", "VSRLperf", "PLPGperf2", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy3"],
             "Q1perf": ["PPO", "VSRLperf", "PLPGperf2"],
             "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy3"],
-            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf2", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf2", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"],
+            "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf2"],
+            "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
         },
         "carracing2": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
@@ -506,7 +532,9 @@ table_settings = {
             "Q1": ["PPO", "VSRLperf", "PLPGperf", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy2"],
             "Q1perf": ["PPO", "VSRLperf", "PLPGperf"],
             "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy2"],
-            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy2"]
+            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy2"],
+            "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf"],
+            "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy2"]
         },
     }
 
@@ -635,7 +663,8 @@ EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
 # draw_Q5("noisy", ALPHA, symbol="ɑ")
 # draw_Q5("eps", EPS, symbol="ε")
 # draw_Q5_together()
-violation_return_combined()
+# violation_return_combined()
+violationn_return_LTST()
 
 
 # curves_combined("perf")
