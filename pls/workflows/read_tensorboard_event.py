@@ -332,17 +332,19 @@ def violation_return(type="Q1perf", title="Perfect Sensors"):
         columns=['symbol', 'domain', 'agent', 'seed', 'violation', 'return']
     )
 
+    base = alt.Chart(df)
+
     c = alt.Chart(df, title=title).mark_point().encode(
-        x=alt.X("violation:Q",
+        x=alt.X("violation", title="",
                 axis=alt.Axis(
                     values=[0, 0.5, 1, 1.5],
-                    # format='.1',
-                    grid=False)),
-        y=alt.Y("return:Q",
+                    grid=False)
+                ),
+        y=alt.Y("return", title="",
                 axis=alt.Axis(
                     values=[0, 0.5, 1],
-                    # format='.1',
-                    grid=False)),
+                    grid=False)
+                ),
         color=alt.Color("agent",
                         scale=alt.Scale(
                             domain=["PPO", "VSRL", "ε-VSRL", "PLPG"],
@@ -354,6 +356,26 @@ def violation_return(type="Q1perf", title="Perfect Sensors"):
         height=200
     )
 
+    tick_axis = alt.Axis(labels=False, domain=False, ticks=False)
+
+    x_ticks = alt.Chart(df, title='').mark_tick().encode(
+        alt.X('violation', axis=tick_axis),
+        alt.Y('agent', title='', axis=tick_axis),
+        color=alt.Color('agent')
+    ).properties(
+        width=200
+    )
+
+    y_ticks = base.mark_tick().encode(
+        alt.X('agent', title='', axis=tick_axis),
+        alt.Y('return', axis=tick_axis),
+        color=alt.Color('agent')
+    ).properties(
+        height=200
+    )
+
+    c = (y_ticks | (c & x_ticks))
+
     return c
 
 def violation_return_combined():
@@ -361,7 +383,10 @@ def violation_return_combined():
     for type, title in [("Q1perf", "Perfect Sensors"), ("Q1noisy", "Noisy Sensors")]:
         c = violation_return(type, title)
         cs.append(c)
-    cc = altair.hconcat(*cs).configure_title(
+    cc = altair.hconcat(*cs).configure_legend(
+        orient="top",
+        direction='horizontal',
+    ).configure_title(
         anchor="middle"
     )
     # cc.show()
