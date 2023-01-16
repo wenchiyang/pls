@@ -329,28 +329,28 @@ def violation_return(type="Q1perf", title="Perfect Sensors"):
             for exp, seeds in exps.items()
             for seed, keys in seeds.items()
         ],
-        columns=['symbol', 'domain', 'agent', 'seed', 'violation', 'return']
+        columns=['Domain', 'domain_real', 'Agent', 'seed', 'Violation', 'Return']
     )
 
     base = alt.Chart(df)
 
     c = alt.Chart(df, title=title).mark_point().encode(
-        x=alt.X("violation", title="",
+        x=alt.X("Violation", title="",
                 axis=alt.Axis(
                     values=[0, 0.5, 1, 1.5],
                     grid=False)
                 ),
-        y=alt.Y("return", title="",
+        y=alt.Y("Return", title="",
                 axis=alt.Axis(
                     values=[0, 0.5, 1],
                     grid=False)
                 ),
-        color=alt.Color("agent",
+        color=alt.Color("Agent",
                         scale=alt.Scale(
                             domain=["PPO", "VSRL", "ε-VSRL", "PLPG"],
                             scheme='category10')
                         ),
-        shape=alt.Shape('symbol', scale=alt.Scale(range=['circle', 'square', 'triangle-right']))
+        shape=alt.Shape('Domain', scale=alt.Scale(range=['circle', 'square', 'triangle-right']))
     ).properties(
         width=200,
         height=200
