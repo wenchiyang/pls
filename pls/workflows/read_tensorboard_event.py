@@ -342,7 +342,10 @@ def violation_return(type="Q1perf", title="Perfect Sensors"):
                     format='.1',
                     grid=False)),
         color=alt.Color("agent",
-                        scale=alt.Scale(scheme='category10')),
+                        scale=alt.Scale(
+                            domain=["PPO", "VSRL", "ε-VSRL", "PLPG"],
+                            scheme='category10')
+                        ),
         shape=alt.Shape('symbol', scale=alt.Scale(range=['circle', 'square', 'triangle-right']))
     ).properties(
         width=200,
@@ -356,10 +359,7 @@ def violation_return_combined():
     for type, title in [("Q1perf", "Perfect Sensors"), ("Q1noisy", "Noisy Sensors")]:
         c = violation_return(type, title)
         cs.append(c)
-    cc = altair.hconcat(*cs).configure_legend(
-        orient="top",
-        direction='horizontal',
-    ).configure_title(
+    cc = altair.hconcat(*cs).configure_title(
         anchor="middle"
     )
     # cc.show()
