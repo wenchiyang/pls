@@ -44,6 +44,20 @@ NORMS_VIO = {
     "carracing2": {"low": 0, "high": 1000}
 }
 
+NAMES_LTST = {
+    "PLPG_LTperf": "Only Safety Grad.",
+    "PLPG_STperf": "Only Policy Grad.",
+    "PLPG_LTnoisy": "Only Safety Grad.",
+    "PLPG_STnoisy": "Only Policy Grad.",
+    "PLPGnoisy": "Both Grad.",
+    "PLPGnoisy2": "Both Grad.",
+    "PLPGnoisy3": "Both Grad.",
+    "PLPGnoisy4": "Both Grad.",
+    "PLPGperf": "Both Grad.",
+    "PLPGperf2": "Both Grad.",
+    "PLPGperf3": "Both Grad.",
+    "PLPGperf4": "Both Grad.",
+}
 ALPHA_NAMES_LEARNING_CURVES = {
     "PPO": "PPO",
     "PLPGperf": "PLPG",
@@ -378,6 +392,82 @@ def violation_return(type="Q1perf", title="Perfect Sensors"):
 
     return c
 
+def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors"):
+    data = {}
+    for domain in table_settings:
+        data[DOMAIN_ABBR[domain]] = {}
+
+    for domain in table_settings:
+        folder = FOLDERS[domain]
+        for i_alpha, exp in enumerate(table_settings[domain][type]):
+            data[DOMAIN_ABBR[domain]][exp] = {}
+            exp_folder = os.path.join(folder, exp)
+            for seed in SEEDS:
+                data[DOMAIN_ABBR[domain]][exp][seed] = {}
+                exp_folder_path = os.path.join(exp_folder, seed)
+                r, v = load_step_values(exp_folder_path, TAGS[0:2], 600_000)
+                # Normalize reward and violation
+                n_r = normalize_rew(r, NORMS_REW[domain])
+                n_v = normalize_vio(v, NORMS_VIO[domain])
+                data[DOMAIN_ABBR[domain]][exp][seed]["return"] = n_r
+                data[DOMAIN_ABBR[domain]][exp][seed]["violation"] = n_v
+
+    df = pd.DataFrame.from_records(
+        [
+            (domain[:-1], domain, NAMES_LTST[exp], seed, keys["violation"], keys["return"])
+            for domain, exps in data.items()
+            for exp, seeds in exps.items()
+            for seed, keys in seeds.items()
+        ],
+        columns=['Domain', 'domain_real', 'Agent', 'seed', 'Violation', 'Return']
+    )
+
+    base = alt.Chart(df)
+
+    c = alt.Chart(df, title=title).mark_point().encode(
+        x=alt.X("Violation", title="",
+                axis=alt.Axis(
+                    values=[0, 0.5, 1, 1.5],
+                    grid=False)
+                ),
+        y=alt.Y("Return", title="",
+                axis=alt.Axis(
+                    values=[0, 0.5, 1],
+                    grid=False)
+                ),
+        color=alt.Color("Agent",
+                        scale=alt.Scale(
+                            domain=["Only Safety Grad.", "Only Policy Grad.", "Both Grad."],
+                            scheme='category10')
+                        ),
+        shape=alt.Shape('Domain', scale=alt.Scale(range=['circle', 'square', 'triangle-right']))
+    ).properties(
+        width=200,
+        height=200
+    )
+
+    tick_axis = alt.Axis(labels=False, domain=False, ticks=False)
+
+    x_ticks = alt.Chart(df, title='').mark_tick().encode(
+        alt.X('Violation', axis=tick_axis),
+        alt.Y('Agent', title='', axis=tick_axis),
+        color=alt.Color('Agent')
+    ).properties(
+        width=200
+    )
+
+    y_ticks = base.mark_tick().encode(
+        alt.X('Agent', title='', axis=tick_axis),
+        alt.Y('Return', axis=tick_axis),
+        color=alt.Color('Agent')
+    ).properties(
+        height=200
+    )
+
+    c = (y_ticks | (c & x_ticks))
+
+    return c
+
 def violation_return_combined():
     cs = []
     for type, title in [("Q1perf", "Perfect Sensors"), ("Q1noisy", "Noisy Sensors")]:
@@ -395,10 +485,10 @@ def violation_return_combined():
     cc.save(fig_path)
     return
 
-def violationn_return_LTST():
+def violationn_return_LTST_conbined():
     cs = []
     for type, title in [("LTSTperf", "Perfect Sensors"), ("LTSTnoisy", "Noisy Sensors")]:
-        c = violation_return(type, title)
+        c = violationn_return_LTST(type, title)
         cs.append(c)
     cc = altair.hconcat(*cs).configure_legend(
         orient="top",
@@ -664,7 +754,7 @@ EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
 # draw_Q5("eps", EPS, symbol="ε")
 # draw_Q5_together()
 # violation_return_combined()
-violationn_return_LTST()
+violationn_return_LTST_conbined()
 
 
 # curves_combined("perf")
