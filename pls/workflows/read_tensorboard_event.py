@@ -333,12 +333,14 @@ def violation_return(type="Q1perf", title="Perfect Sensors"):
     )
 
     c = alt.Chart(df, title=title).mark_point().encode(
-        x=alt.X("violation",
+        x=alt.X("violation:Q",
                 axis=alt.Axis(
-                    format='.1',
+                    tickMinStep=0.5,
+                    # format='.1',
                     grid=False)),
-        y=alt.Y("return",
+        y=alt.Y("return:Q",
                 axis=alt.Axis(
+                    tickMinStep=0.5,
                     format='.1',
                     grid=False)),
         color=alt.Color("agent",
