@@ -372,7 +372,7 @@ def violation_return(type="Q1perf", title="Perfect Sensors", show_domain=True):
                                 scheme='category10')
                             ),
             shape=alt.Shape('domain_real',
-                            legend=altair.Legend(title=None),
+                            legend=altair.Legend(title=None) if show_domain else None,
                             scale=alt.Scale(range=['circle', 'triangle-right']))
         ).properties(
             width=100,
@@ -459,7 +459,9 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain
                                 domain=["Only Safety Grad.", "Only Policy Grad.", "Both Grad."],
                                 scheme='category10')
                             ),
-            shape=alt.Shape('domain_real', scale=alt.Scale(range=['circle', 'triangle-right']))
+            shape=alt.Shape('domain_real',
+                            legend=altair.Legend(title=None) if show_domain else None,
+                            scale=alt.Scale(range=['circle', 'triangle-right']))
         ).properties(
             width=100,
             height=100
@@ -498,6 +500,8 @@ def violation_return_combined():
         direction='horizontal',
     ).configure_title(
         anchor="middle"
+    ).resolve_scale(
+        shape='independent'
     )
     # cc.show()
     svg_path = os.path.join(dir_path, "../..", "experiments5")
@@ -515,6 +519,8 @@ def violationn_return_LTST_conbined():
         direction='horizontal',
     ).configure_title(
         anchor="middle"
+    ).resolve_scale(
+        shape='independent'
     )
     # cc.show()
     svg_path = os.path.join(dir_path, "../..", "experiments5")
@@ -774,7 +780,7 @@ EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
 # draw_Q5("eps", EPS, symbol="ε")
 # draw_Q5_together()
 violation_return_combined()
-# violationn_return_LTST_conbined()
+violationn_return_LTST_conbined()
 
 
 # curves_combined("perf")
