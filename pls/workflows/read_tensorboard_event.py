@@ -351,8 +351,8 @@ def violation_return(type="Q1perf", title="Perfect Sensors", show_domain=True):
     for i, domain in enumerate(["Stars", "Pac", "CR"]):
         # base = alt.Chart(df)
         tt = domain if show_domain else ""
-        x_title = "Violation" #if domain == "Pac" and show_domain else ""
-        y_title = "Return" #if domain == "Pac" and show_domain else ""
+        x_title = "" #"Violation" if domain == "Pac" and show_domain else ""
+        y_title = "" #"Return" if domain == "Pac" and show_domain else ""
         sub_df = df.loc[df["Domain"] == domain]
         c = alt.Chart(sub_df, title=tt).mark_point().encode(
             x=alt.X("Violation", title=x_title,
@@ -371,10 +371,12 @@ def violation_return(type="Q1perf", title="Perfect Sensors", show_domain=True):
                                 domain=["PPO", "VSRL", "ε-VSRL", "PLPG"],
                                 scheme='category10')
                             ),
-            # shape=alt.Shape('Domain', scale=alt.Scale(range=['circle', 'square', 'triangle-right']))
+            shape=alt.Shape('domain_real',
+                            legend=altair.Legend(title=None),
+                            scale=alt.Scale(range=['circle', 'triangle-right']))
         ).properties(
-            width=200,
-            height=200
+            width=100,
+            height=100
         )
         cs.append(c)
         # tick_axis = alt.Axis(labels=False, domain=False, ticks=False)
@@ -435,8 +437,8 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain
     for i, domain in enumerate(["Stars", "Pac", "CR"]):
         # base = alt.Chart(df)
         tt = domain if show_domain else ""
-        x_title = "Violation" #if domain == "Pac" and show_domain else ""
-        y_title = "Return" #if domain == "Pac" and show_domain else ""
+        x_title = "" #"Violation" if domain == "Pac" and show_domain else ""
+        y_title = "" #"Return" if domain == "Pac" and show_domain else ""
         sub_df = df.loc[df["Domain"] == domain]
         # base = alt.Chart(df)
 
@@ -457,10 +459,10 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain
                                 domain=["Only Safety Grad.", "Only Policy Grad.", "Both Grad."],
                                 scheme='category10')
                             ),
-            # shape=alt.Shape('Domain', scale=alt.Scale(range=['circle', 'square', 'triangle-right']))
+            shape=alt.Shape('domain_real', scale=alt.Scale(range=['circle', 'triangle-right']))
         ).properties(
-            width=200,
-            height=200
+            width=100,
+            height=100
         )
         cs.append(c)
         # tick_axis = alt.Axis(labels=False, domain=False, ticks=False)
@@ -772,7 +774,7 @@ EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
 # draw_Q5("eps", EPS, symbol="ε")
 # draw_Q5_together()
 violation_return_combined()
-violationn_return_LTST_conbined()
+# violationn_return_LTST_conbined()
 
 
 # curves_combined("perf")
