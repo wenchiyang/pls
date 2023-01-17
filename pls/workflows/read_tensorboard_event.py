@@ -316,7 +316,7 @@ def curves(domain_name, exp_names, names, step_limit, row):
     # fig_path = os.path.join(domain, f"svg")
     # c.save(fig_path)
 
-def violation_return(type="Q1perf", title="Perfect Sensors"):
+def violation_return(type="Q1perf", title="Perfect Sensors", show_domain=True):
     data = {}
     for domain in table_settings:
         data[DOMAIN_ABBR[domain]] = {}
@@ -346,53 +346,61 @@ def violation_return(type="Q1perf", title="Perfect Sensors"):
         columns=['Domain', 'domain_real', 'Agent', 'seed', 'Violation', 'Return']
     )
 
-    base = alt.Chart(df)
+    # plot a subchart for each domain
+    cs = []
+    for i, domain in enumerate(["Stars", "Pac", "CR"]):
+        # base = alt.Chart(df)
+        tt = domain if show_domain else ""
+        x_title = "Violation" #if domain == "Pac" and show_domain else ""
+        y_title = "Return" #if domain == "Pac" and show_domain else ""
+        sub_df = df.loc[df["Domain"] == domain]
+        c = alt.Chart(sub_df, title=tt).mark_point().encode(
+            x=alt.X("Violation", title=x_title,
+                    axis=alt.Axis(
+                        values=[0, 0.5, 1, 1.5],
+                        grid=False)
+                    ),
+            y=alt.Y("Return", title=y_title,
+                    axis=alt.Axis(
+                        values=[0, 0.5, 1],
+                        grid=False)
+                    ),
+            color=alt.Color("Agent",
+                            legend=altair.Legend(title=None),
+                            scale=alt.Scale(
+                                domain=["PPO", "VSRL", "ε-VSRL", "PLPG"],
+                                scheme='category10')
+                            ),
+            # shape=alt.Shape('Domain', scale=alt.Scale(range=['circle', 'square', 'triangle-right']))
+        ).properties(
+            width=200,
+            height=200
+        )
+        cs.append(c)
+        # tick_axis = alt.Axis(labels=False, domain=False, ticks=False)
+        #
+        # x_ticks = alt.Chart(df, title='').mark_tick().encode(
+        #     alt.X('Violation', axis=tick_axis),
+        #     alt.Y('Agent', title='', axis=tick_axis),
+        #     color=alt.Color('Agent')
+        # ).properties(
+        #     width=200
+        # )
+        #
+        # y_ticks = base.mark_tick().encode(
+        #     alt.X('Agent', title='', axis=tick_axis),
+        #     alt.Y('Return', axis=tick_axis),
+        #     color=alt.Color('Agent')
+        # ).properties(
+        #     height=200
+        # )
+        #
+        # c = (y_ticks | (c & x_ticks))
+    c_row = altair.hconcat(*cs, title=altair.TitleParams(title, orient="left", anchor="middle"))
 
-    c = alt.Chart(df, title=title).mark_point().encode(
-        x=alt.X("Violation", title="",
-                axis=alt.Axis(
-                    values=[0, 0.5, 1, 1.5],
-                    grid=False)
-                ),
-        y=alt.Y("Return", title="",
-                axis=alt.Axis(
-                    values=[0, 0.5, 1],
-                    grid=False)
-                ),
-        color=alt.Color("Agent",
-                        scale=alt.Scale(
-                            domain=["PPO", "VSRL", "ε-VSRL", "PLPG"],
-                            scheme='category10')
-                        ),
-        shape=alt.Shape('Domain', scale=alt.Scale(range=['circle', 'square', 'triangle-right']))
-    ).properties(
-        width=200,
-        height=200
-    )
+    return c_row
 
-    tick_axis = alt.Axis(labels=False, domain=False, ticks=False)
-
-    x_ticks = alt.Chart(df, title='').mark_tick().encode(
-        alt.X('Violation', axis=tick_axis),
-        alt.Y('Agent', title='', axis=tick_axis),
-        color=alt.Color('Agent')
-    ).properties(
-        width=200
-    )
-
-    y_ticks = base.mark_tick().encode(
-        alt.X('Agent', title='', axis=tick_axis),
-        alt.Y('Return', axis=tick_axis),
-        color=alt.Color('Agent')
-    ).properties(
-        height=200
-    )
-
-    c = (y_ticks | (c & x_ticks))
-
-    return c
-
-def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors"):
+def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain=True):
     data = {}
     for domain in table_settings:
         data[DOMAIN_ABBR[domain]] = {}
@@ -422,58 +430,68 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors"):
         columns=['Domain', 'domain_real', 'Agent', 'seed', 'Violation', 'Return']
     )
 
-    base = alt.Chart(df)
+    # plot a subchart for each domain
+    cs = []
+    for i, domain in enumerate(["Stars", "Pac", "CR"]):
+        # base = alt.Chart(df)
+        tt = domain if show_domain else ""
+        x_title = "Violation" #if domain == "Pac" and show_domain else ""
+        y_title = "Return" #if domain == "Pac" and show_domain else ""
+        sub_df = df.loc[df["Domain"] == domain]
+        # base = alt.Chart(df)
 
-    c = alt.Chart(df, title=title).mark_point().encode(
-        x=alt.X("Violation", title="",
-                axis=alt.Axis(
-                    values=[0, 0.5, 1, 1.5],
-                    grid=False)
-                ),
-        y=alt.Y("Return", title="",
-                axis=alt.Axis(
-                    values=[0, 0.5, 1],
-                    grid=False)
-                ),
-        color=alt.Color("Agent",
-                        scale=alt.Scale(
-                            domain=["Only Safety Grad.", "Only Policy Grad.", "Both Grad."],
-                            scheme='category10')
-                        ),
-        shape=alt.Shape('Domain', scale=alt.Scale(range=['circle', 'square', 'triangle-right']))
-    ).properties(
-        width=200,
-        height=200
-    )
+        c = alt.Chart(sub_df, title=tt).mark_point().encode(
+            x=alt.X("Violation", title=x_title,
+                    axis=alt.Axis(
+                        values=[0, 0.5, 1, 1.5],
+                        grid=False)
+                    ),
+            y=alt.Y("Return", title=y_title,
+                    axis=alt.Axis(
+                        values=[0, 0.5, 1],
+                        grid=False)
+                    ),
+            color=alt.Color("Agent",
+                            legend=altair.Legend(title=None),
+                            scale=alt.Scale(
+                                domain=["Only Safety Grad.", "Only Policy Grad.", "Both Grad."],
+                                scheme='category10')
+                            ),
+            # shape=alt.Shape('Domain', scale=alt.Scale(range=['circle', 'square', 'triangle-right']))
+        ).properties(
+            width=200,
+            height=200
+        )
+        cs.append(c)
+        # tick_axis = alt.Axis(labels=False, domain=False, ticks=False)
+        #
+        # x_ticks = alt.Chart(df, title='').mark_tick().encode(
+        #     alt.X('Violation', axis=tick_axis),
+        #     alt.Y('Agent', title='', axis=tick_axis),
+        #     color=alt.Color('Agent')
+        # ).properties(
+        #     width=200
+        # )
+        #
+        # y_ticks = base.mark_tick().encode(
+        #     alt.X('Agent', title='', axis=tick_axis),
+        #     alt.Y('Return', axis=tick_axis),
+        #     color=alt.Color('Agent')
+        # ).properties(
+        #     height=200
+        # )
+        #
+        # c = (y_ticks | (c & x_ticks))
+    c_row = altair.hconcat(*cs, title=altair.TitleParams(title, orient="left", anchor="middle"))
 
-    tick_axis = alt.Axis(labels=False, domain=False, ticks=False)
-
-    x_ticks = alt.Chart(df, title='').mark_tick().encode(
-        alt.X('Violation', axis=tick_axis),
-        alt.Y('Agent', title='', axis=tick_axis),
-        color=alt.Color('Agent')
-    ).properties(
-        width=200
-    )
-
-    y_ticks = base.mark_tick().encode(
-        alt.X('Agent', title='', axis=tick_axis),
-        alt.Y('Return', axis=tick_axis),
-        color=alt.Color('Agent')
-    ).properties(
-        height=200
-    )
-
-    c = (y_ticks | (c & x_ticks))
-
-    return c
+    return c_row
 
 def violation_return_combined():
     cs = []
-    for type, title in [("Q1perf", "Perfect Sensors"), ("Q1noisy", "Noisy Sensors")]:
-        c = violation_return(type, title)
-        cs.append(c)
-    cc = altair.hconcat(*cs).configure_legend(
+    for type, title, show_domain in [("Q1perf", "Perfect Sensors", True), ("Q1noisy", "Noisy Sensors", False)]:
+        c_row = violation_return(type, title, show_domain=show_domain)
+        cs.append(c_row)
+    cc = altair.vconcat(*cs).configure_legend(
         orient="top",
         direction='horizontal',
     ).configure_title(
@@ -487,10 +505,10 @@ def violation_return_combined():
 
 def violationn_return_LTST_conbined():
     cs = []
-    for type, title in [("LTSTperf", "Perfect Sensors"), ("LTSTnoisy", "Noisy Sensors")]:
-        c = violationn_return_LTST(type, title)
-        cs.append(c)
-    cc = altair.hconcat(*cs).configure_legend(
+    for type, title, show_domain in [("LTSTperf", "Perfect Sensors", True), ("LTSTnoisy", "Noisy Sensors", False)]:
+        c_row = violationn_return_LTST(type, title, show_domain)
+        cs.append(c_row)
+    cc = altair.vconcat(*cs).configure_legend(
         orient="top",
         direction='horizontal',
     ).configure_title(
@@ -753,7 +771,7 @@ EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
 # draw_Q5("noisy", ALPHA, symbol="ɑ")
 # draw_Q5("eps", EPS, symbol="ε")
 # draw_Q5_together()
-# violation_return_combined()
+violation_return_combined()
 violationn_return_LTST_conbined()
 
 
