@@ -345,6 +345,9 @@ def violation_return(type="Q1perf", title="Perfect Sensors", show_domain=True):
         ],
         columns=['Domain', 'domain_real', 'Agent', 'seed', 'Violation', 'Return']
     )
+    mean_df = df.groupby(['domain_real', 'Agent']).mean().reset_index()
+    mean_df['Domain'] = mean_df['domain_real'].str.replace('1', "")
+    mean_df['Domain'] = mean_df['Domain'].str.replace('1', "")
 
     # plot a subchart for each domain
     cs = []
@@ -354,7 +357,7 @@ def violation_return(type="Q1perf", title="Perfect Sensors", show_domain=True):
         x_title = "" #"Violation" if domain == "Pac" and show_domain else ""
         y_title = "" #"Return" if domain == "Pac" and show_domain else ""
         sub_df = df.loc[df["Domain"] == domain]
-        c = alt.Chart(sub_df, title=tt).mark_point().encode(
+        c = alt.Chart(sub_df, title=tt).mark_point(size=10).encode(
             x=alt.X("Violation", title=x_title,
                     axis=alt.Axis(
                         values=[0, 0.5, 1, 1.5],
@@ -378,7 +381,37 @@ def violation_return(type="Q1perf", title="Perfect Sensors", show_domain=True):
             width=100,
             height=100
         )
-        cs.append(c)
+
+        sub_mean_df = mean_df.loc[df["Domain"] == domain]
+        mean_c = alt.Chart(sub_mean_df, title=tt).mark_point(size=50,
+                                                             # fill="black"
+                                                             ).encode(
+            x=alt.X("Violation", title=x_title,
+                    axis=alt.Axis(
+                        values=[0, 0.5, 1, 1.5],
+                        grid=False)
+                    ),
+            y=alt.Y("Return", title=y_title,
+                    axis=alt.Axis(
+                        values=[0, 0.5, 1],
+                        grid=False)
+                    ),
+            color=alt.Color("Agent",
+                            legend=altair.Legend(title=None),
+                            scale=alt.Scale(
+                                domain=["PPO", "VSRL", "ε-VSRL", "PLPG"],
+                                scheme='category10')
+                            ),
+            shape=alt.Shape('domain_real',
+                            legend=altair.Legend(title=None) if show_domain else None,
+                            scale=alt.Scale(range=['circle', 'triangle-right']))
+        ).properties(
+            width=100,
+            height=100
+        )
+        comb = (c + mean_c)
+
+        cs.append(comb)
         # tick_axis = alt.Axis(labels=False, domain=False, ticks=False)
         #
         # x_ticks = alt.Chart(df, title='').mark_tick().encode(
@@ -431,6 +464,9 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain
         ],
         columns=['Domain', 'domain_real', 'Agent', 'seed', 'Violation', 'Return']
     )
+    mean_df = df.groupby(['domain_real', 'Agent']).mean().reset_index()
+    mean_df['Domain'] = mean_df['domain_real'].str.replace('1', "")
+    mean_df['Domain'] = mean_df['Domain'].str.replace('1', "")
 
     # plot a subchart for each domain
     cs = []
@@ -442,7 +478,7 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain
         sub_df = df.loc[df["Domain"] == domain]
         # base = alt.Chart(df)
 
-        c = alt.Chart(sub_df, title=tt).mark_point().encode(
+        c = alt.Chart(sub_df, title=tt).mark_point(size=10).encode(
             x=alt.X("Violation", title=x_title,
                     axis=alt.Axis(
                         values=[0, 0.5, 1, 1.5],
@@ -466,7 +502,37 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain
             width=100,
             height=100
         )
-        cs.append(c)
+
+        sub_mean_df = mean_df.loc[df["Domain"] == domain]
+        mean_c = alt.Chart(sub_mean_df, title=tt).mark_point(size=50,
+                                                             # fill="black"
+                                                             ).encode(
+            x=alt.X("Violation", title=x_title,
+                    axis=alt.Axis(
+                        values=[0, 0.5, 1, 1.5],
+                        grid=False)
+                    ),
+            y=alt.Y("Return", title=y_title,
+                    axis=alt.Axis(
+                        values=[0, 0.5, 1],
+                        grid=False)
+                    ),
+            color=alt.Color("Agent",
+                            legend=altair.Legend(title=None),
+                            scale=alt.Scale(
+                                domain=["Only Safety Grad.", "Only Policy Grad.", "Both Grad."],
+                                scheme='category10')
+                            ),
+            shape=alt.Shape('domain_real',
+                            legend=altair.Legend(title=None) if show_domain else None,
+                            scale=alt.Scale(range=['circle', 'triangle-right']))
+        ).properties(
+            width=100,
+            height=100
+        )
+        comb = (c + mean_c)
+
+        cs.append(comb)
         # tick_axis = alt.Axis(labels=False, domain=False, ticks=False)
         #
         # x_ticks = alt.Chart(df, title='').mark_tick().encode(
