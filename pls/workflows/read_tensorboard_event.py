@@ -347,7 +347,7 @@ def violation_return(type="Q1perf", title="Perfect Sensors", show_domain=True):
     )
     mean_df = df.groupby(['domain_real', 'Agent']).mean().reset_index()
     mean_df['Domain'] = mean_df['domain_real'].str.replace('1', "")
-    mean_df['Domain'] = mean_df['Domain'].str.replace('1', "")
+    mean_df['Domain'] = mean_df['Domain'].str.replace('2', "")
 
     # plot a subchart for each domain
     cs = []
@@ -382,7 +382,7 @@ def violation_return(type="Q1perf", title="Perfect Sensors", show_domain=True):
             height=100
         )
 
-        sub_mean_df = mean_df.loc[df["Domain"] == domain]
+        sub_mean_df = mean_df.loc[mean_df["Domain"] == domain]
         mean_c = alt.Chart(sub_mean_df, title=tt).mark_point(size=50,
                                                              # fill="black"
                                                              ).encode(
@@ -466,7 +466,7 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain
     )
     mean_df = df.groupby(['domain_real', 'Agent']).mean().reset_index()
     mean_df['Domain'] = mean_df['domain_real'].str.replace('1', "")
-    mean_df['Domain'] = mean_df['Domain'].str.replace('1', "")
+    mean_df['Domain'] = mean_df['Domain'].str.replace('2', "")
 
     # plot a subchart for each domain
     cs = []
@@ -503,7 +503,7 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain
             height=100
         )
 
-        sub_mean_df = mean_df.loc[df["Domain"] == domain]
+        sub_mean_df = mean_df.loc[mean_df["Domain"] == domain]
         mean_c = alt.Chart(sub_mean_df, title=tt).mark_point(size=50,
                                                              # fill="black"
                                                              ).encode(
