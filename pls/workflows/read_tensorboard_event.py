@@ -357,7 +357,7 @@ def violation_return(type="Q1perf", title="Perfect Sensors", show_domain=True):
         x_title = "" #"Violation" if domain == "Pac" and show_domain else ""
         y_title = "" #"Return" if domain == "Pac" and show_domain else ""
         sub_df = df.loc[df["Domain"] == domain]
-        c = alt.Chart(sub_df, title=tt).mark_point(size=10).encode(
+        c = alt.Chart(sub_df, title=tt).mark_point(size=5, opacity=0.2).encode(
             x=alt.X("Violation", title=x_title,
                     axis=alt.Axis(
                         values=[0, 0.5, 1, 1.5],
@@ -478,7 +478,7 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain
         sub_df = df.loc[df["Domain"] == domain]
         # base = alt.Chart(df)
 
-        c = alt.Chart(sub_df, title=tt).mark_point(size=10).encode(
+        c = alt.Chart(sub_df, title=tt).mark_point(size=5, opacity=0.4).encode(
             x=alt.X("Violation", title=x_title,
                     axis=alt.Axis(
                         values=[0, 0.5, 1, 1.5],
@@ -802,7 +802,7 @@ def draw_Q5(type="perf",ALPHA_OR_EPS=None, symbol="ɑ"):
             width=150 if symbol=="ɑ" else 250,
             height=150
         )
-        band = alt.Chart(df).mark_errorband(extent='ci', opacity=0.2).encode(
+        band = alt.Chart(df).mark_errorband(extent='ci', opacity=0.4).encode(
             x=alt.X("alpha"),
             y=alt.Y("value", title=""),
             color=alt.Color("domain")
