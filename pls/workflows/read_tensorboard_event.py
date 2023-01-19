@@ -173,79 +173,6 @@ def extract_values(name, exp_names):
     print()
     return results
 
-
-def curves_old(domain_name, curve_type, exp_names, names, step_limit, figure_height=100, fig_title="", setting=""):
-    """
-    Plot a safety or reward curve of the experiment of "domain_name/alpha" until "step_limit" steps
-    curve_type: "rollout/ep_rew_mean" or "rollout/#violations"
-    """
-    folder = FOLDERS[domain_name]
-    norm_rew = NORMS_REW[domain_name]
-    df_list = []
-    for exp_name in exp_names:
-        exp_folder = os.path.join(folder, exp_name)
-        for seed in SEEDS:
-            exp_folder_path = os.path.join(exp_folder, seed)
-            df = load_dataframe(exp_folder_path, [curve_type])[0]
-            if curve_type==TAGS[0]:
-                df["value"] = df["value"].apply(lambda x: normalize_rew(x, norm_rew))
-                df["value"] = df["value"].cummax()
-            df["seed"] = seed
-            df["alpha"] = names[exp_name]
-            # take only step_limit steps
-            df = df.drop(df[df.step > step_limit].index)
-            df_list.append(df[["value", "step", "seed", "alpha"]])
-
-    df_main = pd.concat(df_list)
-    df_main["step"] = df_main["step"] / 100_000
-
-    if len(exp_names) == 3:
-        legendX = 25
-        legendY = -35
-    elif len(exp_names) == 4:
-        legendX = -10
-        legendY = -35
-
-
-    line = alt.Chart(df_main).mark_line().encode(
-        x=alt.X("step",
-                scale=alt.Scale(domain=(0, step_limit/100_000)),
-                axis=alt.Axis(
-                    format='~s',
-                    title="100k steps",
-                    grid=False)),
-        y=alt.Y("mean(value)",
-                axis=alt.Axis(
-                    format='.1',
-                    grid=False)),
-        color=alt.Color("alpha",
-                        legend=alt.Legend(
-                            title=f"{fig_title} on {DOMAIN_ABBR[domain_name]}{setting}",
-                            orient='none',
-                            direction='horizontal',
-                            legendX=legendX, legendY=legendY,
-                            titleAnchor='middle'
-                        ),
-                        scale=alt.Scale(domain=[names[exp_name] for exp_name in exp_names], range=["red", "blue", "gray", "green"][:len(exp_names)])
-                        )
-    ).properties(
-            width=200,
-            height=figure_height
-        )
-    band = alt.Chart(df_main).mark_errorband(extent='ci', opacity=0.1).encode(
-        x=alt.X("step"),
-        y=alt.Y("value", title=""),
-        color=alt.Color("alpha",
-                         sort = [names[exp_name] for exp_name in exp_names],
-                         legend=None
-        )
-    )
-    c = alt.layer(band, line).resolve_legend(color='independent')
-    c.show()
-    fig_path = os.path.join(domain, f"{DOMAIN_ABBR[domain_name]}_{fig_title}{setting}.svg")
-    c.save(fig_path)
-
-
 def curves(domain_name, exp_names, names, step_limit, row):
     """
     Plot a safety or reward curve of the experiment of "domain_name/alpha" until "step_limit" steps
@@ -322,7 +249,7 @@ def curves(domain_name, exp_names, names, step_limit, row):
     # fig_path = os.path.join(domain, f"svg")
     # c.save(fig_path)
 
-def violation_return(type="Q1perf", title="Perfect Sensors", show_domain=True):
+def violation_return_tradeoff(type="Q1perf", title="Perfect Sensors", show_domain=True):
     data = {}
     for domain in table_settings:
         data[DOMAIN_ABBR[domain]] = {}
@@ -562,10 +489,10 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain
 
     return c_row
 
-def violation_return_combined():
+def violation_return_tradeoff_combined():
     cs = []
     for type, title, show_domain in [("Q1perf", "Perfect Sensors", True), ("Q1noisy", "Noisy Sensors", False)]:
-        c_row = violation_return(type, title, show_domain=show_domain)
+        c_row = violation_return_tradeoff(type, title, show_domain=show_domain)
         cs.append(c_row)
     cc = altair.vconcat(*cs).configure_legend(
         orient="top",
@@ -577,11 +504,11 @@ def violation_return_combined():
     )
     # cc.show()
     svg_path = os.path.join(dir_path, "../..", "experiments5")
-    fig_path = os.path.join(svg_path, f"violation_return.svg")
+    fig_path = os.path.join(svg_path, f"violation_return_tradeoff.svg")
     cc.save(fig_path)
     return
 
-def violationn_return_LTST_conbined():
+def violation_return_tradeoff_LTST_conbined():
     cs = []
     for type, title, show_domain in [("LTSTperf", "Perfect Sensors", True), ("LTSTnoisy", "Noisy Sensors", False)]:
         c_row = violationn_return_LTST(type, title, show_domain)
@@ -596,7 +523,7 @@ def violationn_return_LTST_conbined():
     )
     # cc.show()
     svg_path = os.path.join(dir_path, "../..", "experiments5")
-    fig_path = os.path.join(svg_path, f"violation_return_LTST.svg")
+    fig_path = os.path.join(svg_path, f"violation_return_tradeoff_LTST.svg")
     cc.save(fig_path)
     return
 
@@ -657,81 +584,11 @@ def curves_combined(type="perf"):
     fig_path = os.path.join(svg_path, f"{type}.svg")
     c.save(fig_path)
 
-table_settings = {
-        "goal_finding1": {
-            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
-            "perf": ["PLPG_STperf", "PLPGperf2", "PLPGperf4", "PLPGperf", "PLPGperf3"],
-            "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
-            "Q1": ["PPO", "VSRLperf", "PLPGperf4", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"],
-            "Q1perf": ["PPO", "VSRLperf", "PLPGperf4"],
-            "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"],
-            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"],
-            "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4"],
-            "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
-        },
-        "goal_finding2": {
-            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
-            "perf": ["PLPG_STperf", "PLPGperf2", "PLPGperf4", "PLPGperf", "PLPGperf3"],
-            "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
-            "Q1": ["PPO", "VSRLperf", "PLPGperf", "VSRLthres", "epsVSRLthres0.01", "PLPGnoisy"],
-            "Q1perf": ["PPO", "VSRLperf", "PLPGperf"],
-            "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.01", "PLPGnoisy"],
-            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"],
-            "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf"],
-            "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
-        },
-        "pacman1": {
-            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
-            "perf": ["PLPG_STperf", "PLPGperf3", "PLPGperf5", "PLPGperf", "PLPGperf2"],
-            "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
-            "Q1": ["PPO", "VSRLperf", "PLPGperf3", "VSRLthres", "epsVSRLthres0.05", "PLPGnoisy4"],
-            "Q1perf":  ["PPO", "VSRLperf", "PLPGperf3"],
-            "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.05", "PLPGnoisy4"],
-            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"],
-            "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3"],
-            "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"],
-            # "distance": ["PLPGperf3"]
-        },
-        "pacman2": {
-            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
-            "perf": ["PLPG_STperf", "PLPGperf3", "PLPGperf4", "PLPGperf", "PLPGperf2"],
-            "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
-            "Q1": ["PPO", "VSRLperf", "PLPGperf4", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"],
-            "Q1perf": ["PPO", "VSRLperf", "PLPGperf4"],
-            "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"],
-            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"],
-            "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4"],
-            "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
-        },
-        "carracing1": {
-            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
-            "perf": ["PLPG_STperf", "PLPGperf", "PLPGperf2", "PLPGperf3", "PLPGperf4"],
-            "noisy": ["PLPG_STnoisy", "PLPGnoisy", "PLPGnoisy2", "PLPGnoisy3", "PLPGnoisy4"],
-            "Q1": ["PPO", "VSRLperf", "PLPGperf2", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy3"],
-            "Q1perf": ["PPO", "VSRLperf", "PLPGperf2"],
-            "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy3"],
-            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf2", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"],
-            "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf2"],
-            "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
-        },
-        "carracing2": {
-            "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
-            "perf": ["PLPG_STperf", "PLPGperf", "PLPGperf2", "PLPGperf3", "PLPGperf4"],
-            "noisy": ["PLPG_STnoisy", "PLPGnoisy", "PLPGnoisy2", "PLPGnoisy3", "PLPGnoisy4"],
-            "Q1": ["PPO", "VSRLperf", "PLPGperf", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy2"],
-            "Q1perf": ["PPO", "VSRLperf", "PLPGperf"],
-            "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy2"],
-            "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy2"],
-            "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf"],
-            "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy2"]
-        },
-    }
-
 def create_tables(type):
     for row, domain in enumerate(table_settings):
         extract_values(domain, table_settings[domain][type])
 
-def draw_Q5(type="perf",ALPHA_OR_EPS=None, symbol="ɑ"):
+def violation_return_curves(type="perf",ALPHA_OR_EPS=None, symbol="ɑ"):
     data_rew, data_vio = {}, {}
     for domain in table_settings:
         data_rew[DOMAIN_ABBR[domain]]={
@@ -818,11 +675,11 @@ def draw_Q5(type="perf",ALPHA_OR_EPS=None, symbol="ɑ"):
         cs.append(c)
     return cs
 
-def draw_Q5_together():
+def violation_return_curves_combined():
     ALPHA = [0, 0.1, 0.5, 1, 5]
     EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
-    eps_rew, eps_vio= draw_Q5("eps", EPS, symbol="ε")
-    alpha_rew, alpha_vio = draw_Q5("noisy", ALPHA, symbol="ɑ")
+    eps_rew, eps_vio= violation_return_curves("eps", EPS, symbol="ε")
+    alpha_rew, alpha_vio = violation_return_curves("noisy", ALPHA, symbol="ɑ")
 
     violation_c = altair.hconcat(eps_vio, alpha_vio, title="Violation")
     return_c = altair.hconcat(eps_rew, alpha_rew, title="Return")
@@ -840,7 +697,74 @@ def draw_Q5_together():
     c.save(fig_path)
     # c.show()
 
-
+table_settings = {
+    "goal_finding1": {
+        "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
+        "perf": ["PLPG_STperf", "PLPGperf2", "PLPGperf4", "PLPGperf", "PLPGperf3"],
+        "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
+        "Q1": ["PPO", "VSRLperf", "PLPGperf4", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"],
+        "Q1perf": ["PPO", "VSRLperf", "PLPGperf4"],
+        "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"],
+        "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"],
+        "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4"],
+        "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
+    },
+    "goal_finding2": {
+        "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
+        "perf": ["PLPG_STperf", "PLPGperf2", "PLPGperf4", "PLPGperf", "PLPGperf3"],
+        "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
+        "Q1": ["PPO", "VSRLperf", "PLPGperf", "VSRLthres", "epsVSRLthres0.01", "PLPGnoisy"],
+        "Q1perf": ["PPO", "VSRLperf", "PLPGperf"],
+        "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.01", "PLPGnoisy"],
+        "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"],
+        "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf"],
+        "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
+    },
+    "pacman1": {
+        "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
+        "perf": ["PLPG_STperf", "PLPGperf3", "PLPGperf5", "PLPGperf", "PLPGperf2"],
+        "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
+        "Q1": ["PPO", "VSRLperf", "PLPGperf3", "VSRLthres", "epsVSRLthres0.05", "PLPGnoisy4"],
+        "Q1perf":  ["PPO", "VSRLperf", "PLPGperf3"],
+        "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.05", "PLPGnoisy4"],
+        "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"],
+        "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3"],
+        "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"],
+    },
+    "pacman2": {
+        "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
+        "perf": ["PLPG_STperf", "PLPGperf3", "PLPGperf4", "PLPGperf", "PLPGperf2"],
+        "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
+        "Q1": ["PPO", "VSRLperf", "PLPGperf4", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"],
+        "Q1perf": ["PPO", "VSRLperf", "PLPGperf4"],
+        "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy3"],
+        "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"],
+        "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4"],
+        "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
+    },
+    "carracing1": {
+        "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
+        "perf": ["PLPG_STperf", "PLPGperf", "PLPGperf2", "PLPGperf3", "PLPGperf4"],
+        "noisy": ["PLPG_STnoisy", "PLPGnoisy", "PLPGnoisy2", "PLPGnoisy3", "PLPGnoisy4"],
+        "Q1": ["PPO", "VSRLperf", "PLPGperf2", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy3"],
+        "Q1perf": ["PPO", "VSRLperf", "PLPGperf2"],
+        "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy3"],
+        "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf2", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"],
+        "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf2"],
+        "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy3"]
+    },
+    "carracing2": {
+        "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
+        "perf": ["PLPG_STperf", "PLPGperf", "PLPGperf2", "PLPGperf3", "PLPGperf4"],
+        "noisy": ["PLPG_STnoisy", "PLPGnoisy", "PLPGnoisy2", "PLPGnoisy3", "PLPGnoisy4"],
+        "Q1": ["PPO", "VSRLperf", "PLPGperf", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy2"],
+        "Q1perf": ["PPO", "VSRLperf", "PLPGperf"],
+        "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.5", "PLPGnoisy2"],
+        "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy2"],
+        "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf"],
+        "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy2"]
+    },
+}
 
 # create_tables(type="Q1")
 # create_tables(type="LTST")
@@ -848,16 +772,18 @@ def draw_Q5_together():
 
 ALPHA = [0, 0.1, 0.5, 1, 5]
 EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
-# draw_Q5("perf", ALPHA, symbol="ɑ")
-# draw_Q5("noisy", ALPHA, symbol="ɑ")
-# draw_Q5("eps", EPS, symbol="ε")
-draw_Q5_together()
-violation_return_combined()
-violationn_return_LTST_conbined()
 
-extract_values("pacman1_distance1", ["PLPGperf3"])
-extract_values("pacman1", ["PLPGperf3"])
-extract_values("pacman1_distance3", ["PLPGperf3"])
-# curves_combined("perf")
-# curves_combined("noisy")
+# violation_return_curves("perf", ALPHA, symbol="ɑ")
+# violation_return_curves("noisy", ALPHA, symbol="ɑ")
+# violation_return_curves("eps", EPS, symbol="ε")
+# violation_return_curves_combined()
+
+# violation_return_tradeoff_combined()
+# violation_return_tradeoff_LTST_conbined()
+
+# extract_values("pacman1_distance1", ["PLPGperf3"])
+# extract_values("pacman1", ["PLPGperf3"])
+# extract_values("pacman1_distance3", ["PLPGperf3"])
+curves_combined("perf")
+curves_combined("noisy")
 
