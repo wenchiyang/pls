@@ -33,6 +33,8 @@ NORMS_REW = {
     "goal_finding2": {"low": 0, "high": 45},
     "pacman1": {"low": 0, "high": 40},
     "pacman2": {"low": 0, "high": 40},
+    "pacman1_distance1": {"low": 0, "high": 40},
+    "pacman1_distance3": {"low": 0, "high": 40},
     "carracing1": {"low": 0, "high": 900},
     "carracing2": {"low": 0, "high": 900}
 }
@@ -40,8 +42,10 @@ NORMS_REW = {
 NORMS_VIO = {
     "goal_finding1": {"low": 0, "high": 15000},
     "goal_finding2": {"low": 0, "high": 15000},
-    "pacman1": {"low": 3500, "high": 7000},
-    "pacman2": {"low": 3500, "high": 15000},
+    "pacman1": {"low": 0, "high": 7000},
+    "pacman2": {"low": 0, "high": 15000},
+    "pacman1_distance1": {"low": 0, "high": 7000},
+    "pacman1_distance3": {"low": 0, "high": 7000},
     "carracing1": {"low": 0, "high": 1000},
     "carracing2": {"low": 0, "high": 1000}
 }
@@ -857,7 +861,7 @@ EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
 # violation_return_combined()
 # violationn_return_LTST_conbined()
 extract_values("pacman1_distance1", table_settings["pacman1_distance1"]["distance"])
-extract_values("pacman", table_settings["pacman1"]["distance"])
+extract_values("pacman1", table_settings["pacman1"]["distance"])
 extract_values("pacman1_distance3", table_settings["pacman1_distance3"]["distance"])
 # curves_combined("perf")
 # curves_combined("noisy")
