@@ -14,6 +14,8 @@ FOLDERS = {
     "goal_finding2": os.path.join(dir_path, "../..", "experiments5", "goal_finding", "small2"),
     "pacman1": os.path.join(dir_path, "../..", "experiments5", "pacman", "small3"),
     "pacman2": os.path.join(dir_path, "../..", "experiments5", "pacman", "small4"),
+    "pacman1_distance1": os.path.join(dir_path, "../..", "experiments5", "pacman", "small5"),
+    "pacman1_distance3": os.path.join(dir_path, "../..", "experiments5", "pacman", "small6"),
     "carracing1": os.path.join(dir_path, "../..", "experiments5", "carracing", "map0"),
     "carracing2": os.path.join(dir_path, "../..", "experiments5", "carracing", "map2"),
 }
@@ -683,7 +685,14 @@ table_settings = {
             "Q1noisy": ["PPO", "VSRLthres", "epsVSRLthres0.05", "PLPGnoisy4"],
             "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"],
             "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3"],
-            "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"]
+            "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"],
+            "distance": ["PLPGperf3"]
+        },
+        "pacman1_distance1":{
+            "distance": ["PLPGperf3"]
+        },
+        "pacman1_distance3":{
+            "distance": ["PLPGperf3"]
         },
         "pacman2": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
@@ -845,10 +854,11 @@ EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
 # draw_Q5("noisy", ALPHA, symbol="ɑ")
 # draw_Q5("eps", EPS, symbol="ε")
 # draw_Q5_together()
-violation_return_combined()
-violationn_return_LTST_conbined()
-
-
+# violation_return_combined()
+# violationn_return_LTST_conbined()
+extract_values("pacman1_distance1", "distance")
+extract_values("pacman", "distance")
+extract_values("pacman1_distance3", "distance")
 # curves_combined("perf")
 # curves_combined("noisy")
 
