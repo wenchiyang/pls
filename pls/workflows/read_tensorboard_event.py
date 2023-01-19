@@ -856,9 +856,9 @@ EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
 # draw_Q5_together()
 # violation_return_combined()
 # violationn_return_LTST_conbined()
-extract_values("pacman1_distance1", "distance")
-extract_values("pacman", "distance")
-extract_values("pacman1_distance3", "distance")
+extract_values("pacman1_distance1", table_settings["pacman1_distance1"]["distance"])
+extract_values("pacman", table_settings["pacman1"]["distance"])
+extract_values("pacman1_distance3", table_settings["pacman1_distance3"]["distance"])
 # curves_combined("perf")
 # curves_combined("noisy")
 
