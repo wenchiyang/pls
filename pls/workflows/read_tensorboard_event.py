@@ -484,7 +484,7 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain
         sub_df = df.loc[df["Domain"] == domain]
         # base = alt.Chart(df)
 
-        c = alt.Chart(sub_df, title=tt).mark_point(size=5, opacity=0.4).encode(
+        c = alt.Chart(sub_df, title=tt).mark_point(size=5, opacity=0.2).encode(
             x=alt.X("Violation", title=x_title,
                     axis=alt.Axis(
                         values=[0, 0.5, 1, 1.5],
@@ -690,13 +690,7 @@ table_settings = {
             "LTST": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3", "PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"],
             "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf3"],
             "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy4"],
-            "distance": ["PLPGperf3"]
-        },
-        "pacman1_distance1":{
-            "distance": ["PLPGperf3"]
-        },
-        "pacman1_distance3":{
-            "distance": ["PLPGperf3"]
+            # "distance": ["PLPGperf3"]
         },
         "pacman2": {
             "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
@@ -815,7 +809,7 @@ def draw_Q5(type="perf",ALPHA_OR_EPS=None, symbol="ɑ"):
             width=150 if symbol=="ɑ" else 250,
             height=150
         )
-        band = alt.Chart(df).mark_errorband(extent='ci', opacity=0.4).encode(
+        band = alt.Chart(df).mark_errorband(extent='ci', opacity=0.2).encode(
             x=alt.X("alpha"),
             y=alt.Y("value", title=""),
             color=alt.Color("domain")
@@ -857,12 +851,13 @@ EPS = [0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
 # draw_Q5("perf", ALPHA, symbol="ɑ")
 # draw_Q5("noisy", ALPHA, symbol="ɑ")
 # draw_Q5("eps", EPS, symbol="ε")
-# draw_Q5_together()
-# violation_return_combined()
-# violationn_return_LTST_conbined()
-extract_values("pacman1_distance1", table_settings["pacman1_distance1"]["distance"])
-extract_values("pacman1", table_settings["pacman1"]["distance"])
-extract_values("pacman1_distance3", table_settings["pacman1_distance3"]["distance"])
+draw_Q5_together()
+violation_return_combined()
+violationn_return_LTST_conbined()
+
+extract_values("pacman1_distance1", ["PLPGperf3"])
+extract_values("pacman1", ["PLPGperf3"])
+extract_values("pacman1_distance3", ["PLPGperf3"])
 # curves_combined("perf")
 # curves_combined("noisy")
 
