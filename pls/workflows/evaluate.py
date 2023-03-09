@@ -9,7 +9,6 @@ from pls.workflows.ppo_dpl import setup_env
 from time import sleep
 
 
-from pls.dpl_policies.sokoban.sokoban_ppo import Sokoban_DPLPPO
 from pls.dpl_policies.pacman.pacman_ppo import Pacman_DPLPPO
 from pls.dpl_policies.carracing.carracing_ppo import Carracing_DPLPPO
 
@@ -19,8 +18,6 @@ def load_model_and_env(folder, config, model_at_step, eval=True):
     env_name = config["env_type"]
     if "Pacman" in env_name:
         model_cls = Pacman_DPLPPO
-    elif "oban" in env_name:
-        model_cls = Sokoban_DPLPPO
     elif "Car" in env_name:
         model_cls = Carracing_DPLPPO
 
@@ -28,6 +25,7 @@ def load_model_and_env(folder, config, model_at_step, eval=True):
         path = os.path.join(folder, "model.zip")
     else:
         path = os.path.join(folder, "model_checkpoints", f"rl_model_{model_at_step}_steps.zip")
+
     model = model_cls.load(path, env)
     if "GoalFinding" in env_name and eval:
         model.set_random_seed(config["eval_env_features"]["seed"])
@@ -136,12 +134,12 @@ def my_evaluate_policy(
         if "Carracing" in str(model):
             actions = model.predict(observations, deterministic=deterministic)
         else:
-            # tinygrid = env.envs[0].render("tinygrid")
-            # tinygrid = env.envs[0].render("tiny_rgb_array")
-            tinygrid = env.envs[0].render("rgb_array")
-            # tinygrid = obs_as_tensor(tinygrid, "cpu").unsqueeze(0)
+            tinygrid = env.envs[0].render("tinygrid")
+            # tinygrid = env.envs[0].render("tiny_rgb_array") # for sokoban
+            # tinygrid = env.envs[0].render("rgb_array")
+            tinygrid = obs_as_tensor(tinygrid, "cpu").unsqueeze(0)
             actions = model.predict(observations, state=tinygrid, deterministic=deterministic)
-        observations, rewards, dones, infos = env.step(actions[0])
+        observations, rewards, dones, infos = env.step(actions)
         if render:
             for e in env.envs:
                 e.env.render()

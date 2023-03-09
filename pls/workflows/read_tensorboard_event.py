@@ -10,18 +10,18 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
 FOLDERS = {
-    "goal_finding1": os.path.join(dir_path, "../..", "experiments5", "goal_finding", "small0"),
-    "goal_finding2": os.path.join(dir_path, "../..", "experiments5", "goal_finding", "small2"),
-    "pacman1": os.path.join(dir_path, "../..", "experiments5", "pacman", "small3"),
-    "pacman2": os.path.join(dir_path, "../..", "experiments5", "pacman", "small4"),
-    "pacman1_distance1": os.path.join(dir_path, "../..", "experiments5", "pacman", "small5"),
-    "pacman1_distance3": os.path.join(dir_path, "../..", "experiments5", "pacman", "small6"),
-    "carracing1": os.path.join(dir_path, "../..", "experiments5", "carracing", "map0"),
-    "carracing2": os.path.join(dir_path, "../..", "experiments5", "carracing", "map2"),
+    "stars1": os.path.join(dir_path, "../..", "experiments", "stars", "small0"),
+    "stars2": os.path.join(dir_path, "../..", "experiments", "stars", "small2"),
+    "pacman1": os.path.join(dir_path, "../..", "experiments", "pacman", "small3"),
+    "pacman2": os.path.join(dir_path, "../..", "experiments", "pacman", "small4"),
+    "pacman1_distance1": os.path.join(dir_path, "../..", "experiments", "pacman", "small5"),
+    "pacman1_distance3": os.path.join(dir_path, "../..", "experiments", "pacman", "small6"),
+    "carracing1": os.path.join(dir_path, "../..", "experiments", "carracing", "map0"),
+    "carracing2": os.path.join(dir_path, "../..", "experiments", "carracing", "map2"),
 }
 DOMAIN_ABBR = {
-    "goal_finding1": "Stars1",
-    "goal_finding2": "Stars2",
+    "stars1": "Stars1",
+    "stars2": "Stars2",
     "pacman1": "Pac1",
     "pacman2": "Pac2",
     "carracing1": "CR1",
@@ -29,8 +29,8 @@ DOMAIN_ABBR = {
 }
 
 NORMS_REW = {
-    "goal_finding1": {"low": 0, "high": 45},
-    "goal_finding2": {"low": 0, "high": 45},
+    "stars1": {"low": 0, "high": 45},
+    "stars2": {"low": 0, "high": 45},
     "pacman1": {"low": 0, "high": 40},
     "pacman2": {"low": 0, "high": 40},
     "pacman1_distance1": {"low": 0, "high": 40},
@@ -40,8 +40,8 @@ NORMS_REW = {
 }
 
 NORMS_VIO = {
-    "goal_finding1": {"low": 0, "high": 15000},
-    "goal_finding2": {"low": 0, "high": 15000},
+    "stars1": {"low": 0, "high": 15000},
+    "stars2": {"low": 0, "high": 15000},
     "pacman1": {"low": 0, "high": 7000},
     "pacman2": {"low": 0, "high": 15000},
     "pacman1_distance1": {"low": 0, "high": 7000},
@@ -185,8 +185,6 @@ def curves(domain_name, exp_names, names, step_limit, row):
         for seed in SEEDS:
             exp_folder_path = os.path.join(exp_folder, seed)
             dfs = load_dataframe(exp_folder_path, TAGS)
-            # # Renormalize reward
-            # dfs[0]["value"] = dfs[0]["value"].apply(lambda x: normalize_rew(x, norm_rew))
             dfs[0]["value"] = dfs[0]["value"].cummax()
             new_dfs = []
             for df in dfs:
@@ -227,7 +225,6 @@ def curves(domain_name, exp_names, names, step_limit, row):
             color=alt.Color("alpha",
                             legend=altair.Legend(title=None),
                             sort = [names[exp_name] for exp_name in exp_names],
-                            # scale=alt.Scale(domain=[names[exp_name] for exp_name in exp_names], range=["gray", "blue", "green"]),
                             scale=alt.Scale(scheme="category10")
                             )
         ).properties(
@@ -239,15 +236,12 @@ def curves(domain_name, exp_names, names, step_limit, row):
             y=alt.Y("value", title=""),
             color=alt.Color("alpha", sort = [names[exp_name] for exp_name in exp_names],)
         )
-        c = alt.layer(band, line)#.resolve_scale(color="independent")
+        c = alt.layer(band, line)
         charts.append(c)
 
     chart_row = altair.hconcat(*charts)
 
     return chart_row
-    # chart_row.show()
-    # fig_path = os.path.join(domain, f"svg")
-    # c.save(fig_path)
 
 def violation_return_tradeoff(type="Q1perf", title="Perfect Sensors", show_domain=True):
     data = {}
@@ -287,8 +281,8 @@ def violation_return_tradeoff(type="Q1perf", title="Perfect Sensors", show_domai
     for i, domain in enumerate(["Stars", "Pac", "CR"]):
         # base = alt.Chart(df)
         tt = domain if show_domain else ""
-        x_title = "" #"Violation" if domain == "Pac" and show_domain else ""
-        y_title = "" #"Return" if domain == "Pac" and show_domain else ""
+        x_title = ""
+        y_title = ""
         sub_df = df.loc[df["Domain"] == domain]
         c = alt.Chart(sub_df, title=tt).mark_point(size=5, opacity=0.2).encode(
             x=alt.X("Violation", title=x_title,
@@ -316,9 +310,7 @@ def violation_return_tradeoff(type="Q1perf", title="Perfect Sensors", show_domai
         )
 
         sub_mean_df = mean_df.loc[mean_df["Domain"] == domain]
-        mean_c = alt.Chart(sub_mean_df, title=tt).mark_point(size=50,
-                                                             # fill="black"
-                                                             ).encode(
+        mean_c = alt.Chart(sub_mean_df, title=tt).mark_point(size=50).encode(
             x=alt.X("Violation", title=x_title,
                     axis=alt.Axis(
                         values=[0, 0.5, 1, 1.5],
@@ -345,25 +337,6 @@ def violation_return_tradeoff(type="Q1perf", title="Perfect Sensors", show_domai
         comb = (c + mean_c)
 
         cs.append(comb)
-        # tick_axis = alt.Axis(labels=False, domain=False, ticks=False)
-        #
-        # x_ticks = alt.Chart(df, title='').mark_tick().encode(
-        #     alt.X('Violation', axis=tick_axis),
-        #     alt.Y('Agent', title='', axis=tick_axis),
-        #     color=alt.Color('Agent')
-        # ).properties(
-        #     width=200
-        # )
-        #
-        # y_ticks = base.mark_tick().encode(
-        #     alt.X('Agent', title='', axis=tick_axis),
-        #     alt.Y('Return', axis=tick_axis),
-        #     color=alt.Color('Agent')
-        # ).properties(
-        #     height=200
-        # )
-        #
-        # c = (y_ticks | (c & x_ticks))
     c_row = altair.hconcat(*cs, title=altair.TitleParams(title, orient="left", anchor="middle"))
 
     return c_row
@@ -406,8 +379,8 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain
     for i, domain in enumerate(["Stars", "Pac", "CR"]):
         # base = alt.Chart(df)
         tt = domain if show_domain else ""
-        x_title = "" #"Violation" if domain == "Pac" and show_domain else ""
-        y_title = "" #"Return" if domain == "Pac" and show_domain else ""
+        x_title = ""
+        y_title = ""
         sub_df = df.loc[df["Domain"] == domain]
         # base = alt.Chart(df)
 
@@ -437,9 +410,7 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain
         )
 
         sub_mean_df = mean_df.loc[mean_df["Domain"] == domain]
-        mean_c = alt.Chart(sub_mean_df, title=tt).mark_point(size=50,
-                                                             # fill="black"
-                                                             ).encode(
+        mean_c = alt.Chart(sub_mean_df, title=tt).mark_point(size=50).encode(
             x=alt.X("Violation", title=x_title,
                     axis=alt.Axis(
                         values=[0, 0.5, 1, 1.5],
@@ -466,25 +437,6 @@ def violationn_return_LTST(type="LTSTperf", title="Perfect Sensors", show_domain
         comb = (c + mean_c)
 
         cs.append(comb)
-        # tick_axis = alt.Axis(labels=False, domain=False, ticks=False)
-        #
-        # x_ticks = alt.Chart(df, title='').mark_tick().encode(
-        #     alt.X('Violation', axis=tick_axis),
-        #     alt.Y('Agent', title='', axis=tick_axis),
-        #     color=alt.Color('Agent')
-        # ).properties(
-        #     width=200
-        # )
-        #
-        # y_ticks = base.mark_tick().encode(
-        #     alt.X('Agent', title='', axis=tick_axis),
-        #     alt.Y('Return', axis=tick_axis),
-        #     color=alt.Color('Agent')
-        # ).properties(
-        #     height=200
-        # )
-        #
-        # c = (y_ticks | (c & x_ticks))
     c_row = altair.hconcat(*cs, title=altair.TitleParams(title, orient="left", anchor="middle"))
 
     return c_row
@@ -502,8 +454,7 @@ def violation_return_tradeoff_combined():
     ).resolve_scale(
         shape='independent'
     )
-    # cc.show()
-    svg_path = os.path.join(dir_path, "../..", "experiments5")
+    svg_path = os.path.join(dir_path, "../..", "experiments")
     fig_path = os.path.join(svg_path, f"violation_return_tradeoff.svg")
     cc.save(fig_path)
     return
@@ -521,19 +472,18 @@ def violation_return_tradeoff_LTST_conbined():
     ).resolve_scale(
         shape='independent'
     )
-    # cc.show()
-    svg_path = os.path.join(dir_path, "../..", "experiments5")
+    svg_path = os.path.join(dir_path, "../..", "experiments")
     fig_path = os.path.join(svg_path, f"violation_return_tradeoff_LTST.svg")
     cc.save(fig_path)
     return
 
 def curves_combined(type="perf"):
     graph_settings = {
-        "goal_finding1": {
+        "stars1": {
             "perf": ["PPO", "VSRLperf", "PLPGperf4"],
             "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.005", "PLPGnoisy"]
         },
-        "goal_finding2": {
+        "stars2": {
             "perf": ["PPO", "VSRLperf", "PLPGperf"],
             "noisy": ["PPO", "VSRLthres", "epsVSRLthres0.01", "PLPGnoisy"]
         },
@@ -580,7 +530,7 @@ def curves_combined(type="perf"):
         anchor="middle"
     )
     # c.show()
-    svg_path = os.path.join(dir_path, "../..", "experiments5")
+    svg_path = os.path.join(dir_path, "../..", "experiments")
     fig_path = os.path.join(svg_path, f"{type}.svg")
     c.save(fig_path)
 
@@ -692,13 +642,12 @@ def violation_return_curves_combined():
         anchor="middle"
     )
 
-    svg_path = os.path.join(dir_path, "../..", "experiments5")
+    svg_path = os.path.join(dir_path, "../..", "experiments")
     fig_path = os.path.join(svg_path, f"Q5.svg")
     c.save(fig_path)
-    # c.show()
 
 table_settings = {
-    "goal_finding1": {
+    "stars1": {
         "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
         "perf": ["PLPG_STperf", "PLPGperf2", "PLPGperf4", "PLPGperf", "PLPGperf3"],
         "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],
@@ -709,7 +658,7 @@ table_settings = {
         "LTSTperf": ["PLPG_LTperf", "PLPG_STperf", "PLPGperf4"],
         "LTSTnoisy": ["PLPG_LTnoisy", "PLPG_STnoisy", "PLPGnoisy"]
     },
-    "goal_finding2": {
+    "stars2": {
         "eps": ["VSRLthres", "epsVSRLthres0.005", "epsVSRLthres0.01", "epsVSRLthres0.05", "epsVSRLthres0.1", "epsVSRLthres0.2", "epsVSRLthres0.5", "PPO"],
         "perf": ["PLPG_STperf", "PLPGperf2", "PLPGperf4", "PLPGperf", "PLPGperf3"],
         "noisy": ["PLPG_STnoisy", "PLPGnoisy3", "PLPGnoisy4", "PLPGnoisy", "PLPGnoisy2"],

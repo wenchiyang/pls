@@ -1,41 +1,22 @@
 import gym
 import pacman_gym
-import gym_sokoban
 import carracing_gym
 
 import torch as th
 from torch import nn
 import os
-from pls.dpl_policies.pacman.dpl_policy import (
-    Pacman_Encoder,
-    Pacman_Monitor,
-    Pacman_DPLActorCriticPolicy,
-    Pacman_Callback,
-)
-from pls.dpl_policies.sokoban.dpl_policy import (
-    Sokoban_Encoder,
-    Sokoban_Monitor,
-    Sokoban_DPLActorCriticPolicy,
-    Sokoban_Callback
-)
-from pls.dpl_policies.carracing.dpl_policy import (
-    Carracing_Encoder,
-    Carracing_Monitor,
-    Carracing_DPLActorCriticPolicy,
-    Carracing_Callback
-)
+from pls.dpl_policies.pacman.dpl_policy import Pacman_Encoder, Pacman_Monitor, Pacman_DPLActorCriticPolicy, Pacman_Callback
+from pls.dpl_policies.carracing.dpl_policy import Carracing_Encoder, Carracing_Monitor, Carracing_DPLActorCriticPolicy, Carracing_Callback
+
+
 
 from pls.dpl_policies.pacman.pacman_ppo import Pacman_DPLPPO
-from pls.dpl_policies.sokoban.sokoban_ppo import Sokoban_DPLPPO
 from pls.dpl_policies.carracing.carracing_ppo import Carracing_DPLPPO
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import CheckpointCallback
 import math
 
-
-
 def setup_env(folder, config, eval=False):
-    #####   Initialize env   #############
     env_name = config["env_type"]
     if eval:
         env_args = config["eval_env_features"]
@@ -56,17 +37,6 @@ def setup_env(folder, config, eval=False):
             allow_early_resets=False,
             stochasticity=stochasticity
         )
-
-    elif "Sokoban" in env_name or "Boxoban" in env_name:
-        stochasticity = config["model_features"]["stochasticity"] if "stochasticity" in config["model_features"] else 0
-        assert type(stochasticity) == float
-        image_encoder_cls = Sokoban_Encoder
-        env = Sokoban_Monitor(
-            env,
-            allow_early_resets=False,
-            stochasticity=stochasticity
-        )
-
     elif "Car" in env_name:
         stochasticity = config["model_features"]["stochasticity"] if "stochasticity" in config["model_features"] else 0
         assert type(stochasticity) == float
@@ -74,11 +44,9 @@ def setup_env(folder, config, eval=False):
         env = Carracing_Monitor(
             env,
             vio_len = config["model_features"]["shield_params"]["vio_len"],
-            # vio_len = 100,
             allow_early_resets=False,
             stochasticity=stochasticity
         )
-
 
     return env, image_encoder_cls
 
@@ -102,17 +70,12 @@ def main(folder, config):
         policy_cls = Pacman_DPLActorCriticPolicy
         custom_callback = Pacman_Callback(custom_callback)
         encoder_kwargs = {}
-    elif "Sokoban" in env_name or "Boxoban" in env_name:
-        model_cls = Sokoban_DPLPPO
-        policy_cls = Sokoban_DPLActorCriticPolicy
-        custom_callback = Sokoban_Callback(custom_callback)
-        encoder_kwargs = {}
+
     elif "Car" in env_name :
         model_cls = Carracing_DPLPPO
         policy_cls = Carracing_DPLActorCriticPolicy
         custom_callback = Carracing_Callback(custom_callback)
         encoder_kwargs = {"n_stacked_images": 4}
-
 
     #####   Configure network   #############
     net_arch = config["model_features"]["params"]["net_arch_shared"] + [
@@ -165,23 +128,3 @@ def main(folder, config):
         total_timesteps=config["model_features"]["params"]["step_limit"],
         callback=[custom_callback, checkpoint_callback])
     model.save(os.path.join(folder_path, "model"))
-
-
-
-def load_model_and_env(folder, config, model_at_step, eval=True):
-    program_path = os.path.join(folder, "../../../data", f'{config["model_features"]["params"]["program_type"]}.pl')
-    env, image_encoder_cls, shielding_settings, custom_callback = setup_env(
-        folder, config, program_path, eval=eval
-    )
-    env_name = config["env_type"]
-    if "Sokoban" in env_name:
-        model_cls = Sokoban_DPLPPO
-
-    path = os.path.join(folder, "model_checkpoints", f"rl_model_{model_at_step}_steps.zip")
-    model = model_cls.load(path, env)
-    if eval:
-        model.set_random_seed(config["eval_env_features"]["seed"])
-
-    return model, env
-
-

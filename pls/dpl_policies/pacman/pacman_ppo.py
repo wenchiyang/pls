@@ -407,8 +407,6 @@ class Pacman_DPLPPO(PPO):
             if callback.on_step() is False:
                 return False
 
-            # safety = object_detect_probs["policy_safety"]
-
             if dones:
                 ep_len = infos[0]["episode"]["l"]
                 ##### on_episide_end ##########
@@ -461,8 +459,7 @@ class Pacman_DPLPPO(PPO):
                 self._last_episode_starts,
                 values,
                 log_probs,
-                tinygrid=tinygrid,
-                # safety=safety
+                tinygrid=tinygrid
             )
             self._last_obs = new_obs
             self._last_episode_starts = dones

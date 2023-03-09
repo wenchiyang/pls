@@ -5,10 +5,40 @@ from problog.ddnnf_formula import DDNNF
 from pls.deepproblog.light.semiring import GraphSemiring
 import torch as th
 
+
+def compile_problog(program, queries=[], evidences=[], input_struct=None, query_struct=None,
+                    single_output=None):
+    query = "\n".join(["query(%s)." % q for q in queries])
+    evidence = "\n".join(["evidence(%s)." % e for e in evidences])
+    program = "\n\n".join([program, evidence, query])
+    lf = LogicFormula.create_from(program)
+    dag = LogicDAG.create_from(lf)
+    ddnnf = DDNNF.create_from(dag)
+
+    return ddnnf
+
+def evaluate_problog(ddnnf, input_struct, single_output=None):
+    x = {key: th.full((1, len(value)), 0.2) for key, value in input_struct.items()}
+
+    semiring = GraphSemiring()
+    if single_output is not None:
+        semiring.set_weights({single_output: x})
+    else:
+        semiring.set_weights(x)
+    out = ddnnf.evaluate(semiring=semiring)
+    return out
+
+
 class DeepProbLogLayer_Approx(nn.Module):
+    """
+    An optimized ProbLog implementation for a specific class of ProbLog programs. Supported programs must:
+    (1) have at most one annotated disjunction
+    (2) the AD (if exists) must be the predicate 'action'
+    """
     def __init__(self, program, queries=[], evidences=[], input_struct=None, query_struct=None,
                  single_output=None):
         super().__init__()
+        # Initialize a problog program
         query = "\n".join(["query(%s)." % q for q in queries])
         evidence = "\n".join(["evidence(%s)." % e for e in evidences])
         self.program = "\n\n".join([program, evidence, query])
@@ -18,61 +48,64 @@ class DeepProbLogLayer_Approx(nn.Module):
         self.semiring = GraphSemiring()
         self.single_output = single_output
 
+        # Prepare for optimization
         self.input_struct = input_struct
         self.n_facts = sum(len(input_struct[entry]) for entry in input_struct if "action" not in entry)
         self.n_actions = len(input_struct["action"])
         self.n_ads = len([entry for entry in input_struct if "action" in entry])
         self.n_queries = len(queries)
         self.query_struct = query_struct
+
+        # Compile the program
         self._init()
 
 
     def _init(self):
-        nf = self.n_facts
-        # initialize fact part of w
-        w_facts = th.zeros((2 ** nf, nf))
-        for i in range(2 ** nf):
-            bin_i = f"{bin(i)[2:]}".zfill(nf)
-            for j in range(nf):
+        n_facts = self.n_facts
+        # Initialize all possible worlds
+        # Enumerate the facts of the worlds
+        w_facts = th.zeros((2 ** n_facts, n_facts))
+        for i in range(2 ** n_facts):
+            bin_i = f"{bin(i)[2:]}".zfill(n_facts)
+            for j in range(n_facts):
                 w_facts[i][j] = float(bin_i[j])
         w_facts = w_facts.repeat_interleave(self.n_actions ** self.n_ads, dim=0)
-
-        # initialize ad part of w
+        # Enumerate the ADs of the worlds
         if self.n_ads == 1:
             w_actions = th.eye(self.n_actions)
-            w_actions = w_actions.repeat(2 ** nf, 1)
+            w_actions = w_actions.repeat(2 ** n_facts, 1)
         else:
+            # TODO: confirm this case works
             w_actions = th.cat((th.eye(self.n_actions).repeat_interleave(self.n_actions, dim=0), th.eye(self.n_actions).repeat(self.n_actions, 1)),dim=1)
-            w_actions = w_actions.repeat(2 ** nf, 1)
+            w_actions = w_actions.repeat(2 ** n_facts, 1)
+        worlds = th.cat((w_facts, w_actions), dim=1)
+        n_worlds = 2 ** n_facts  * self.n_actions ** self.n_ads
 
-        w = th.cat((w_facts, w_actions), dim=1)
-
-        n_worlds = 2 ** nf  * self.n_actions ** self.n_ads
-
-        valid_w = []
-        # query (need problog)
+        # Filter valid worlds
+        valid_worlds = []
         w_queries = []
-        for r in range(n_worlds):
-            x = self.world_tensor_to_dict(w[r].reshape(1, -1))
+        # TODO: make parallel
+        for world_ix in range(n_worlds):
+            x = self.worlds_to_dict(worlds[world_ix].reshape(1, -1))
             q_dict = self.calculate_complete_w(x=x)
-            q_tensor = self.dict_to_tensor(self.query_struct, q_dict)
+            q_tensor = self.dict_to_worlds(self.query_struct, q_dict)
             if not q_tensor[0][0].isnan():
                 w_queries.append(q_tensor)
-                valid_w.append(w[r])
+                valid_worlds.append(worlds[world_ix])
 
         w_queries = th.stack(w_queries, dim=0)[:, 0]
         self.w_queries = w_queries
-        self.w = th.stack(valid_w, dim=0)
-        self.w_facts = self.w[:, 0:self.n_facts]
-        self.w_actions = self.w[:, self.n_facts:]
+        self.w = th.stack(valid_worlds, dim=0)
+        self.w_facts = self.w[:, 0:n_facts]
+        self.w_actions = self.w[:, n_facts:]
 
 
 
-    def world_tensor_to_dict(self, ww):
+    def worlds_to_dict(self, ww):
         x = {k: ww[:, v[0]:v[0]+len(v)] for k, v in self.input_struct.items()}
         return x
 
-    def dict_to_tensor(self, struct, d):
+    def dict_to_worlds(self, struct, d):
         a = []
         for k in struct:
             a.append(d[k])
@@ -92,14 +125,13 @@ class DeepProbLogLayer_Approx(nn.Module):
         return x
 
     def forward(self, x):
-        xx = self.dict_to_tensor(self.input_struct, x)
+        xx = self.dict_to_worlds(self.input_struct, x)
         p_facts = xx[:, :self.n_facts]
         p_ads = xx[:, self.n_facts:]
         eps = 1e-9
         lp_facts = th.log(p_facts + eps)
         lnp_facts = th.log(1 - p_facts + eps)
         lp_ads = th.log(p_ads + eps)
-        # w = self.w.float()
         w_facts = self.w_facts.float()
         w_queries = self.w_queries.float()
         lp_w = lp_facts @ w_facts.T + lnp_facts @ (1 - w_facts.T) + lp_ads @ self.w_actions.T
@@ -116,19 +148,12 @@ class DeepProbLogLayer_Approx(nn.Module):
         else:
             self.semiring.set_weights(x)
         out = self.ddnnf.evaluate(semiring=self.semiring)
-        # stacked = defaultdict(list)
         ss = defaultdict(dict)
         for k, v in out.items():
-            # stacked[k.functor].append((k, v))
             if k.arity > 0:
                 ss[k.functor][self.query_struct[k.functor][str(k.args[0])]] = v
             else:
                 ss[k.functor][self.query_struct[k.functor]] = v
-        # tensorial = {}
-        # for k, v in stacked.items():
-        #     v = [b for a, b in v]
-        #     tensorial[k] = th.cat(v, dim=-1)
-
         tensorial = {}
         for k, v in ss.items():
             v = [b for a, b in sorted(ss[k].items())]
@@ -138,114 +163,3 @@ class DeepProbLogLayer_Approx(nn.Module):
             return tensorial[self.single_output]
         else:
             return tensorial
-
-def test1():
-    queries = [
-        "safe_action(one)",
-        "safe_action(two)",
-    ]
-    evidences = ["safe_next"]
-    program = """ 
-f(0)::f(one).
-f(1)::f(two).
-
-action(0)::action(one);
-action(1)::action(two).
-
-safe_next :- f(one), action(one).
-safe_next :- f(two), action(two).
-
-safe_action(A):- action(A), safe_next.
-"""
-    input_struct = {"f": th.tensor([i for i in range(2)]),
-                    "action": th.tensor([i for i in range(2, 4)])}
-    query_struct = {"safe_action": th.tensor([i for i in range(2)])}
-    dpl_layer = DeepProbLogLayer_Approx(program=program, queries=queries, evidences=evidences,
-                                        input_struct=input_struct, query_struct=query_struct,
-                                        )
-
-    a = th.tensor([[0.2, 0.6]])
-    b = th.tensor([[0.1, 0.9]])
-    results = dpl_layer(
-        x={
-            "f": a,
-            "action": b
-        }
-    )
-    print(results)
-
-def test2():
-    queries = [
-        "safe_action(no_op)",
-        "safe_action(push_up)",
-        "safe_action(push_down)",
-        "safe_action(push_left)",
-        "safe_action(push_right)"
-    ]
-    queries += [
-        "box(0, 1)",
-        "box(-1, 0)",
-        "box(1, 0)",
-        "box(0, -1)",
-        "corner(0, 2)",
-        "corner(-2, 0)",
-        "corner(2, 0)",
-        "corner(0, -2)",
-    ]
-    evidences = ["safe_next"]
-    program = """ 
-action(0):: action(no_op);      % 0
-action(1):: action(push_up);    % 1
-action(2):: action(push_down);  % 2
-action(3):: action(push_left);  % 3
-action(4):: action(push_right). % 4
-
-box(0):: box( 0, 1). % 5
-box(1):: box(-1, 0). % 9
-box(2):: box( 1, 0). % 10
-box(3):: box( 0,-1). % 14
-
-corner(0):: corner( 0, 2). % 2
-corner(1):: corner(-2, 0). % 8
-corner(2):: corner( 2, 0). % 11
-corner(3):: corner( 0,-2). % 17
-
-box_transition( X,  Y, no_op,       X,  Y).
-box_transition(-1,  0, push_left,  -2,  0).
-box_transition( 1,  0, push_right,  2,  0).
-box_transition( 0,  1, push_up,     0,  2).
-box_transition( 0, -1, push_down,   0, -2).
-box_transition( X,  Y, push_left,   X,  Y):- \+(X =:= -1, Y =:= 0).
-box_transition( X,  Y, push_right,  X,  Y):- \+(X =:=  1, Y =:= 0).
-box_transition( X,  Y, push_up,     X,  Y):- \+(X =:=  0, Y =:= 1).
-box_transition( X,  Y, push_down,   X,  Y):- \+(X =:=  0, Y =:= -1).
-
-
-unsafe_next :-
-    box( X,  Y),
-    action(A),
-    box_transition(X, Y, A, NextX, NextY),
-    corner(NextX, NextY).
-
-
-safe_next:- \+unsafe_next.
-safe_action(A):- action(A), safe_next.
-"""
-    input_struct = {"box": [i for i in range(4)], "corner": [i for i in range(4,8)], "action": [i for i in range(8,13)]}
-    query_struct = {"box": [i for i in range(4)], "corner": [i for i in range(4,8)], "safe_action": [i for i in range(8,13)]}
-    dpl_layer = DeepProbLogLayer_Approx(program=program, queries=queries, evidences=evidences,
-                                        input_struct=input_struct, query_struct=query_struct,
-                                        )
-
-    a = th.tensor([[0.9, 0.2, 0.9, 0.4]])
-    b = th.tensor([[0.8, 0.2, 0.5, 0.4]])
-    c = th.tensor([[0.0, 0.6, 0.1, 0.2, 0.1]])
-
-    results = dpl_layer(
-        x={
-            "box": a,
-            "corner": b,
-            "action": c
-        }
-    )
-    print(results)

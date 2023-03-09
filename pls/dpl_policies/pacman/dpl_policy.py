@@ -20,6 +20,7 @@ from pls.deepproblog.light import DeepProbLogLayer_Approx
 from .util import get_ground_wall
 from pls.observation_nets.observation_nets import Observation_Net_Stars
 from random import random
+from pls.deepproblog.light.wmc import compile_problog, evaluate_problog
 
 WALL_COLOR = 0.25
 GHOST_COLOR = 0.5
@@ -173,7 +174,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         if not self.differentiable_shield and self.alpha > 0:
             self.vsrl_eps = shielding_params["vsrl_eps"] if "vsrl_eps" in shielding_params else 0
         if self.program_path:
-            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments5/goal_finding_sto/data/relative_loc_simple.pl")
+            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments5/pacman/data/relative_loc_simple.pl")
             # self.program_path = pp
             with open(self.program_path) as f:
                 self.program = f.read()
@@ -189,7 +190,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             device = th.device("cuda" if use_cuda else "cpu")
             self.observation_model = Observation_Net_Stars(input_size=self.net_input_dim * self.net_input_dim, output_size=4).to(device)
             pp = path.join(self.folder, "../../data", self.observation_type)
-            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments5/goal_finding_sto/small2/data", self.observation_type)
+            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments5/pacman/small5/data", self.observation_type)
             self.observation_model.load_state_dict(th.load(pp))
 
         debug_queries = ["safe_next"]
@@ -199,7 +200,8 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             "action": [i for i in range(self.n_ghost_locs, self.n_ghost_locs + self.n_actions)]
         }
         pp = path.join(self.folder, "../../../data", f"{shielding_params['program_type']}.p")
-        # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments5/goal_finding_sto/data/query_safety_layer.p")
+        # pp = path.join(f"/Users/wenchi/PycharmProjects/pls/experiments5/pacman/data/{shielding_params['program_type']}.p")
+
         self.query_safety_layer = self.get_layer(
             pp, program=self.program, queries=debug_queries, evidences=[],
             input_struct=debug_input_struct, query_struct=debug_query_struct
@@ -208,15 +210,34 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         self._build(lr_schedule)
 
     def get_layer(self, cache_path, program, queries, evidences, input_struct, query_struct):
-        if path.exists(cache_path):
-            return pickle.load(open(cache_path, "rb"))
+        # if path.exists(cache_path):
+        #     return pickle.load(open(cache_path, "rb"))
 
         layer = DeepProbLogLayer_Approx(
             program=program, queries=queries, evidences=evidences,
             input_struct=input_struct, query_struct=query_struct
         )
-        pickle.dump(layer, open(cache_path, "wb"))
+        # pickle.dump(layer, open(cache_path, "wb"))
         return layer
+
+    def get_layer_problog(self, cache_path, program, queries, evidences, input_struct, query_struct):
+        import time
+
+        start = time.time()
+        circuit = compile_problog(
+            program=program, queries=queries, evidences=evidences,
+            input_struct=input_struct, query_struct=query_struct
+        )
+        end = time.time()
+        comp = end-start
+
+        start = time.time()
+        rr = evaluate_problog(circuit, input_struct)
+        end = time.time()
+        eval = end-start
+
+        print(f"{comp:.4f}  {eval:.4f}  {len(circuit)}")
+        return rr
 
     def get_step_safety(self, policy_distribution, ghost_probs):
         with th.no_grad():
