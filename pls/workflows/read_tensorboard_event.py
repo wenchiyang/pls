@@ -19,6 +19,7 @@ FOLDERS = {
     "carracing1": os.path.join(dir_path, "../..", "experiments", "carracing", "map0"),
     "carracing2": os.path.join(dir_path, "../..", "experiments", "carracing", "map2"),
 }
+
 DOMAIN_ABBR = {
     "stars1": "Stars1",
     "stars2": "Stars2",

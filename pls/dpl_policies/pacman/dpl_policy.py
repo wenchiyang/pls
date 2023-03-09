@@ -14,7 +14,6 @@ from stable_baselines3.common.type_aliases import (
     Schedule,
 )
 from os import path
-import pickle
 from gym.spaces import Box
 from pls.deepproblog.light import DeepProbLogLayer_Approx
 from .util import get_ground_wall
@@ -174,8 +173,6 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         if not self.differentiable_shield and self.alpha > 0:
             self.vsrl_eps = shielding_params["vsrl_eps"] if "vsrl_eps" in shielding_params else 0
         if self.program_path:
-            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments5/pacman/data/relative_loc_simple.pl")
-            # self.program_path = pp
             with open(self.program_path) as f:
                 self.program = f.read()
 
@@ -190,7 +187,6 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             device = th.device("cuda" if use_cuda else "cpu")
             self.observation_model = Observation_Net_Stars(input_size=self.net_input_dim * self.net_input_dim, output_size=4).to(device)
             pp = path.join(self.folder, "../../data", self.observation_type)
-            # pp = path.join("/Users/wenchi/PycharmProjects/pls/experiments5/pacman/small5/data", self.observation_type)
             self.observation_model.load_state_dict(th.load(pp))
 
         debug_queries = ["safe_next"]
@@ -200,7 +196,6 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
             "action": [i for i in range(self.n_ghost_locs, self.n_ghost_locs + self.n_actions)]
         }
         pp = path.join(self.folder, "../../../data", f"{shielding_params['program_type']}.p")
-        # pp = path.join(f"/Users/wenchi/PycharmProjects/pls/experiments5/pacman/data/{shielding_params['program_type']}.p")
 
         self.query_safety_layer = self.get_layer(
             pp, program=self.program, queries=debug_queries, evidences=[],
@@ -210,6 +205,7 @@ class Pacman_DPLActorCriticPolicy(ActorCriticPolicy):
         self._build(lr_schedule)
 
     def get_layer(self, cache_path, program, queries, evidences, input_struct, query_struct):
+        # import pickle
         # if path.exists(cache_path):
         #     return pickle.load(open(cache_path, "rb"))
 
