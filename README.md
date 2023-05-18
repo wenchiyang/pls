@@ -8,7 +8,7 @@ Implementation of [Safe Reinforcement Learning via Probabilistic Logic Shields](
   }
 
 
-## Dependency [TODO add links to packages]
+## Dependency
 - [pacman_gym](https://github.com/wenchiyang/pacman_gym) 
 - [carracing-gym](https://github.com/wenchiyang/carracing-gym) 
 - [problog](https://github.com/ML-KULeuven/problog)
