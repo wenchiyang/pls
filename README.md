@@ -1,3 +1,5 @@
+DOCUMENTATION OF THIS REPOSITORY IS COMING SOON
+
 Implementation of [Safe Reinforcement Learning via Probabilistic Logic Shields](https://arxiv.org/abs/2303.03226)
 
 @inproceedings{Yang2023,
