@@ -2,7 +2,7 @@ from torch import nn
 from collections import defaultdict
 from problog.formula import LogicFormula, LogicDAG
 from problog.ddnnf_formula import DDNNF
-from pls.deepproblog.light.semiring import GraphSemiring
+from pls.shields.deepproblog.light.semiring import GraphSemiring
 import torch as th
 
 
@@ -29,7 +29,7 @@ def evaluate_problog(ddnnf, input_struct, single_output=None):
     return out
 
 
-class DeepProbLogLayer_Approx(nn.Module):
+class DeepProbLogLayer_Optimized(nn.Module):
     """
     An optimized ProbLog implementation for a specific class of ProbLog programs. Supported programs must:
     (1) have at most one annotated disjunction

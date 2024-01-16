@@ -1,14 +1,18 @@
 import logging
+import os
 import sys
 from logging import getLogger
-import matplotlib.pyplot as plt
-import os
-import torch as th
 from pathlib import Path
+
+import matplotlib.pyplot as plt
 import numpy as np
+import torch as th
+
 
 WALL_COLOR = 0.25
-def safe_max(arr) :
+
+
+def safe_max(arr):
     """
     Compute the mean of an array if there is at least one element.
     For empty array, return NaN. It is used for logging only.
@@ -17,7 +21,9 @@ def safe_max(arr) :
     :return:
     """
     return np.nan if len(arr) == 0 else np.max(arr)
-def safe_min(arr) :
+
+
+def safe_min(arr):
     """
     Compute the mean of an array if there is at least one element.
     For empty array, return NaN. It is used for logging only.
@@ -26,6 +32,7 @@ def safe_min(arr) :
     :return:
     """
     return np.nan if len(arr) == 0 else np.min(arr)
+
 
 def myformat(tensor):
     s = str(tensor)
@@ -77,15 +84,6 @@ def init_logger(verbose=None, name="policy_gradient", out=None):
         logger.setLevel(level)
         logger.log(level, "Output level: %s" % level)
 
-    # levels = [logging.WARNING, logging.INFO, logging.DEBUG] + list(range(9, 0, -1))
-    # verbose = max(0, min(len(levels) - 1, verbose))
-    # logger = getLogger(name)
-    # ch = logging.StreamHandler(sys.stdout)
-    # formatter = logging.Formatter("[%(levelname)s] %(message)s")
-    # ch.setFormatter(formatter)
-    # logger.addHandler(ch)
-    # logger.setLevel(levels[verbose])
-
 
 def draw(image):
     plt.axis("off")
@@ -103,63 +101,90 @@ def initial_log(name, args):
     logger.info(f"Reward crash:     {args['reward_crash']}")
     logger.info(f"Reward food:      {args['reward_food']}")
     logger.info(f"Reward time:      {args['reward_time']}")
-    logger.info(f"Step limit:       {args['step_limit']}")
+    logger.info(f"Total timesteps:  {args['total_timesteps']}")
     logger.info(f"Logger:           {args['logger_name']}")
     logger.info(f"Seed:             {args['seed']}")
     logger.info(f"Gamma:            {args['gamma']}")
-    logger.info(f"Render:           {args['render']}")
-
+    logger.info(f"Render_or_not:    {args['render_or_not']}")
 
 
 # FOR TINYGRID INPUT
-def get_ground_wall(input, center_color, detect_color, ghost_distance):
+def get_ground_wall(ghost_distance, center_color, detect_color, input):
+    """
+    Computes the ground truth of the presence of ghosts around the agent.
+
+    :param ghost_distance: int representing the detection range of the agent.
+    :param center_color: color of the agent
+    :param detect_color: color of the ghost
+    :param input: tensor representing the pacman grid world
+    :return: tensor of {0, 1} representing the presence of grass on up, down, left and right
+    """
+
+    input = input["tinygrid"]
 
     centers = (input == center_color).nonzero()[:, 1:]
     neighbors = th.stack(
         (
-            input[th.arange(input.size(0)), centers[:, 0] - 1 , centers[:, 1]],
+            input[th.arange(input.size(0)), centers[:, 0] - 1, centers[:, 1]],
             input[th.arange(input.size(0)), centers[:, 0] + 1, centers[:, 1]],
             input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] - 1],
-            input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] + 1]
-        ), dim=1)
+            input[th.arange(input.size(0)), centers[:, 0], centers[:, 1] + 1],
+        ),
+        dim=1,
+    )
     results = (neighbors == detect_color).float()
 
     if ghost_distance == 1:
         return results
 
-    padded_input = th.nn.functional.pad(input, (ghost_distance-1,ghost_distance-1,ghost_distance-1,ghost_distance-1), "constant", WALL_COLOR)
+    padded_input = th.nn.functional.pad(
+        input,
+        (
+            ghost_distance - 1,
+            ghost_distance - 1,
+            ghost_distance - 1,
+            ghost_distance - 1,
+        ),
+        "constant",
+        WALL_COLOR,
+    )
     l = th.arange(padded_input.size(0))
     centers = (padded_input == center_color).nonzero()[:, 1:]
-    for i in range(2, ghost_distance+1):
+    for i in range(2, ghost_distance + 1):
         neighbors = th.stack(
             (
-                padded_input[l, centers[:, 0] - i , centers[:, 1]],
+                padded_input[l, centers[:, 0] - i, centers[:, 1]],
                 padded_input[l, centers[:, 0] + i, centers[:, 1]],
                 padded_input[l, centers[:, 0], centers[:, 1] - i],
-                padded_input[l, centers[:, 0], centers[:, 1] + i]
-            ), dim=1)
+                padded_input[l, centers[:, 0], centers[:, 1] + i],
+            ),
+            dim=1,
+        )
         res2 = (neighbors == detect_color).float()
         results = th.logical_or(results, res2).float()
-
 
     # check clockwise neighbors, upperleft, upperright, ...
     neighbors = th.stack(
         (
-            padded_input[l, centers[:, 0] - 1 , centers[:, 1] + 1],
-            padded_input[l, centers[:, 0] + 1,  centers[:, 1] - 1],
-            padded_input[l, centers[:, 0] - 1 , centers[:, 1] - 1],
-            padded_input[l, centers[:, 0] + 1,  centers[:, 1] + 1]
-        ), dim=1)
+            padded_input[l, centers[:, 0] - 1, centers[:, 1] + 1],
+            padded_input[l, centers[:, 0] + 1, centers[:, 1] - 1],
+            padded_input[l, centers[:, 0] - 1, centers[:, 1] - 1],
+            padded_input[l, centers[:, 0] + 1, centers[:, 1] + 1],
+        ),
+        dim=1,
+    )
     res2 = (neighbors == detect_color).float()
     results = th.logical_or(results, res2).float()
     # check counter clockwise neighbors
     neighbors = th.stack(
         (
-            padded_input[l, centers[:, 0] - 1 , centers[:, 1] - 1],
-            padded_input[l, centers[:, 0] + 1,  centers[:, 1] + 1],
-            padded_input[l, centers[:, 0] + 1 , centers[:, 1] - 1],
-            padded_input[l, centers[:, 0] - 1,  centers[:, 1] + 1]
-        ), dim=1)
+            padded_input[l, centers[:, 0] - 1, centers[:, 1] - 1],
+            padded_input[l, centers[:, 0] + 1, centers[:, 1] + 1],
+            padded_input[l, centers[:, 0] + 1, centers[:, 1] - 1],
+            padded_input[l, centers[:, 0] - 1, centers[:, 1] + 1],
+        ),
+        dim=1,
+    )
     res2 = (neighbors == detect_color).float()
     results = th.logical_or(results, res2).float()
 
@@ -169,43 +194,54 @@ def get_ground_wall(input, center_color, detect_color, ghost_distance):
     # check clockwise neighbors, upperleft, upperright, ...
     up = th.stack(
         (
-            padded_input[l, centers[:, 0] - 1 , centers[:, 1] - 2],
-            padded_input[l, centers[:, 0] - 2 , centers[:, 1] - 1],
-            padded_input[l, centers[:, 0] - 2 , centers[:, 1] + 1],
-            padded_input[l, centers[:, 0] - 1 , centers[:, 1] + 2]
-        ), dim=1)
+            padded_input[l, centers[:, 0] - 1, centers[:, 1] - 2],
+            padded_input[l, centers[:, 0] - 2, centers[:, 1] - 1],
+            padded_input[l, centers[:, 0] - 2, centers[:, 1] + 1],
+            padded_input[l, centers[:, 0] - 1, centers[:, 1] + 2],
+        ),
+        dim=1,
+    )
     down = th.stack(
         (
-            padded_input[l, centers[:, 0] + 1 , centers[:, 1] - 2],
-            padded_input[l, centers[:, 0] + 2 , centers[:, 1] - 1],
-            padded_input[l, centers[:, 0] + 2 , centers[:, 1] + 1],
-            padded_input[l, centers[:, 0] + 1 , centers[:, 1] + 2]
-        ), dim=1)
+            padded_input[l, centers[:, 0] + 1, centers[:, 1] - 2],
+            padded_input[l, centers[:, 0] + 2, centers[:, 1] - 1],
+            padded_input[l, centers[:, 0] + 2, centers[:, 1] + 1],
+            padded_input[l, centers[:, 0] + 1, centers[:, 1] + 2],
+        ),
+        dim=1,
+    )
     left = th.stack(
         (
-            padded_input[l, centers[:, 0] - 2 , centers[:, 1] - 1],
-            padded_input[l, centers[:, 0] - 1 , centers[:, 1] - 2],
-            padded_input[l, centers[:, 0] + 1 , centers[:, 1] - 2],
-            padded_input[l, centers[:, 0] + 2 , centers[:, 1] - 1]
-        ), dim=1)
+            padded_input[l, centers[:, 0] - 2, centers[:, 1] - 1],
+            padded_input[l, centers[:, 0] - 1, centers[:, 1] - 2],
+            padded_input[l, centers[:, 0] + 1, centers[:, 1] - 2],
+            padded_input[l, centers[:, 0] + 2, centers[:, 1] - 1],
+        ),
+        dim=1,
+    )
     right = th.stack(
         (
-            padded_input[l, centers[:, 0] - 2 , centers[:, 1] + 1],
-            padded_input[l, centers[:, 0] - 1 , centers[:, 1] + 2],
-            padded_input[l, centers[:, 0] + 1 , centers[:, 1] + 2],
-            padded_input[l, centers[:, 0] + 2 , centers[:, 1] + 1]
-        ), dim=1)
+            padded_input[l, centers[:, 0] - 2, centers[:, 1] + 1],
+            padded_input[l, centers[:, 0] - 1, centers[:, 1] + 2],
+            padded_input[l, centers[:, 0] + 1, centers[:, 1] + 2],
+            padded_input[l, centers[:, 0] + 2, centers[:, 1] + 1],
+        ),
+        dim=1,
+    )
     res2 = th.stack(
         (
             th.any((up == detect_color), dim=1),
             th.any((down == detect_color), dim=1),
             th.any((left == detect_color), dim=1),
-            th.any((right == detect_color), dim=1)
-        ), dim=1).float()
+            th.any((right == detect_color), dim=1),
+        ),
+        dim=1,
+    ).float()
 
     results = th.logical_or(results, res2).float()
     if ghost_distance == 3:
         return results
+
 
 def get_agent_coord(input, agent_color):
     centers = (input == agent_color).nonzero()[:, 1:]
