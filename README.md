@@ -129,7 +129,7 @@ The config file contains all required parameters to run the PPO_shielded algorit
 - `policy_params`: Parameters for the learning algorithm (`ppo`). Most parameters are passed to [stablebaselines3](https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html#).
     - `net_arch_shared`, `net_arch_pi`, `net_arch_vf`: Configuration of Neural network architecture (`net_arch` in stablebaselines3).
     - `alpha`: Coefficient of the safety loss.
-- `shield_params`: Parameters for the shield. "Null" if no shield is used.
+- `shield_params`: Parameters for the shield. If the value is `null` then no shield is used.
     - `num_sensors`: Number of sensors.
     - `num_actions`: Number of available discrete actions.
     - `differentiable`: Boolean indicating whether the shield is differentiable.
@@ -137,11 +137,11 @@ The config file contains all required parameters to run the PPO_shielded algorit
     - `ghost_distance`: Detection range of agent sensors. This is a domain-specific parameter for Pacman.
 - `policy_safety_params`: Parameters for the policy safety calculator for the safety loss. Same structure as `shield_params`. 
 - `observation_params`: Parameters for the observation. 
-      - `observation_type`: Observation type ("ground truth" or "pretrained"). If the value is "pretrained", 
-then `observation_net`, `net_input_dim` and `noisy_observations` must be provided.
-      - `observation_net`: File location of the pretrained observation network.
-      - `net_input_dim`: the dimension of the image input.
-      - `noisy_observations`: Boolean indicating whether noisy observations are used.
+  - `observation_type`: Observation type (`ground truth` or `pretrained`). If the value is `pretrained`, 
+  then `observation_net`, `net_input_dim` and `noisy_observations` must be provided.
+  - `observation_net`: File location of the pretrained observation network.
+  - `net_input_dim`: Dimension of the image input.
+  - `noisy_observations`: Boolean indicating whether noisy observations are used.
 
 
 ## Configure a shield
@@ -163,8 +163,8 @@ action(4)::action(turn_right).
 
 ### Sensors
 The sensor readings. 
-During training, `sensor_value(int)` will be replaced by probabilities produced by the observation network (if `observation_type` is "pretrained"),
-or the ground truth sensor values (if `observation_type` is "ground truth"). 
+During training, `sensor_value(int)` will be replaced by probabilities produced by the observation network (if `observation_type` is `pretrained`),
+or the ground truth sensor values (if `observation_type` is `ground truth`). 
 ```prolog
 sensor_value(0)::grass(in_front).
 sensor_value(1)::grass(on_the_left).

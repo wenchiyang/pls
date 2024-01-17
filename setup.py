@@ -8,27 +8,20 @@ setup(
     ),
     install_requires=[
         # environment
-        "gym",
-        "torch",
-        "torchvision",
-        "cherry-rl",
-        "stable-baselines3[extra]",
-        "networkx",
+        "protobuf==3.20.0",
+        "gym==0.21.0",
+        "torch==1.9.0",
+        "stable-baselines3[extra]==1.5.0",
         # shielding
-        "problog",
+        "problog==2.2.4",
         "pysdd",
-        # experiments -- dask
-        "dask[complete]",
-        "asyncssh",
-        "bokeh",
+        # # experiments -- dask
+        # "dask[complete]",
+        # "asyncssh",
+        # "bokeh",
         # visialization
-        "pyvirtualdisplay",
-        "tensorboard",
-        "altair",
-        "altair_saver",
-        "selenium",
-        "matplotlib",
-        "tqdm",
-        "scikit-image"
-    ],  # And any other dependencies required
+        "tensorboard==2.7.0",
+        "matplotlib==3.4.1",
+        "scikit-image>=0.19.2"
+    ],
 )
