@@ -101,7 +101,7 @@ if __name__ == "__main__":
     )
     model_at_step = 600000
     image_dim = 48  # The size of each image is 48 x 48 pixels
-    num_imgs = 600
+    num_imgs = 3000
     sample_frequency = 50  # sample every 50 frames
     # location to save the generated images
     img_folder = os.path.join(cwd, "data/")
@@ -125,9 +125,9 @@ if __name__ == "__main__":
     downsampling_size = 1
     # location of the trained observation network
     observation_net_folder = cwd
-    num_training_examples = 500
-    num_test_examples = 100
-    epochs = 10
+    num_training_examples = 2500
+    num_test_examples = 500
+    epochs = 30
 
     # we use three sensors for the car racing domain
     labels = ["grass(in_front)", "grass(on_the_left)", "grass(on_the_right)"]
