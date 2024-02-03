@@ -1,0 +1,45 @@
+{
+    "base_policy": "ppo",
+    "env": "Pacman-v0",
+    "env_features": {
+        "seed": 567,
+        "render_mode": "dict",
+        "move_ghosts": true,
+        "stochasticity": 0.0,
+        "render_or_not": false
+    },
+    "eval_env_features": {
+        "seed": 567,
+        "render_mode": "dict",
+        "move_ghosts": true,
+        "stochasticity": 0.0,
+        "render_or_not": false
+    },
+    "monitor_features": null,
+    "policy_params": {
+        "log_interval": 1,
+        "batch_size": 512,
+        "n_epochs": 15,
+        "n_steps": 2048,
+        "learning_rate": 0.0001,
+        "seed": 567,
+        "clip_range": 0.1,
+        "gamma": 0.99,
+        "total_timesteps": 700000,
+        "net_arch_shared": [],
+        "net_arch_pi": [64, 64],
+        "net_arch_vf": [64, 64],
+        "alpha": 0
+    },
+    "policy_safety_params": {
+        "num_sensors": 4,
+        "num_actions": 5,
+        "ghost_distance": 2,
+        "differentiable": false,
+        "shield_program": "../../../data/pacman_ghosts.pl"
+    },
+    "shield_params": null,
+    "observation_params": {
+        "observation_type": "ground truth"
+    }
+}
