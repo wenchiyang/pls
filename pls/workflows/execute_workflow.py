@@ -166,7 +166,7 @@ def pretrain_observation(
     else:
         net_input_size = image_dim
 
-    net_output_size = len(labels)
+    net_output_size = len(labels) if not pretrain_w_extra_labels else len(labels)-2
 
     pretrain(
         csv_file=csv_file,

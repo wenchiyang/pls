@@ -127,8 +127,8 @@ def train(
         loss1 = loss_function1(labels_loss1, target[:, :net_output_size])
 
         if loss_function2 is not None:
-            labels_loss1 = output[:, net_output_size:]
-            loss2 = loss_function2(labels_loss1, target[:, net_output_size:])
+            labels_loss2 = output[:, net_output_size:]
+            loss2 = loss_function2(labels_loss2, target[:, net_output_size:])
             loss = loss1 + loss2
         else:
             loss = loss1
@@ -301,7 +301,7 @@ def main(
 
     def calculate_sample_weights(dataset, keys):
         pos_weights = []
-        for key in keys:
+        for key in keys[:net_output_size]:
             ones = dataset.instances[key].value_counts()[1]
             zeros = dataset.instances[key].value_counts()[0]
             total = ones + zeros
@@ -317,6 +317,7 @@ def main(
     calculate_sample_weights(dataset_test1, keys)
     print("\nCLASS WEIGHTS TEST (USE TRAINSET):")
     calculate_sample_weights(dataset_test2, keys)
+
 
     model = net_class(input_size=net_input_size, output_size=net_output_size).to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
