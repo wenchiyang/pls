@@ -294,7 +294,7 @@ class Carracing_Callback(ConvertCallback):
                 safe_mean([ep_info["total_violate_len"] for ep_info in ep_info_buffer]),
             )
             self.logger.record(
-                "rollout/out_of_field",
+                "rollout/out_of_field_rate",
                 safe_mean([ep_info["out_of_field"] for ep_info in ep_info_buffer]),
             )
 

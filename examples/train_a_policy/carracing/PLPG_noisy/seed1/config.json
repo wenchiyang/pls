@@ -42,7 +42,7 @@
     "observation_params": {
         "observation_type": "pretrained",
         "noisy_observations": true,
-        "observation_net": "../../../../pretrain_sensors_cr/observation_model_500_examples.pt",
+        "observation_net": "../../../../pretrain_sensors_cr/observation_model_2000_examples.pt",
         "net_input_dim": 48
     }
 }
