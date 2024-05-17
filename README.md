@@ -30,6 +30,13 @@ pip install -e .
 ```
 
 ## Quick Start
+
+### How to run an example
+```shell script
+cd pls/examples/train_a_policy
+python quickstart.py
+```
+
 ### Example 1
 Train a shielded reinforcement learning agent. For the full example,
 please see `pls/examples/train_a_policy/quickstart.py`.
